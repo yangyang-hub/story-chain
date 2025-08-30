@@ -15,16 +15,14 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     // 常量
     // 前100个故事无需质押
     uint256 public constant FREE_STORY_COUNT = 100;
-    // 创建故事默认质押金额（提交100章节后返回质押金额）
-    uint256 public constant DEFAULT_STORY_DEPOSIT = 10 ether;
     // 新故事需提交的章节数量，才能返还质押金额
     uint256 public constant MIN_CHAPTERS_FOR_DEPOSIT = 100;
-    // fork费用分配 故事作者 15%
-    uint256 public constant FORK_FEE_AUTHOR = 15;
-    // fork费用分配 章节作者 80%
-    uint256 public constant FORK_FEE_CHAPTER_AUTHOR = 80;
-    // 平台手续费率5%
-    uint256 public constant PLATFORM_FEE_RATE = 5;
+    // fork费用分配 故事作者 10%
+    uint256 public constant FORK_FEE_AUTHOR = 10;
+    // fork费用分配 章节作者 89%
+    uint256 public constant FORK_FEE_CHAPTER_AUTHOR = 89;
+    // 平台手续费率1%
+    uint256 public constant PLATFORM_FEE_RATE = 1;
 
     // NFT Token ID计数器
     uint256 private _tokenIdCounter;
@@ -37,9 +35,12 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         uint256 createdTime; // 创建时间
         uint256 likes; // 点赞数
         uint256 forkCount; // fork数量
-        uint256 forkFee; // fork费用
+        uint256 forkFee; // fork所需费用
         bool isDeposited; // 是否质押创作费用
+        uint256 deposited; // 质押的创作费用
         uint256 totalTips; // 获得打赏费用
+        uint256 totalTipCount; // 获得打赏次数
+        uint256 totalForkFees; // 获得fork费用
         uint256 firstChapterId; // 故事第一个章节
     }
 
@@ -52,7 +53,11 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         string ipfsHash; // IPFS存储的章节内容哈希
         uint256 createdTime; // 创建时间
         uint256 likes; // 点赞数
+        uint256 forkCount; // fork数量
+        uint256 forkFee; // fork所需费用
+        uint256 totalForkFees; // 获得fork费用
         uint256 totalTips; // 获得打赏费用
+        uint256 totalTipCount; // 获得打赏次数
         uint256 chapterNumber; // 故事章节号
         uint256[] childChapterIds; // 子章节列表
     }
@@ -66,6 +71,8 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     // 状态变量
+    // 创建故事默认质押金额（提交100章节后返回质押金额）
+    uint256 public DEFAULT_STORY_DEPOSIT = 10 ether;
     uint256[] public stories; // 故事集合
     mapping(uint256 => Story) public storiesMap; // 故事映射
     mapping(uint256 => Chapter) public chaptersMap; // 章节映射
@@ -106,12 +113,28 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         uint256 newLikeCount
     );
     event CommentAdded(uint256 indexed chapterId, address indexed commenter);
-    event RewardsDistributed(
+    event StoryRewardsDistributed(
+        uint256 indexed storyId,
         address indexed storyAuthor,
+        uint256 amount
+    );
+    event ChapterRewardsDistributed(
+        uint256 indexed chapterId,
         address indexed chapterAuthor,
-        uint256 totalAmount
+        uint256 amount
+    );
+    event tipSent(
+        uint256 indexed storyId,
+        uint256 indexed chapterId,
+        address indexed tipper,
+        uint256 amount
     );
     event RewardsWithdrawn(address indexed user, uint256 amount);
+    event DepositRefunded(
+        uint256 indexed storyId,
+        address indexed author,
+        uint256 amount
+    );
 
     constructor() ERC721("StoryChain", "STORY") Ownable(msg.sender) {}
 
@@ -154,9 +177,12 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             likes: 0,
             forkCount: 0,
             forkFee: forkFee,
-            isDeposited: msg.value > 0,
+            totalForkFees: 0,
             totalTips: 0,
-            firstChapterId: 0
+            totalTipCount: 0,
+            firstChapterId: 0,
+            isDeposited: msg.value > 0,
+            deposited: msg.value
         });
 
         // 铸造NFT给作者
@@ -175,8 +201,9 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     function createChapter(
         uint256 storyId,
         uint256 parentId,
-        string memory ipfsHash
-    ) external payable nonReentrant {
+        string memory ipfsHash,
+        uint256 forkFee
+    ) external nonReentrant {
         require(bytes(ipfsHash).length > 0, "IPFS hash cannot be empty");
 
         // 检查是否是创建新故事开头
@@ -219,7 +246,11 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             ipfsHash: ipfsHash,
             createdTime: block.timestamp,
             likes: 0,
+            forkCount: 0,
+            forkFee: forkFee,
             totalTips: 0,
+            totalTipCount: 0,
+            totalForkFees: 0,
             chapterNumber: isNewStory ? 1 : parentChapter.chapterNumber + 1,
             childChapterIds: new uint256[](0)
         });
@@ -232,6 +263,15 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         // 铸造NFT给作者
         _safeMint(msg.sender, newChapterId);
         _setTokenURI(newChapterId, ipfsHash);
+
+        // 判断是否满足创建质押资金返还条件
+        if (story.author == msg.sender && story.isDeposited && parentChapter.chapterNumber >= 99) {
+            // 返还质押资金
+            story.isDeposited = false;
+            payable(msg.sender).transfer(story.deposited);
+            // 记录事件
+            emit DepositRefunded(storyId, msg.sender, story.deposited);
+        }
 
         emit ChapterCreated(
             storyId,
@@ -251,7 +291,8 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     function forkStory(
         uint256 storyId,
         uint256 parentId,
-        string memory ipfsHash
+        string memory ipfsHash,
+        uint256 forkFee
     ) external payable nonReentrant {
         require(bytes(ipfsHash).length > 0, "IPFS hash cannot be empty");
         // 校验fork费用
@@ -280,7 +321,10 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             ipfsHash: ipfsHash,
             createdTime: block.timestamp,
             likes: 0,
+            forkCount: 0,
+            forkFee: forkFee,
             totalTips: 0,
+            totalForkFees: 0,
             chapterNumber: parentChapter.chapterNumber + 1,
             childChapterIds: new uint256[](0)
         });
@@ -291,9 +335,18 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         _setTokenURI(newChapterId, ipfsHash);
 
         // 分配分叉费用（分给原故事链的作者们）
-        _distributeRewards(story.author, parentChapter.author, msg.value);
+        (uint256 storyFee, uint256 chapterFee) = _distributeRewards(
+            storyId,
+            parentId,
+            story.author,
+            parentChapter.author,
+            msg.value
+        );
+        story.totalForkFees += storyFee;
+        parentChapter.totalForkFees += chapterFee;
 
         story.forkCount++;
+        parentChapter.forkCount++;
 
         emit ChapterForked(
             storyId,
@@ -361,16 +414,20 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
 
     /**
      * @dev 分发fork奖励给故事作者和章节作者
+     * @param storyId 故事ID
+     * @param chapterId 章节ID
      * @param storyAuthor 故事作者地址
      * @param chapterAuthor 章节作者地址
      * @param totalAmount 总奖励金额
      */
     function _distributeRewards(
+        uint256 storyId,
+        uint256 chapterId,
         address storyAuthor,
         address chapterAuthor,
         uint256 totalAmount
-    ) internal {
-        if (totalAmount == 0) return;
+    ) internal returns (uint256 storyFee, uint256 chapterFee) {
+        if (totalAmount == 0) return (0, 0);
 
         // 扣除平台手续费
         uint256 platformFee = (totalAmount * PLATFORM_FEE_RATE) / 100;
@@ -381,15 +438,36 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             pendingWithdrawals[owner()] += platformFee;
         }
 
-        // 如果故事作者与章节作者是同一个人
-        if (storyAuthor == chapterAuthor) {
-            pendingWithdrawals[storyAuthor] += rewardPool;
-        } else {
-            uint256 storyAuthorFee = (rewardPool * FORK_FEE_AUTHOR) / 100;
-            pendingWithdrawals[storyAuthor] += storyAuthorFee;
-            pendingWithdrawals[chapterAuthor] += rewardPool - storyAuthorFee;
-        }
-        emit RewardsDistributed(storyAuthor, chapterAuthor, totalAmount);
+        uint256 storyAuthorFee = (rewardPool * FORK_FEE_AUTHOR) / 100;
+        pendingWithdrawals[storyAuthor] += storyAuthorFee;
+        uint256 chapterAuthorFee = rewardPool - storyAuthorFee;
+        pendingWithdrawals[chapterAuthor] += chapterAuthorFee;
+        emit StoryRewardsDistributed(storyId, storyAuthor, storyAuthorFee);
+        emit ChapterRewardsDistributed(
+            chapterId,
+            chapterAuthor,
+            chapterAuthorFee
+        );
+        return (storyAuthorFee, chapterAuthorFee);
+    }
+
+    // 打赏
+    function tip(uint256 storyId, uint256 chapterId) external payable {
+        require(msg.value > 0, "Tip amount must be greater than 0");
+        Story storage story = storiesMap[storyId];
+        Chapter storage chapter = chaptersMap[chapterId];
+        (uint256 storyFee, uint256 chapterFee) = _distributeRewards(
+            storyId,
+            chapterId,
+            story.author,
+            chapter.author,
+            msg.value
+        );
+        story.totalTips += storyFee;
+        chapter.totalTips += chapterFee;
+        story.totalTipCount += 1;
+        chapter.totalTipCount += 1;
+        emit tipSent(storyId, chapterId, msg.sender, msg.value);
     }
 
     // 提取奖励
@@ -401,6 +479,20 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         payable(msg.sender).transfer(amount);
 
         emit RewardsWithdrawn(msg.sender, amount);
+    }
+
+    // 章节作者修改fork费用
+    function updateChapterForkFee(uint256 chapterId, uint256 newForkFee) external  {
+        Chapter storage chapter = chaptersMap[chapterId];
+        require(chapter.author == msg.sender, "Not the chapter author");
+        chapter.forkFee = newForkFee;
+    }
+
+    // 故事作者修改fork费用
+    function updateStoryForkFee(uint256 storyId, uint256 newForkFee) external  {
+        Story storage story = storiesMap[storyId];
+        require(story.author == msg.sender, "Not the story author");
+        story.forkFee = newForkFee;
     }
 
     /**
@@ -423,6 +515,11 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         return chaptersMap[chapterId];
     }
 
+    // 查询创建故事所需质押金额
+    function getStoryDeposit() external view returns (uint256) {
+        return DEFAULT_STORY_DEPOSIT;
+    }
+
     // 重写必要的函数
     function tokenURI(
         uint256 tokenId
@@ -434,5 +531,10 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         bytes4 interfaceId
     ) public view override(ERC721, ERC721URIStorage) returns (bool) {
         return super.supportsInterface(interfaceId);
+    }
+
+    // 管理员修改创建故事所需质押金额
+    function updateStoryDeposit(uint256 newDeposit) external onlyOwner {
+        DEFAULT_STORY_DEPOSIT = newDeposit;
     }
 }
