@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./DeployHelpers.s.sol";
-import { DeployYourContract } from "./DeployYourContract.s.sol";
+import { DeployStoryChain } from "./DeployStoryChain.s.sol";
 
 /**
  * @notice Main deployment script for all contracts
@@ -12,13 +12,14 @@ import { DeployYourContract } from "./DeployYourContract.s.sol";
  */
 contract DeployScript is ScaffoldETHDeploy {
     function run() external {
-        // Deploys all your contracts sequentially
-        // Add new deployments here when needed
+        // 部署所有合约
+        // 需要时在此添加新的部署
 
-        DeployYourContract deployYourContract = new DeployYourContract();
-        deployYourContract.run();
+        // 部署故事链合约
+        DeployStoryChain deployStoryChain = new DeployStoryChain();
+        deployStoryChain.run();
 
-        // Deploy another contract
+        // 部署其他合约
         // DeployMyContract myContract = new DeployMyContract();
         // myContract.run();
     }
