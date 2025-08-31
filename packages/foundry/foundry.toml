@@ -5,6 +5,9 @@ libs = ['lib', 'node_modules']
 fs_permissions = [{ access = "read-write", path = "./"}]
 via_ir = true
 
+# 优化器配置 - 减少合约大小
+optimizer = true
+optimizer_runs = 200
 
 [rpc_endpoints]
 default_network = "http://127.0.0.1:8545"
