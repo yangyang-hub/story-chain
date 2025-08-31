@@ -217,7 +217,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             require(msg.sender == story.author, "Not the story owner");
             // 校验故事是否已经存在开头
             require(
-                story.firstChapterId != 0,
+                story.firstChapterId == 0,
                 "Story already has a start chapter"
             );
         } else {
@@ -230,7 +230,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             );
             // 校验是否有用该章节的续写权（仅支持上一章节的作者续写）
             require(
-                msg.sender == parentChapter.author,
+                msg.sender == _ownerOf(parentId),
                 "Not the chapter author"
             );
         }
