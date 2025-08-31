@@ -5,23 +5,47 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
-import { Bars3Icon, BugAntIcon } from "@heroicons/react/24/outline";
+import { Bars3Icon, BugAntIcon, PlusIcon, BookOpenIcon, UserIcon } from "@heroicons/react/24/outline";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { LanguageSwitcher } from "~~/components/LanguageSwitcher";
+import { SwitchTheme } from "~~/components/SwitchTheme";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { useLanguage } from "~~/contexts/LanguageContext";
 
 type HeaderMenuLink = {
   label: string;
+  labelKey: string;
   href: string;
   icon?: React.ReactNode;
 };
 
-export const menuLinks: HeaderMenuLink[] = [
+const menuLinksConfig: HeaderMenuLink[] = [
   {
     label: "Home",
+    labelKey: "nav.home",
     href: "/",
   },
   {
+    label: "Create Story",
+    labelKey: "nav.create",
+    href: "/create",
+    icon: <PlusIcon className="h-4 w-4" />,
+  },
+  {
+    label: "Explore",
+    labelKey: "nav.explore",
+    href: "/explore",
+    icon: <BookOpenIcon className="h-4 w-4" />,
+  },
+  {
+    label: "Profile",
+    labelKey: "nav.profile",
+    href: "/profile",
+    icon: <UserIcon className="h-4 w-4" />,
+  },
+  {
     label: "Debug Contracts",
+    labelKey: "nav.debug",
     href: "/debug",
     icon: <BugAntIcon className="h-4 w-4" />,
   },
@@ -29,10 +53,11 @@ export const menuLinks: HeaderMenuLink[] = [
 
 export const HeaderMenuLinks = () => {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
     <>
-      {menuLinks.map(({ label, href, icon }) => {
+      {menuLinksConfig.map(({ labelKey, href, icon }) => {
         const isActive = pathname === href;
         return (
           <li key={href}>
@@ -44,7 +69,7 @@ export const HeaderMenuLinks = () => {
               } hover:bg-secondary hover:shadow-md focus:!bg-secondary active:!text-neutral py-1.5 px-3 text-sm rounded-full gap-2 grid grid-flow-col`}
             >
               {icon}
-              <span>{label}</span>
+              <span>{t(labelKey)}</span>
             </Link>
           </li>
         );
@@ -83,18 +108,20 @@ export const Header = () => {
         </details>
         <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
           <div className="flex relative w-10 h-10">
-            <Image alt="SE2 logo" className="cursor-pointer" fill src="/logo.svg" />
+            <Image alt="StoryChain logo" className="cursor-pointer" fill src="/logo.svg" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold leading-tight">Scaffold-ETH</span>
-            <span className="text-xs">Ethereum dev stack</span>
+            <span className="font-bold leading-tight">StoryChain</span>
+            <span className="text-xs">去中心化故事平台</span>
           </div>
         </Link>
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
           <HeaderMenuLinks />
         </ul>
       </div>
-      <div className="navbar-end grow mr-4">
+      <div className="navbar-end grow mr-4 flex items-center gap-2">
+        <SwitchTheme />
+        <LanguageSwitcher />
         <RainbowKitCustomConnectButton />
         {isLocalNetwork && <FaucetButton />}
       </div>
