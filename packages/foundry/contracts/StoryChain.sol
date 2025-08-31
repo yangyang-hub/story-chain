@@ -19,10 +19,10 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     uint256 public constant MIN_CHAPTERS_FOR_DEPOSIT = 100;
     // fork费用分配 故事作者 10%
     uint256 public constant FORK_FEE_AUTHOR = 10;
-    // fork费用分配 章节作者 89%
-    uint256 public constant FORK_FEE_CHAPTER_AUTHOR = 89;
-    // 平台手续费率1%
-    uint256 public constant PLATFORM_FEE_RATE = 1;
+    // fork费用分配 章节作者 85%
+    uint256 public constant FORK_FEE_CHAPTER_AUTHOR = 85;
+    // 平台手续费率5%
+    uint256 public constant PLATFORM_FEE_RATE = 5;
 
     // NFT Token ID计数器
     uint256 private _tokenIdCounter;
