@@ -52,6 +52,7 @@ const CreateStoryPage = () => {
   const handleImageUpload = (cid: string, url: string) => {
     setImageCid(cid);
     setImageUrl(url);
+    setIsUploading(false);
   };
 
   const validateForm = () => {
