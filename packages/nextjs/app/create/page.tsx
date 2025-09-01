@@ -2,25 +2,20 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
 import { parseEther } from "viem";
-import { 
-  PlusIcon, 
-  PhotoIcon, 
-  CurrencyDollarIcon,
-  InformationCircleIcon 
-} from "@heroicons/react/24/outline";
-import { useScaffoldWriteContract, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useAccount } from "wagmi";
+import { CurrencyDollarIcon, InformationCircleIcon, PhotoIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
-import { uploadStoryMetadata, type StoryMetadata } from "~~/services/ipfs/ipfsService";
 import { useLanguage } from "~~/contexts/LanguageContext";
+import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { type StoryMetadata, uploadStoryMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
 const CreateStoryPage = () => {
   const router = useRouter();
   const { address } = useAccount();
   const { t } = useLanguage();
-  
+
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -77,7 +72,7 @@ const CreateStoryPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!address) {
       notification.error(t("wallet.connect"));
       return;
@@ -94,14 +89,17 @@ const CreateStoryPage = () => {
         content: formData.content,
         author: address,
         timestamp: Date.now(),
-        tags: formData.tags.split(",").map(tag => tag.trim()).filter(Boolean),
+        tags: formData.tags
+          .split(",")
+          .map(tag => tag.trim())
+          .filter(Boolean),
         image: imageCid,
         description: formData.description || formData.content.slice(0, 200) + "...",
       };
 
       // 上传到IPFS
       const ipfsHash = await uploadStoryMetadata(metadata);
-      
+
       // 确定是否需要质押
       const needsDeposit = storyCount && storyCount >= 100n;
       const depositAmount = needsDeposit && storyDeposit ? storyDeposit : 0n;
@@ -115,7 +113,6 @@ const CreateStoryPage = () => {
 
       notification.success(t("success.story_created"));
       router.push("/explore");
-      
     } catch (error) {
       console.error("创建故事失败:", error);
       notification.error(error instanceof Error ? error.message : t("error.unknown"));
@@ -148,9 +145,7 @@ const CreateStoryPage = () => {
           <InformationCircleIcon className="w-6 h-6" />
           <div>
             <div className="font-semibold">需要质押</div>
-            <div className="text-sm">
-              前100个故事免费创建，之后需要质押 {depositAmount} ETH（完成100章后返还）
-            </div>
+            <div className="text-sm">前100个故事免费创建，之后需要质押 {depositAmount} ETH（完成100章后返还）</div>
           </div>
         </div>
       )}
@@ -159,7 +154,7 @@ const CreateStoryPage = () => {
         <div className="card bg-base-100 shadow-lg">
           <div className="card-body">
             <h2 className="card-title mb-4">基本信息</h2>
-            
+
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">{t("story.title")} *</span>
@@ -234,18 +229,18 @@ const CreateStoryPage = () => {
               <PhotoIcon className="w-5 h-5" />
               故事封面
             </h2>
-            
+
             <ImageUploader
               onImageUpload={handleImageUpload}
               onUploadStart={() => setIsUploading(true)}
-              onUploadError={(error) => {
+              onUploadError={error => {
                 setIsUploading(false);
                 notification.error(error);
               }}
               className="w-full"
               previewImage={imageUrl}
             />
-            
+
             {isUploading && (
               <div className="flex items-center gap-2 text-sm text-base-content/70">
                 <span className="loading loading-spinner loading-sm"></span>
@@ -261,7 +256,7 @@ const CreateStoryPage = () => {
               <CurrencyDollarIcon className="w-5 h-5" />
               经济设置
             </h2>
-            
+
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">{t("story.fork_fee")}</span>
@@ -279,9 +274,7 @@ const CreateStoryPage = () => {
                 disabled={isCreating}
               />
               <label className="label">
-                <span className="label-text-alt">
-                  其他用户分叉你的故事时需要支付的费用
-                </span>
+                <span className="label-text-alt">其他用户分叉你的故事时需要支付的费用</span>
               </label>
             </div>
 
@@ -300,15 +293,10 @@ const CreateStoryPage = () => {
         </div>
 
         <div className="flex gap-4 pt-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="btn btn-outline flex-1"
-            disabled={isCreating}
-          >
+          <button type="button" onClick={() => router.back()} className="btn btn-outline flex-1" disabled={isCreating}>
             {t("button.cancel")}
           </button>
-          
+
           <button
             type="submit"
             className="btn btn-primary flex-1 gap-2"

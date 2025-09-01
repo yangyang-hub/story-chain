@@ -1,23 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAccount } from "wagmi";
 import { formatEther } from "viem";
-import { 
-  ShareIcon,
+import { useAccount } from "wagmi";
+import {
   ArrowLeftIcon,
-  InformationCircleIcon,
-  CurrencyDollarIcon,
   BookOpenIcon,
-  PhotoIcon
+  CurrencyDollarIcon,
+  InformationCircleIcon,
+  PhotoIcon,
+  ShareIcon,
 } from "@heroicons/react/24/outline";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { useStoryChain } from "~~/hooks/useStoryChain";
 import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
-import { getJSONFromIPFS, type ChapterMetadata } from "~~/services/ipfs/ipfsService";
 import { useLanguage } from "~~/contexts/LanguageContext";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useStoryChain } from "~~/hooks/useStoryChain";
+import { type ChapterMetadata, getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
 const ForkStoryPage = () => {
@@ -28,8 +28,8 @@ const ForkStoryPage = () => {
   const { forkStory, isLoading } = useStoryChain();
 
   // URL参数
-  const storyId = searchParams.get('storyId');
-  const parentId = searchParams.get('parentId');
+  const storyId = searchParams.get("storyId");
+  const parentId = searchParams.get("parentId");
 
   // 表单状态
   const [formData, setFormData] = useState({
@@ -69,7 +69,7 @@ const ForkStoryPage = () => {
     const loadParentData = async () => {
       try {
         setLoadingParent(true);
-        
+
         // 确定是分叉故事还是分叉章节
         let data, metadata;
         if (parentId && parentId !== "0" && originalChapter) {
@@ -125,7 +125,7 @@ const ForkStoryPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!address) {
       notification.error(t("wallet.connect"));
       return;
@@ -155,17 +155,10 @@ const ForkStoryPage = () => {
       const forkFeeValue = formatEther(parentData.forkFee || 0n);
 
       // 调用分叉函数
-      await forkStory(
-        BigInt(storyId),
-        BigInt(parentId || "0"),
-        metadata,
-        formData.forkFee,
-        forkFeeValue
-      );
+      await forkStory(BigInt(storyId), BigInt(parentId || "0"), metadata, formData.forkFee, forkFeeValue);
 
       // 跳转到故事详情页
       router.push(`/story/${storyId}`);
-      
     } catch (error) {
       console.error("分叉失败:", error);
       // 错误处理已在 useStoryChain 中处理
@@ -215,10 +208,7 @@ const ForkStoryPage = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* 返回按钮 */}
-      <button
-        onClick={() => router.back()}
-        className="btn btn-ghost gap-2 mb-6"
-      >
+      <button onClick={() => router.back()} className="btn btn-ghost gap-2 mb-6">
         <ArrowLeftIcon className="w-4 h-4" />
         返回
       </button>
@@ -251,17 +241,17 @@ const ForkStoryPage = () => {
         {/* 左侧：原始内容 */}
         <div className="space-y-6">
           <h2 className="text-xl font-bold">原始{isChapterFork ? "章节" : "故事"}</h2>
-          
+
           <div className="card bg-base-100 shadow-lg">
             <div className="card-body">
-              <IPFSContentViewer 
-                cid={parentData.ipfsHash} 
+              <IPFSContentViewer
+                cid={parentData.ipfsHash}
                 contentType="json"
                 className="border-none bg-transparent p-0"
               />
-              
+
               <div className="divider"></div>
-              
+
               <div className="flex justify-between items-center text-sm">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1">
@@ -273,10 +263,8 @@ const ForkStoryPage = () => {
                     <span>{parentData.forkCount?.toString() || 0} 分叉</span>
                   </div>
                 </div>
-                
-                <div className="text-xs text-base-content/60">
-                  分叉费: {forkFeeEth} ETH
-                </div>
+
+                <div className="text-xs text-base-content/60">分叉费: {forkFeeEth} ETH</div>
               </div>
             </div>
           </div>
@@ -285,12 +273,12 @@ const ForkStoryPage = () => {
         {/* 右侧：分叉表单 */}
         <div className="space-y-6">
           <h2 className="text-xl font-bold">创建分叉</h2>
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="card bg-base-100 shadow-lg">
               <div className="card-body">
                 <h3 className="card-title mb-4">基本信息</h3>
-                
+
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">分叉标题 *</span>
@@ -333,12 +321,8 @@ const ForkStoryPage = () => {
                   <PhotoIcon className="w-5 h-5" />
                   章节插图
                 </h3>
-                
-                <ImageUploader
-                  onImageUpload={handleImageUpload}
-                  className="w-full"
-                  previewImage={imageUrl}
-                />
+
+                <ImageUploader onImageUpload={handleImageUpload} className="w-full" previewImage={imageUrl} />
               </div>
             </div>
 
@@ -348,7 +332,7 @@ const ForkStoryPage = () => {
                   <CurrencyDollarIcon className="w-5 h-5" />
                   经济设置
                 </h3>
-                
+
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">我的分叉费用</span>
@@ -366,9 +350,7 @@ const ForkStoryPage = () => {
                     disabled={isLoading}
                   />
                   <label className="label">
-                    <span className="label-text-alt">
-                      其他用户分叉你的内容时需要支付的费用
-                    </span>
+                    <span className="label-text-alt">其他用户分叉你的内容时需要支付的费用</span>
                   </label>
                 </div>
 
@@ -396,12 +378,8 @@ const ForkStoryPage = () => {
               >
                 {t("button.cancel")}
               </button>
-              
-              <button
-                type="submit"
-                className="btn btn-primary flex-1 gap-2"
-                disabled={!address || isLoading}
-              >
+
+              <button type="submit" className="btn btn-primary flex-1 gap-2" disabled={!address || isLoading}>
                 {isLoading ? (
                   <>
                     <span className="loading loading-spinner loading-sm"></span>
@@ -411,9 +389,7 @@ const ForkStoryPage = () => {
                   <>
                     <ShareIcon className="w-4 h-4" />
                     创建分叉
-                    {parseFloat(forkFeeEth) > 0 && (
-                      <span className="text-xs">({forkFeeEth} ETH)</span>
-                    )}
+                    {parseFloat(forkFeeEth) > 0 && <span className="text-xs">({forkFeeEth} ETH)</span>}
                   </>
                 )}
               </button>

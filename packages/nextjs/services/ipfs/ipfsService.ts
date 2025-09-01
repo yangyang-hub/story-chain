@@ -1,74 +1,96 @@
-// Wrapper for Pinata IPFS service
-const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || "https://gateway.pinata.cloud";
-const PINATA_GATEWAY = process.env.PINATA_GATEWAY || "https://bronze-working-manatee-308.mypinata.cloud";
+// Wrapper for Pinata IPFS service using backend API
+const PINATA_GATEWAY = process.env.PINATA_GATEWAY || "bronze-working-manatee-308.mypinata.cloud";
+
+// Story metadata type definition
+export interface StoryMetadata {
+  title: string;
+  content: string;
+  author: string;
+  timestamp: number;
+  tags: string[];
+  image: string;
+  description: string;
+}
+
+// Chapter metadata type definition
+export interface ChapterMetadata {
+  title: string;
+  content: string;
+  author: string;
+  storyId: string;
+  chapterNumber: number;
+  timestamp: number;
+  parentChapterId?: string;
+  image?: string;
+}
+
+// Comment metadata type definition
+export interface CommentMetadata {
+  content: string;
+  author: string;
+  timestamp: number;
+  storyId: string;
+  chapterId?: string;
+  tokenId?: string;
+}
 
 // The gateway URL to view your IPFS files
-const IPFS_GATEWAYS = [`${PINATA_GATEWAY}/ipfs/`, "https://ipfs.io/ipfs/"];
+const IPFS_GATEWAYS = [`https://${PINATA_GATEWAY}/ipfs/`, "https://ipfs.io/ipfs/"];
 
 /**
- * Uploads a file to IPFS using Pinata.
+ * Uploads a file to IPFS using our backend API.
  * @param file The file to upload.
  * @returns The IPFS hash (CID) of the uploaded file.
  */
 export const uploadToIPFS = async (file: File): Promise<string> => {
-  if (!PINATA_JWT) {
-    throw new Error("NEXT_PUBLIC_PINATA_JWT is not configured in the environment variables.");
-  }
-
   const formData = new FormData();
   formData.append("file", file);
 
-  const metadata = JSON.stringify({
-    name: file.name,
-  });
-  formData.append("pinataMetadata", metadata);
-
-  const options = JSON.stringify({
-    cidVersion: 0,
-  });
-  formData.append("pinataOptions", options);
-
   try {
-    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    const response = await fetch("/api/ipfs/upload", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${PINATA_JWT}`,
-      },
       body: formData,
     });
-    const resData = await res.json();
-    console.log("File uploaded to Pinata:", resData);
-    return resData.IpfsHash;
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to upload file to IPFS");
+    }
+
+    const result = await response.json();
+    console.log("File uploaded to IPFS:", result);
+    return result.ipfsHash;
   } catch (error) {
-    console.error("Error uploading file to Pinata:", error);
+    console.error("Error uploading file to IPFS:", error);
     throw new Error("Failed to upload file to IPFS.");
   }
 };
 
 /**
- * Uploads JSON data to IPFS using Pinata.
+ * Uploads JSON data to IPFS using our backend API.
  * @param data The JSON data to upload.
  * @returns The IPFS hash (CID) of the uploaded data.
  */
 export const uploadJSONToIPFS = async (data: object): Promise<string> => {
-  if (!PINATA_JWT) {
-    throw new Error("NEXT_PUBLIC_PINATA_JWT is not configured in the environment variables.");
-  }
-
   try {
-    const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+    const response = await fetch("/api/ipfs/upload-json", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${PINATA_JWT}`,
       },
       body: JSON.stringify(data),
     });
-    const resData = await res.json();
-    console.log("JSON uploaded to Pinata:", resData);
-    return resData.IpfsHash;
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to upload JSON to IPFS");
+    }
+
+    const result = await response.json();
+    console.log("JSON uploaded to IPFS:", result);
+    return result.ipfsHash;
   } catch (error) {
-    console.error("Error uploading JSON to Pinata:", error);
+    console.error("Error uploading JSON to IPFS:", error);
     throw new Error("Failed to upload JSON to IPFS.");
   }
 };
@@ -129,4 +151,31 @@ export const getJSONFromIPFS = async (cid: string): Promise<any> => {
     console.error("Failed to parse JSON from IPFS:", error);
     throw new Error("Content from IPFS is not valid JSON.");
   }
+};
+
+/**
+ * Uploads story metadata to IPFS as JSON.
+ * @param metadata The story metadata to upload.
+ * @returns The IPFS hash (CID) of the uploaded metadata.
+ */
+export const uploadStoryMetadata = async (metadata: StoryMetadata): Promise<string> => {
+  return uploadJSONToIPFS(metadata);
+};
+
+/**
+ * Uploads chapter metadata to IPFS as JSON.
+ * @param metadata The chapter metadata to upload.
+ * @returns The IPFS hash (CID) of the uploaded metadata.
+ */
+export const uploadChapterMetadata = async (metadata: ChapterMetadata): Promise<string> => {
+  return uploadJSONToIPFS(metadata);
+};
+
+/**
+ * Uploads comment metadata to IPFS as JSON.
+ * @param metadata The comment metadata to upload.
+ * @returns The IPFS hash (CID) of the uploaded metadata.
+ */
+export const uploadCommentMetadata = async (metadata: CommentMetadata): Promise<string> => {
+  return uploadJSONToIPFS(metadata);
 };

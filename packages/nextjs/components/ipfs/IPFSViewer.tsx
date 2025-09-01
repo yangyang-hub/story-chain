@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { EyeIcon, LinkIcon, DocumentDuplicateIcon } from "@heroicons/react/24/outline";
-import { getFromIPFS, getJSONFromIPFS, getIPFSUrl } from "~~/services/ipfs/ipfsService";
+import React, { useEffect, useState } from "react";
+import { DocumentDuplicateIcon, EyeIcon, LinkIcon } from "@heroicons/react/24/outline";
 import { useLanguage } from "~~/contexts/LanguageContext";
+import { getFromIPFS, getIPFSUrl, getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
 
 interface IPFSContentViewerProps {
   cid: string;
@@ -108,18 +108,10 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
             <span className="truncate">IPFS: {cid}</span>
           </div>
           <div className="flex space-x-1">
-            <button
-              onClick={() => copyToClipboard(cid)}
-              className="btn btn-ghost btn-xs"
-              title="复制 CID"
-            >
+            <button onClick={() => copyToClipboard(cid)} className="btn btn-ghost btn-xs" title="复制 CID">
               <DocumentDuplicateIcon className="w-3 h-3" />
             </button>
-            <button
-              onClick={() => copyToClipboard(ipfsUrl)}
-              className="btn btn-ghost btn-xs"
-              title="复制链接"
-            >
+            <button onClick={() => copyToClipboard(ipfsUrl)} className="btn btn-ghost btn-xs" title="复制链接">
               <LinkIcon className="w-3 h-3" />
             </button>
           </div>
@@ -146,7 +138,7 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
                 <p className="text-lg font-semibold">{content.name}</p>
               </div>
             )}
-            
+
             {content.description && (
               <div>
                 <label className="text-sm font-medium text-base-content/70">描述:</label>
@@ -196,10 +188,7 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
                 <label className="text-sm font-medium text-base-content/70">标签:</label>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {content.tags.map((tag: string, index: number) => (
-                    <span
-                      key={index}
-                      className="badge badge-sm badge-outline"
-                    >
+                    <span key={index} className="badge badge-sm badge-outline">
                       {tag}
                     </span>
                   ))}
@@ -208,9 +197,7 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
             )}
 
             <details className="mt-4">
-              <summary className="text-sm font-medium text-base-content/70 cursor-pointer">
-                原始数据
-              </summary>
+              <summary className="text-sm font-medium text-base-content/70 cursor-pointer">原始数据</summary>
               <pre className="mt-2 p-3 bg-base-300 rounded-lg text-xs overflow-x-auto">
                 {JSON.stringify(content, null, 2)}
               </pre>
@@ -220,9 +207,7 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
 
         {type === "text" && (
           <div className="prose prose-sm max-w-none">
-            <pre className="whitespace-pre-wrap bg-base-200 p-4 rounded-lg text-sm">
-              {content}
-            </pre>
+            <pre className="whitespace-pre-wrap bg-base-200 p-4 rounded-lg text-sm">{content}</pre>
           </div>
         )}
       </div>
@@ -237,11 +222,7 @@ interface IPFSPreviewProps {
   maxLines?: number;
 }
 
-export const IPFSPreview: React.FC<IPFSPreviewProps> = ({
-  cid,
-  className = "",
-  maxLines = 3,
-}) => {
+export const IPFSPreview: React.FC<IPFSPreviewProps> = ({ cid, className = "", maxLines = 3 }) => {
   const [preview, setPreview] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
@@ -251,7 +232,7 @@ export const IPFSPreview: React.FC<IPFSPreviewProps> = ({
 
       try {
         setLoading(true);
-        
+
         try {
           // 尝试作为 JSON 获取
           const jsonData = await getJSONFromIPFS(cid);
@@ -289,19 +270,17 @@ export const IPFSPreview: React.FC<IPFSPreviewProps> = ({
     );
   }
 
-  const lines = preview.split('\n').slice(0, maxLines);
-  const truncated = preview.split('\n').length > maxLines;
+  const lines = preview.split("\n").slice(0, maxLines);
+  const truncated = preview.split("\n").length > maxLines;
 
   return (
     <div className={`text-sm text-base-content/70 ${className}`}>
       {lines.map((line, index) => (
         <div key={index} className="truncate">
-          {line || '\u00A0'}
+          {line || "\u00A0"}
         </div>
       ))}
-      {truncated && (
-        <div className="text-xs text-base-content/50 mt-1">...</div>
-      )}
+      {truncated && <div className="text-xs text-base-content/50 mt-1">...</div>}
     </div>
   );
 };

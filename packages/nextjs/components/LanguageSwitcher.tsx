@@ -1,7 +1,7 @@
 "use client";
 
+import { GlobeAltIcon } from "@heroicons/react/24/outline";
 import { useLanguage } from "~~/contexts/LanguageContext";
-import { LanguageIcon, GlobeAltIcon } from "@heroicons/react/24/outline";
 
 export const LanguageSwitcher = ({ className }: { className?: string }) => {
   const { language, setLanguage, t } = useLanguage();
@@ -18,9 +18,7 @@ export const LanguageSwitcher = ({ className }: { className?: string }) => {
         title={t("language.toggle")}
       >
         <GlobeAltIcon className="h-4 w-4" />
-        <span className="text-xs font-medium">
-          {language === "zh" ? t("language.zh") : t("language.en")}
-        </span>
+        <span className="text-xs font-medium">{language === "zh" ? t("language.zh") : t("language.en")}</span>
       </button>
     </div>
   );

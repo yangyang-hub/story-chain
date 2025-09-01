@@ -1,30 +1,28 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
-import { formatEther } from "viem";
-import { 
-  UserIcon,
-  BookOpenIcon,
-  DocumentTextIcon,
-  CurrencyDollarIcon,
-  HeartIcon,
-  ShareIcon,
-  PlusIcon,
+import {
   ArrowDownTrayIcon,
+  BookOpenIcon,
   ChartBarIcon,
-  ClockIcon
+  ClockIcon,
+  CurrencyDollarIcon,
+  DocumentTextIcon,
+  HeartIcon,
+  PlusIcon,
+  ShareIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
-import { useStoryChain } from "~~/hooks/useStoryChain";
-import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { LikeButton } from "~~/components/interactions/LikeButton";
 import { TipModal } from "~~/components/interactions/TipModal";
 import { IPFSPreview } from "~~/components/ipfs/IPFSViewer";
-import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
-import { useLanguage } from "~~/contexts/LanguageContext";
 import { Address } from "~~/components/scaffold-eth";
-import { notification } from "~~/utils/scaffold-eth";
+import { useLanguage } from "~~/contexts/LanguageContext";
+import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+import { useStoryChain } from "~~/hooks/useStoryChain";
+import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
 
 interface UserStory {
   id: string;
@@ -62,7 +60,7 @@ const ProfilePage = () => {
   const { address } = useAccount();
   const { t } = useLanguage();
   const { withdrawRewards, pendingRewards, isLoading } = useStoryChain();
-  
+
   const [activeTab, setActiveTab] = useState<"stories" | "chapters" | "stats">("stories");
   const [userStories, setUserStories] = useState<UserStory[]>([]);
   const [userChapters, setUserChapters] = useState<UserChapter[]>([]);
@@ -109,7 +107,7 @@ const ProfilePage = () => {
     const loadUserData = async () => {
       try {
         setLoading(true);
-        
+
         // 加载用户故事
         if (storyEvents && storyEvents.length > 0) {
           const stories: UserStory[] = [];
@@ -159,19 +157,20 @@ const ProfilePage = () => {
         }
 
         // 计算统计信息
-        const totalStories = stories.length;
-        const totalChapters = chapters.length;
+        const totalStories = userStories.length;
+        const totalChapters = userChapters.length;
         const stats: UserStats = {
           totalStories,
           totalChapters,
-          totalLikes: stories.reduce((sum, story) => sum + story.likes, 0) + 
-                     chapters.reduce((sum, chapter) => sum + chapter.likes, 0),
+          totalLikes:
+            userStories.reduce((sum: number, story: any) => sum + story.likes, 0) +
+            userChapters.reduce((sum: number, chapter: any) => sum + chapter.likes, 0),
           totalTips: "0", // 需要计算
-          totalForks: stories.reduce((sum, story) => sum + story.forkCount, 0) + 
-                     chapters.reduce((sum, chapter) => sum + chapter.forkCount, 0),
+          totalForks:
+            userStories.reduce((sum: number, story: any) => sum + story.forkCount, 0) +
+            userChapters.reduce((sum: number, chapter: any) => sum + chapter.forkCount, 0),
         };
         setUserStats(stats);
-
       } catch (error) {
         console.error("加载用户数据失败:", error);
       } finally {
@@ -232,15 +231,9 @@ const ProfilePage = () => {
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <div className="text-sm text-base-content/70">待提取奖励</div>
-                  <div className="text-xl font-bold text-success">
-                    {parseFloat(pendingRewards).toFixed(4)} ETH
-                  </div>
+                  <div className="text-xl font-bold text-success">{parseFloat(pendingRewards).toFixed(4)} ETH</div>
                 </div>
-                <button
-                  onClick={handleWithdrawRewards}
-                  className="btn btn-success gap-2"
-                  disabled={isLoading}
-                >
+                <button onClick={handleWithdrawRewards} className="btn btn-success gap-2" disabled={isLoading}>
                   {isLoading ? (
                     <span className="loading loading-spinner loading-sm"></span>
                   ) : (
@@ -263,7 +256,7 @@ const ProfilePage = () => {
           <div className="stat-title">故事</div>
           <div className="stat-value text-primary">{userStats.totalStories}</div>
         </div>
-        
+
         <div className="stat bg-base-100 rounded-lg shadow-md">
           <div className="stat-figure text-secondary">
             <DocumentTextIcon className="w-8 h-8" />
@@ -271,7 +264,7 @@ const ProfilePage = () => {
           <div className="stat-title">章节</div>
           <div className="stat-value text-secondary">{userStats.totalChapters}</div>
         </div>
-        
+
         <div className="stat bg-base-100 rounded-lg shadow-md">
           <div className="stat-figure text-accent">
             <HeartIcon className="w-8 h-8" />
@@ -279,7 +272,7 @@ const ProfilePage = () => {
           <div className="stat-title">获赞</div>
           <div className="stat-value text-accent">{userStats.totalLikes}</div>
         </div>
-        
+
         <div className="stat bg-base-100 rounded-lg shadow-md">
           <div className="stat-figure text-warning">
             <ShareIcon className="w-8 h-8" />
@@ -343,26 +336,26 @@ const ProfilePage = () => {
                     创建新故事
                   </Link>
                 </div>
-                
+
                 {userStories.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {userStories.map((story) => (
+                    {userStories.map(story => (
                       <div key={story.id} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
                         <div className="card-body">
                           <h3 className="card-title text-lg line-clamp-2">{story.title}</h3>
-                          
+
                           <div className="flex-1">
                             <IPFSPreview cid={story.ipfsHash} maxLines={3} />
                           </div>
-                          
+
                           <div className="flex items-center gap-2 text-sm text-base-content/70">
                             <ClockIcon className="w-4 h-4" />
                             <span>{new Date(story.createdTime).toLocaleDateString()}</span>
                           </div>
-                          
+
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-4 text-sm">
-                              <LikeButton 
+                              <LikeButton
                                 tokenId={BigInt(story.id)}
                                 isStory={true}
                                 currentLikes={story.likes}
@@ -377,12 +370,9 @@ const ProfilePage = () => {
                                 {parseFloat(story.totalTips).toFixed(3)}
                               </span>
                             </div>
-                            
+
                             <div className="card-actions">
-                              <Link 
-                                href={`/story/${story.id}`}
-                                className="btn btn-primary btn-sm"
-                              >
+                              <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm">
                                 查看
                               </Link>
                             </div>
@@ -409,31 +399,29 @@ const ProfilePage = () => {
             {activeTab === "chapters" && (
               <div className="space-y-6">
                 <h2 className="text-xl font-bold">我的章节 ({userChapters.length})</h2>
-                
+
                 {userChapters.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {userChapters.map((chapter) => (
+                    {userChapters.map(chapter => (
                       <div key={chapter.id} className="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
                         <div className="card-body">
                           <div className="flex justify-between items-start mb-2">
                             <h3 className="card-title text-lg line-clamp-2">{chapter.title}</h3>
-                            <div className="badge badge-primary badge-sm">
-                              第{chapter.chapterNumber}章
-                            </div>
+                            <div className="badge badge-primary badge-sm">第{chapter.chapterNumber}章</div>
                           </div>
-                          
+
                           <div className="flex-1">
                             <IPFSPreview cid={chapter.ipfsHash} maxLines={3} />
                           </div>
-                          
+
                           <div className="flex items-center gap-2 text-sm text-base-content/70">
                             <ClockIcon className="w-4 h-4" />
                             <span>{new Date(chapter.createdTime).toLocaleDateString()}</span>
                           </div>
-                          
+
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-4 text-sm">
-                              <LikeButton 
+                              <LikeButton
                                 tokenId={BigInt(chapter.id)}
                                 isStory={false}
                                 currentLikes={chapter.likes}
@@ -444,12 +432,9 @@ const ProfilePage = () => {
                                 {chapter.forkCount}
                               </span>
                             </div>
-                            
+
                             <div className="card-actions">
-                              <Link 
-                                href={`/story/${chapter.storyId}`}
-                                className="btn btn-primary btn-sm"
-                              >
+                              <Link href={`/story/${chapter.storyId}`} className="btn btn-primary btn-sm">
                                 查看故事
                               </Link>
                             </div>
@@ -476,7 +461,7 @@ const ProfilePage = () => {
             {activeTab === "stats" && (
               <div className="space-y-6">
                 <h2 className="text-xl font-bold">详细统计</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* 创作统计 */}
                   <div className="card bg-base-100 shadow-md">
@@ -494,10 +479,9 @@ const ProfilePage = () => {
                         <div className="flex justify-between">
                           <span>平均章节/故事</span>
                           <span className="font-bold">
-                            {userStats.totalStories > 0 
+                            {userStats.totalStories > 0
                               ? (userStats.totalChapters / userStats.totalStories).toFixed(1)
-                              : "0"
-                            }
+                              : "0"}
                           </span>
                         </div>
                       </div>

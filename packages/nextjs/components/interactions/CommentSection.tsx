@@ -1,19 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import { 
-  ChatBubbleLeftIcon, 
-  PaperAirplaneIcon,
-  ClockIcon,
-  UserIcon 
-} from "@heroicons/react/24/outline";
+import { ChatBubbleLeftIcon, ClockIcon, PaperAirplaneIcon, UserIcon } from "@heroicons/react/24/outline";
+import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
+import { Address } from "~~/components/scaffold-eth";
+import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
-import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
-import { uploadCommentMetadata, type CommentMetadata } from "~~/services/ipfs/ipfsService";
-import { useLanguage } from "~~/contexts/LanguageContext";
-import { Address } from "~~/components/scaffold-eth";
+import { type CommentMetadata } from "~~/services/ipfs/ipfsService";
 
 interface CommentSectionProps {
   tokenId: bigint;
@@ -29,15 +24,11 @@ interface CommentDisplay {
   content?: any;
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({
-  tokenId,
-  tokenType,
-  className = "",
-}) => {
+export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenType, className = "" }) => {
   const { address } = useAccount();
   const { t } = useLanguage();
   const { addComment, isLoading } = useStoryChain();
-  
+
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState<CommentDisplay[]>([]);
   const [loadingComments, setLoadingComments] = useState(true);
@@ -60,13 +51,13 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
       try {
         setLoadingComments(true);
-        
+
         // 从合约的评论映射获取详细信息
         const commentsWithContent: CommentDisplay[] = [];
-        
+
         for (let i = 0; i < commentEvents.length; i++) {
           const event = commentEvents[i];
-          
+
           // 这里需要调用合约的comments映射来获取详细信息
           // 由于合约结构限制，我们使用事件数据
           const comment: CommentDisplay = {
@@ -75,10 +66,10 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             ipfsHash: "", // 需要从合约映射获取
             timestamp: Date.now(), // 需要从区块时间戳获取
           };
-          
+
           commentsWithContent.push(comment);
         }
-        
+
         setComments(commentsWithContent);
       } catch (error) {
         console.error("加载评论失败:", error);
@@ -92,7 +83,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!address) {
       return;
     }
@@ -112,15 +103,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
       // 调用合约添加评论
       await addComment(tokenId, metadata);
-      
+
       // 清空输入框
       setCommentText("");
-      
+
       // 刷新评论列表
       setTimeout(() => {
         refetchComments();
       }, 2000);
-      
     } catch (error) {
       console.error("添加评论失败:", error);
     }
@@ -131,9 +121,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       {/* 标题 */}
       <div className="flex items-center gap-2">
         <ChatBubbleLeftIcon className="w-5 h-5" />
-        <h3 className="text-lg font-semibold">
-          评论 ({comments.length})
-        </h3>
+        <h3 className="text-lg font-semibold">评论 ({comments.length})</h3>
       </div>
 
       {/* 添加评论表单 */}
@@ -142,25 +130,19 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           <div className="form-control">
             <textarea
               value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
+              onChange={e => setCommentText(e.target.value)}
               className="textarea textarea-bordered w-full h-24 resize-none"
               placeholder={`对这个${tokenType === "story" ? "故事" : "章节"}说点什么...`}
               disabled={isLoading}
               maxLength={500}
             />
             <label className="label">
-              <span className="label-text-alt">
-                {commentText.length}/500
-              </span>
+              <span className="label-text-alt">{commentText.length}/500</span>
             </label>
           </div>
-          
+
           <div className="flex justify-end">
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm gap-2"
-              disabled={!commentText.trim() || isLoading}
-            >
+            <button type="submit" className="btn btn-primary btn-sm gap-2" disabled={!commentText.trim() || isLoading}>
               {isLoading ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
@@ -202,7 +184,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           </div>
         ) : comments.length > 0 ? (
           <div className="space-y-4">
-            {comments.map((comment) => (
+            {comments.map(comment => (
               <div key={comment.id} className="border-l-2 border-primary pl-4 py-2">
                 {/* 评论头部信息 */}
                 <div className="flex items-center gap-2 text-sm text-base-content/70 mb-2">
@@ -216,19 +198,17 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                     <span>{new Date(comment.timestamp).toLocaleString()}</span>
                   </div>
                 </div>
-                
+
                 {/* 评论内容 */}
                 <div className="prose prose-sm max-w-none">
                   {comment.ipfsHash ? (
-                    <IPFSContentViewer 
+                    <IPFSContentViewer
                       cid={comment.ipfsHash}
                       contentType="json"
                       className="bg-transparent border-none p-0"
                     />
                   ) : (
-                    <p className="text-base-content/90 whitespace-pre-wrap">
-                      {comment.content || "评论加载中..."}
-                    </p>
+                    <p className="text-base-content/90 whitespace-pre-wrap">{comment.content || "评论加载中..."}</p>
                   )}
                 </div>
               </div>
@@ -237,9 +217,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         ) : (
           <div className="text-center py-8">
             <ChatBubbleLeftIcon className="w-12 h-12 mx-auto text-base-content/30 mb-4" />
-            <p className="text-base-content/70">
-              还没有评论，来发表第一个评论吧！
-            </p>
+            <p className="text-base-content/70">还没有评论，来发表第一个评论吧！</p>
           </div>
         )}
       </div>

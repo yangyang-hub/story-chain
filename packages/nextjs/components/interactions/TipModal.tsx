@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import { useAccount } from "wagmi";
-import { CurrencyDollarIcon, XMarkIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
-import { useStoryChain } from "~~/hooks/useStoryChain";
-import { useLanguage } from "~~/contexts/LanguageContext";
+import { CurrencyDollarIcon, InformationCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
+import { useLanguage } from "~~/contexts/LanguageContext";
+import { useStoryChain } from "~~/hooks/useStoryChain";
 
 interface TipModalProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ export const TipModal: React.FC<TipModalProps> = ({
   const { address } = useAccount();
   const { t } = useLanguage();
   const { tip, isLoading } = useStoryChain();
-  
+
   const [tipAmount, setTipAmount] = useState("0.01");
   const [customAmount, setCustomAmount] = useState("");
   const [useCustom, setUseCustom] = useState(false);
@@ -52,12 +52,11 @@ export const TipModal: React.FC<TipModalProps> = ({
       await tip(storyId, chapterId, amount);
       onTipSuccess?.();
       onClose();
-      
+
       // 重置表单
       setTipAmount("0.01");
       setCustomAmount("");
       setUseCustom(false);
-      
     } catch (error) {
       // 错误处理已在 useStoryChain 中处理
       console.error("打赏失败:", error);
@@ -79,11 +78,8 @@ export const TipModal: React.FC<TipModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* 背景遮罩 */}
-      <div 
-        className="fixed inset-0 bg-black/50 transition-opacity"
-        onClick={onClose}
-      />
-      
+      <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
+
       {/* 模态框内容 */}
       <div className="relative bg-base-100 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
@@ -94,14 +90,9 @@ export const TipModal: React.FC<TipModalProps> = ({
                 <CurrencyDollarIcon className="w-6 h-6 text-warning" />
                 打赏{recipientType === "story" ? "故事" : "章节"}
               </h2>
-              <p className="text-sm text-base-content/70 mt-1">
-                支持优质内容创作
-              </p>
+              <p className="text-sm text-base-content/70 mt-1">支持优质内容创作</p>
             </div>
-            <button
-              onClick={onClose}
-              className="btn btn-ghost btn-sm btn-circle"
-            >
+            <button onClick={onClose} className="btn btn-ghost btn-sm btn-circle">
               <XMarkIcon className="w-4 h-4" />
             </button>
           </div>
@@ -112,7 +103,7 @@ export const TipModal: React.FC<TipModalProps> = ({
               {recipientType === "story" ? "故事" : "章节"}标题:
             </h3>
             <p className="font-semibold mb-3 line-clamp-2">{title}</p>
-            
+
             <div className="flex items-center gap-2 text-sm text-base-content/70">
               <span>作者:</span>
               <Address address={recipientAddress} size="sm" />
@@ -126,10 +117,10 @@ export const TipModal: React.FC<TipModalProps> = ({
                 <span className="label-text font-medium">选择打赏金额</span>
                 <span className="label-text-alt">ETH</span>
               </label>
-              
+
               {/* 预设金额 */}
               <div className="grid grid-cols-3 gap-2 mb-3">
-                {predefinedAmounts.map((amount) => (
+                {predefinedAmounts.map(amount => (
                   <button
                     key={amount}
                     type="button"
@@ -137,18 +128,14 @@ export const TipModal: React.FC<TipModalProps> = ({
                       setTipAmount(amount);
                       setUseCustom(false);
                     }}
-                    className={`btn btn-sm ${
-                      !useCustom && tipAmount === amount 
-                        ? "btn-primary" 
-                        : "btn-outline"
-                    }`}
+                    className={`btn btn-sm ${!useCustom && tipAmount === amount ? "btn-primary" : "btn-outline"}`}
                     disabled={isLoading}
                   >
                     {amount} ETH
                   </button>
                 ))}
               </div>
-              
+
               {/* 自定义金额 */}
               <div className="form-control">
                 <label className="label cursor-pointer">
@@ -157,7 +144,7 @@ export const TipModal: React.FC<TipModalProps> = ({
                     type="checkbox"
                     className="checkbox checkbox-sm"
                     checked={useCustom}
-                    onChange={(e) => setUseCustom(e.target.checked)}
+                    onChange={e => setUseCustom(e.target.checked)}
                     disabled={isLoading}
                   />
                 </label>
@@ -182,8 +169,11 @@ export const TipModal: React.FC<TipModalProps> = ({
                 <InformationCircleIcon className="w-5 h-5" />
                 <div className="text-sm">
                   <div className="font-medium">费用分配:</div>
-                  <div>• {recipientType === "story" ? "故事" : "章节"}作者: {(parseFloat(finalAmount) * 0.85).toFixed(4)} ETH</div>
-                  <div>• 故事作者: {(parseFloat(finalAmount) * 0.10).toFixed(4)} ETH</div>
+                  <div>
+                    • {recipientType === "story" ? "故事" : "章节"}作者: {(parseFloat(finalAmount) * 0.85).toFixed(4)}{" "}
+                    ETH
+                  </div>
+                  <div>• 故事作者: {(parseFloat(finalAmount) * 0.1).toFixed(4)} ETH</div>
                   <div>• 平台手续费: {(parseFloat(finalAmount) * 0.05).toFixed(4)} ETH</div>
                 </div>
               </div>
@@ -192,15 +182,10 @@ export const TipModal: React.FC<TipModalProps> = ({
 
           {/* 操作按钮 */}
           <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-outline flex-1"
-              disabled={isLoading}
-            >
+            <button type="button" onClick={onClose} className="btn btn-outline flex-1" disabled={isLoading}>
               取消
             </button>
-            
+
             <button
               type="button"
               onClick={handleTip}

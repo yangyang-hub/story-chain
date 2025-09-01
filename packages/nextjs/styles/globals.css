@@ -25,17 +25,17 @@
   --color-secondary-content: #1e293b;
   --color-accent: #06b6d4;
   --color-accent-content: #ffffff;
-  
+
   /* 中性色：深色文字 */
   --color-neutral: #1e293b;
   --color-neutral-content: #ffffff;
-  
+
   /* 背景色：白色主体，黑色字体 */
   --color-base-100: #ffffff;
   --color-base-200: #f8fafc;
   --color-base-300: #e2e8f0;
   --color-base-content: #0f172a; /* 黑色字体 */
-  
+
   /* 状态色 */
   --color-info: #3b82f6;
   --color-success: #10b981;
@@ -56,17 +56,17 @@
   --color-secondary-content: #f8fafc;
   --color-accent: #22d3ee;
   --color-accent-content: #0f172a;
-  
+
   /* 中性色：浅色文字 */
   --color-neutral: #f8fafc;
   --color-neutral-content: #1e293b;
-  
+
   /* 背景色：黑色主体，白色字体 */
   --color-base-100: #0f172a; /* 黑色背景 */
   --color-base-200: #1e293b; /* 深灰背景 */
   --color-base-300: #334155; /* 中灰背景 */
   --color-base-content: #ffffff; /* 白色字体 */
-  
+
   /* 状态色 */
   --color-info: #60a5fa;
   --color-success: #34d399;

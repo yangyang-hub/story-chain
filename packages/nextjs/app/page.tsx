@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
-import { PlusIcon, BookOpenIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { BookOpenIcon, PlusIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
 
@@ -22,10 +22,8 @@ const Home: NextPage = () => {
             </span>
             <span className="block text-xl mt-2 text-base-content/70">{t("welcome.subtitle")}</span>
           </h1>
-          
-          <p className="text-center text-lg mt-6 max-w-2xl mx-auto text-base-content/80">
-            {t("welcome.description")}
-          </p>
+
+          <p className="text-center text-lg mt-6 max-w-2xl mx-auto text-base-content/80">{t("welcome.description")}</p>
 
           {connectedAddress && (
             <div className="flex justify-center items-center space-x-2 flex-col mt-6">
@@ -35,17 +33,11 @@ const Home: NextPage = () => {
           )}
 
           <div className="flex justify-center mt-8 gap-4">
-            <Link 
-              href="/create" 
-              className="btn btn-primary btn-lg gap-2 hover:scale-105 transition-transform"
-            >
+            <Link href="/create" className="btn btn-primary btn-lg gap-2 hover:scale-105 transition-transform">
               <PlusIcon className="h-5 w-5" />
               {t("welcome.get_started")}
             </Link>
-            <Link 
-              href="/explore" 
-              className="btn btn-outline btn-lg gap-2 hover:scale-105 transition-transform"
-            >
+            <Link href="/explore" className="btn btn-outline btn-lg gap-2 hover:scale-105 transition-transform">
               <BookOpenIcon className="h-5 w-5" />
               {t("welcome.explore_stories")}
             </Link>
@@ -61,21 +53,17 @@ const Home: NextPage = () => {
                 {t("story.create")}，开启你的创作之旅。每个故事都是独特的NFT。
               </p>
             </div>
-            
+
             <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl hover:shadow-lg transition-shadow">
               <BookOpenIcon className="h-8 w-8 fill-secondary" />
               <h3 className="text-lg font-bold mt-4 mb-2">{t("nav.explore")}</h3>
-              <p className="text-sm text-base-content/70">
-                探索其他创作者的精彩故事，发现无限的创意可能性。
-              </p>
+              <p className="text-sm text-base-content/70">探索其他创作者的精彩故事，发现无限的创意可能性。</p>
             </div>
-            
+
             <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl hover:shadow-lg transition-shadow">
               <SparklesIcon className="h-8 w-8 fill-secondary" />
               <h3 className="text-lg font-bold mt-4 mb-2">{t("story.fork_story")}</h3>
-              <p className="text-sm text-base-content/70">
-                分叉喜欢的故事，创造属于你的故事分支和结局。
-              </p>
+              <p className="text-sm text-base-content/70">分叉喜欢的故事，创造属于你的故事分支和结局。</p>
             </div>
           </div>
         </div>

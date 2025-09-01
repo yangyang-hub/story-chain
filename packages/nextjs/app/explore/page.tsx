@@ -1,23 +1,23 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
-import { 
-  BookOpenIcon, 
-  ShareIcon,
-  CurrencyDollarIcon,
+import {
+  BookOpenIcon,
   ClockIcon,
-  UserIcon,
+  CurrencyDollarIcon,
+  FunnelIcon,
   MagnifyingGlassIcon,
-  FunnelIcon
+  ShareIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
+import { LikeButton } from "~~/components/interactions/LikeButton";
+import { Address } from "~~/components/scaffold-eth";
+import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
-import { useLanguage } from "~~/contexts/LanguageContext";
 import { notification } from "~~/utils/scaffold-eth";
-import { Address } from "~~/components/scaffold-eth";
-import { LikeButton } from "~~/components/interactions/LikeButton";
 
 interface StoryData {
   id: bigint;
@@ -36,13 +36,10 @@ interface StoryData {
   metadata?: any;
 }
 
-const StoryCard: React.FC<{ story: StoryData }> = ({ 
-  story
-}) => {
+const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
   const { t } = useLanguage();
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
 
   useEffect(() => {
     const loadMetadata = async () => {
@@ -60,7 +57,6 @@ const StoryCard: React.FC<{ story: StoryData }> = ({
       loadMetadata();
     }
   }, [story.ipfsHash]);
-
 
   if (loading) {
     return (
@@ -84,9 +80,7 @@ const StoryCard: React.FC<{ story: StoryData }> = ({
           <h2 className="card-title text-lg font-bold line-clamp-2">
             {metadata?.name || `故事 #${story.id.toString()}`}
           </h2>
-          <div className="badge badge-secondary badge-sm">
-            #{story.id.toString()}
-          </div>
+          <div className="badge badge-secondary badge-sm">#{story.id.toString()}</div>
         </div>
 
         {/* 作者和创建时间 */}
@@ -102,11 +96,7 @@ const StoryCard: React.FC<{ story: StoryData }> = ({
         </div>
 
         {/* 故事预览 */}
-        {metadata?.description && (
-          <p className="text-base-content/80 mb-4 line-clamp-3">
-            {metadata.description}
-          </p>
-        )}
+        {metadata?.description && <p className="text-base-content/80 mb-4 line-clamp-3">{metadata.description}</p>}
 
         {/* 标签 */}
         {metadata?.tags && metadata.tags.length > 0 && (
@@ -117,9 +107,7 @@ const StoryCard: React.FC<{ story: StoryData }> = ({
               </span>
             ))}
             {metadata.tags.length > 3 && (
-              <span className="badge badge-outline badge-sm">
-                +{metadata.tags.length - 3}
-              </span>
+              <span className="badge badge-outline badge-sm">+{metadata.tags.length - 3}</span>
             )}
           </div>
         )}
@@ -127,12 +115,7 @@ const StoryCard: React.FC<{ story: StoryData }> = ({
         {/* 统计信息 */}
         <div className="flex justify-between items-center text-sm">
           <div className="flex items-center gap-4">
-            <LikeButton
-              tokenId={story.id}
-              isStory={true}
-              currentLikes={Number(story.likes)}
-              showCount={true}
-            />
+            <LikeButton tokenId={story.id} isStory={true} currentLikes={Number(story.likes)} showCount={true} />
 
             <div className="flex items-center gap-1 text-base-content/70">
               <ShareIcon className="w-4 h-4" />
@@ -145,17 +128,12 @@ const StoryCard: React.FC<{ story: StoryData }> = ({
             </div>
           </div>
 
-          <div className="text-xs text-base-content/60">
-            分叉费: {(Number(story.forkFee) / 1e18).toFixed(3)} ETH
-          </div>
+          <div className="text-xs text-base-content/60">分叉费: {(Number(story.forkFee) / 1e18).toFixed(3)} ETH</div>
         </div>
 
         {/* 操作按钮 */}
         <div className="card-actions justify-end mt-4">
-          <Link 
-            href={`/story/${story.id}`}
-            className="btn btn-primary btn-sm gap-1"
-          >
+          <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm gap-1">
             <BookOpenIcon className="w-4 h-4" />
             {t("story.read", "阅读")}
           </Link>
@@ -191,15 +169,16 @@ const ExplorePage = () => {
       try {
         setLoading(true);
         const storyPromises = [];
-        
+
         // 假设我们有一些故事，从合约中获取
         for (let i = 1; i <= Math.min(Number(totalStories), 20); i++) {
-          storyPromises.push(
+          storyPromises
+            .push
             // 这里应该调用 getStory(i)，但由于合约结构，我们需要其他方式获取故事列表
             // 暂时创建模拟数据
-          );
+            ();
         }
-        
+
         // 暂时使用空数组，实际应用中需要从合约事件或其他方式获取故事列表
         setStories([]);
       } catch (error) {
@@ -213,11 +192,12 @@ const ExplorePage = () => {
     loadStories();
   }, [totalStories]);
 
-
   const filteredStories = stories.filter(story => {
     if (!searchTerm) return true;
-    return story.metadata?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           story.metadata?.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    return (
+      story.metadata?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      story.metadata?.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   const sortedStories = [...filteredStories].sort((a, b) => {
@@ -236,9 +216,7 @@ const ExplorePage = () => {
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{t("nav.explore")}</h1>
-        <p className="text-base-content/70">
-          探索社区创作的精彩故事，发现无限的创意可能性
-        </p>
+        <p className="text-base-content/70">探索社区创作的精彩故事，发现无限的创意可能性</p>
       </div>
 
       {/* 搜索和筛选 */}
@@ -252,7 +230,7 @@ const ExplorePage = () => {
                   placeholder="搜索故事标题或描述..."
                   className="input input-bordered w-full"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                 />
                 <button className="btn btn-square">
                   <MagnifyingGlassIcon className="w-5 h-5" />
@@ -265,10 +243,10 @@ const ExplorePage = () => {
                 <label className="input-group-text">
                   <FunnelIcon className="w-4 h-4" />
                 </label>
-                <select 
+                <select
                   className="select select-bordered"
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
+                  onChange={e => setSortBy(e.target.value as any)}
                 >
                   <option value="newest">最新创建</option>
                   <option value="popular">最受欢迎</option>
@@ -297,20 +275,15 @@ const ExplorePage = () => {
         </div>
       ) : sortedStories.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedStories.map((story) => (
-            <StoryCard
-              key={story.id.toString()}
-              story={story}
-            />
+          {sortedStories.map(story => (
+            <StoryCard key={story.id.toString()} story={story} />
           ))}
         </div>
       ) : (
         <div className="text-center py-16">
           <BookOpenIcon className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
           <h3 className="text-xl font-semibold mb-2">还没有故事</h3>
-          <p className="text-base-content/70 mb-6">
-            {searchTerm ? "没有找到匹配的故事" : "成为第一个创建故事的人！"}
-          </p>
+          <p className="text-base-content/70 mb-6">{searchTerm ? "没有找到匹配的故事" : "成为第一个创建故事的人！"}</p>
           <Link href="/create" className="btn btn-primary gap-2">
             <BookOpenIcon className="w-4 h-4" />
             {t("story.create")}
@@ -320,7 +293,7 @@ const ExplorePage = () => {
 
       {/* 创建按钮 */}
       <div className="fixed bottom-6 right-6">
-        <Link 
+        <Link
           href="/create"
           className="btn btn-primary btn-circle btn-lg shadow-lg hover:shadow-xl transition-shadow"
           title={t("story.create")}

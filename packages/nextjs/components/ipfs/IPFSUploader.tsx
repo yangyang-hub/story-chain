@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useRef, useState } from "react";
 import { CloudArrowUpIcon, PhotoIcon } from "@heroicons/react/24/outline";
-import { uploadToIPFS, uploadImageToIPFS, getIPFSUrl } from "~~/services/ipfs/ipfsService";
 import { useLanguage } from "~~/contexts/LanguageContext";
+import { getIPFSUrl, uploadImageToIPFS, uploadToIPFS } from "~~/services/ipfs/ipfsService";
 
 interface IPFSUploaderProps {
   onUploadComplete: (cid: string, url: string) => void;
@@ -48,7 +48,7 @@ export const IPFSUploader: React.FC<IPFSUploaderProps> = ({
       onUploadStart?.();
 
       let cid: string;
-      
+
       if (file.type.startsWith("image/")) {
         cid = await uploadImageToIPFS(file);
       } else {
@@ -147,15 +147,9 @@ export const IPFSUploader: React.FC<IPFSUploaderProps> = ({
               <CloudArrowUpIcon className="w-12 h-12 text-base-content/50" />
             </div>
             <div>
-              <p className="text-sm font-medium text-base-content">
-                点击上传或拖拽文件到此处
-              </p>
-              <p className="text-xs text-base-content/60 mt-1">
-                支持图片、文本、JSON 等文件类型
-              </p>
-              <p className="text-xs text-base-content/40 mt-1">
-                最大文件大小: {Math.round(maxSize / 1024 / 1024)}MB
-              </p>
+              <p className="text-sm font-medium text-base-content">点击上传或拖拽文件到此处</p>
+              <p className="text-xs text-base-content/60 mt-1">支持图片、文本、JSON 等文件类型</p>
+              <p className="text-xs text-base-content/40 mt-1">最大文件大小: {Math.round(maxSize / 1024 / 1024)}MB</p>
             </div>
           </div>
         )}
@@ -208,7 +202,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
       const cid = await uploadImageToIPFS(file);
       const url = getIPFSUrl(cid);
-      
+
       onImageUpload(cid, url);
 
       // 清空文件输入
@@ -267,17 +261,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           type="file"
           className="hidden"
           accept="image/*"
-          onChange={(e) => e.target.files && handleImageUpload(e.target.files)}
+          onChange={e => e.target.files && handleImageUpload(e.target.files)}
           disabled={isUploading}
         />
 
         {previewImage ? (
           <div className="relative group">
-            <img
-              src={previewImage}
-              alt="预览"
-              className="max-h-64 mx-auto rounded-lg"
-            />
+            <img src={previewImage} alt="预览" className="max-h-64 mx-auto rounded-lg" />
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
               <PhotoIcon className="w-8 h-8 text-white" />
             </div>

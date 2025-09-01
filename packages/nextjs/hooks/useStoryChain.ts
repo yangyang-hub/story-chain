@@ -1,24 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { formatEther, parseEther } from "viem";
 import { useAccount } from "wagmi";
-import { parseEther, formatEther } from "viem";
-import { 
-  useScaffoldReadContract, 
-  useScaffoldWriteContract,
-  useScaffoldEventHistory
-} from "~~/hooks/scaffold-eth";
-import { 
-  uploadStoryMetadata, 
+import { useLanguage } from "~~/contexts/LanguageContext";
+import { useScaffoldEventHistory, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import {
+  type ChapterMetadata,
+  type CommentMetadata,
+  type StoryMetadata,
+  getJSONFromIPFS,
   uploadChapterMetadata,
   uploadCommentMetadata,
-  getJSONFromIPFS,
-  type StoryMetadata,
-  type ChapterMetadata,
-  type CommentMetadata
+  uploadStoryMetadata,
 } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
-import { useLanguage } from "~~/contexts/LanguageContext";
 
 export interface Story {
   id: bigint;
@@ -137,10 +133,10 @@ export const useStoryChain = () => {
 
   // 2. 创建章节
   const createChapter = async (
-    storyId: bigint, 
-    parentId: bigint, 
-    metadata: ChapterMetadata, 
-    forkFeeEth: string = "0"
+    storyId: bigint,
+    parentId: bigint,
+    metadata: ChapterMetadata,
+    forkFeeEth: string = "0",
   ) => {
     if (!address) {
       notification.error(t("wallet.connect"));
@@ -176,7 +172,7 @@ export const useStoryChain = () => {
     parentId: bigint,
     metadata: ChapterMetadata,
     forkFeeEth: string = "0",
-    forkFeeValue: string
+    forkFeeValue: string,
   ) => {
     if (!address) {
       notification.error(t("wallet.connect"));
@@ -491,12 +487,12 @@ export const useStoryChain = () => {
     address,
     storyCount,
     pendingRewards: pendingRewards ? formatEther(pendingRewards) : "0",
-    
+
     // 合约常量
     freeStoryCount,
     storyDeposit: storyDeposit ? formatEther(storyDeposit) : "0",
     minChaptersForDeposit,
-    
+
     // 写入操作
     createStory,
     createChapter,
@@ -508,12 +504,12 @@ export const useStoryChain = () => {
     withdrawRewards,
     updateStoryForkFee,
     updateChapterForkFee,
-    
+
     // 读取操作
     getStory,
     getChapter,
     hasUserLiked,
-    
+
     // 事件查询
     getAllStoryEvents,
     getAllChapterEvents,

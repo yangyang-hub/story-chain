@@ -36,8 +36,8 @@ export const SwitchTheme = ({ className }: { className?: string }) => {
           onChange={handleToggle}
           checked={isDarkMode}
         />
-        <label 
-          htmlFor="theme-toggle" 
+        <label
+          htmlFor="theme-toggle"
           className={`swap swap-rotate cursor-pointer ${!isDarkMode ? "swap-active" : ""}`}
           title={t("theme.toggle")}
         >

@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import { useAccount } from "wagmi";
 import { HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
+import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
-import { useLanguage } from "~~/contexts/LanguageContext";
 
 interface LikeButtonProps {
   tokenId: bigint;
@@ -57,7 +57,6 @@ export const LikeButton: React.FC<LikeButtonProps> = ({
       setLikes(prev => prev + 1);
       refetchLikeStatus();
       onLikeSuccess?.();
-      
     } catch (error) {
       // 错误处理已在 useStoryChain 中处理
       console.error("点赞失败:", error);
@@ -74,21 +73,18 @@ export const LikeButton: React.FC<LikeButtonProps> = ({
       title={buttonTitle}
       className={`
         flex items-center gap-1 transition-all duration-200
-        ${hasLiked 
-          ? "text-error cursor-not-allowed" 
-          : !address 
-          ? "text-base-content/40 cursor-not-allowed"
-          : "text-base-content/70 hover:text-error hover:scale-110"
+        ${
+          hasLiked
+            ? "text-error cursor-not-allowed"
+            : !address
+              ? "text-base-content/40 cursor-not-allowed"
+              : "text-base-content/70 hover:text-error hover:scale-110"
         }
         ${isLoading ? "animate-pulse" : ""}
         ${className}
       `}
     >
-      {hasLiked ? (
-        <HeartIconSolid className="w-5 h-5" />
-      ) : (
-        <HeartIcon className="w-5 h-5" />
-      )}
+      {hasLiked ? <HeartIconSolid className="w-5 h-5" /> : <HeartIcon className="w-5 h-5" />}
       {showCount && <span className="text-sm font-medium">{likes}</span>}
     </button>
   );
