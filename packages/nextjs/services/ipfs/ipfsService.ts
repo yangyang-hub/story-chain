@@ -1,249 +1,132 @@
-import { create } from "kubo-rpc-client";
-import type { IPFSHTTPClient } from "kubo-rpc-client";
+// Wrapper for Pinata IPFS service
+const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || "https://gateway.pinata.cloud";
+const PINATA_GATEWAY = process.env.PINATA_GATEWAY || "https://bronze-working-manatee-308.mypinata.cloud";
 
-// IPFS 客户端配置
-const IPFS_GATEWAYS = [
-  "https://ipfs.io/ipfs/",
-  "https://dweb.link/ipfs/",
-  "https://gateway.pinata.cloud/ipfs/",
-  "https://cloudflare-ipfs.com/ipfs/",
-];
+// The gateway URL to view your IPFS files
+const IPFS_GATEWAYS = [`${PINATA_GATEWAY}/ipfs/`, "https://ipfs.io/ipfs/"];
 
-let ipfsClient: IPFSHTTPClient | null = null;
-
-// 初始化 IPFS 客户端
-const getIPFSClient = (): IPFSHTTPClient => {
-  if (!ipfsClient) {
-    try {
-      // 优先使用本地 IPFS 节点
-      ipfsClient = create({
-        host: "localhost",
-        port: 5001,
-        protocol: "http",
-      });
-    } catch (error) {
-      console.warn("本地 IPFS 节点不可用，使用公共网关");
-      // 使用公共 IPFS 网关
-      ipfsClient = create({
-        host: "ipfs.infura.io",
-        port: 5001,
-        protocol: "https",
-        headers: {
-          authorization: process.env.NEXT_PUBLIC_INFURA_PROJECT_SECRET ? 
-            `Basic ${Buffer.from(
-              `${process.env.NEXT_PUBLIC_INFURA_PROJECT_ID}:${process.env.NEXT_PUBLIC_INFURA_PROJECT_SECRET}`
-            ).toString("base64")}` : undefined,
-        },
-      });
-    }
+/**
+ * Uploads a file to IPFS using Pinata.
+ * @param file The file to upload.
+ * @returns The IPFS hash (CID) of the uploaded file.
+ */
+export const uploadToIPFS = async (file: File): Promise<string> => {
+  if (!PINATA_JWT) {
+    throw new Error("NEXT_PUBLIC_PINATA_JWT is not configured in the environment variables.");
   }
-  return ipfsClient;
-};
 
-// 上传文件到 IPFS
-export const uploadToIPFS = async (file: File | string | object): Promise<string> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const metadata = JSON.stringify({
+    name: file.name,
+  });
+  formData.append("pinataMetadata", metadata);
+
+  const options = JSON.stringify({
+    cidVersion: 0,
+  });
+  formData.append("pinataOptions", options);
+
   try {
-    const client = getIPFSClient();
-    
-    let content: any;
-    
-    if (typeof file === "string") {
-      // 文本内容
-      content = file;
-    } else if (file instanceof File) {
-      // 文件对象
-      content = file;
-    } else {
-      // JSON 对象
-      content = JSON.stringify(file);
-    }
-
-    const result = await client.add(content, {
-      progress: (prog: number) => console.log(`上传进度: ${prog} bytes`),
+    const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${PINATA_JWT}`,
+      },
+      body: formData,
     });
-
-    console.log("IPFS 上传成功:", result.cid.toString());
-    return result.cid.toString();
+    const resData = await res.json();
+    console.log("File uploaded to Pinata:", resData);
+    return resData.IpfsHash;
   } catch (error) {
-    console.error("IPFS 上传失败:", error);
-    throw new Error("IPFS 上传失败");
+    console.error("Error uploading file to Pinata:", error);
+    throw new Error("Failed to upload file to IPFS.");
   }
 };
 
-// 上传JSON数据到IPFS
+/**
+ * Uploads JSON data to IPFS using Pinata.
+ * @param data The JSON data to upload.
+ * @returns The IPFS hash (CID) of the uploaded data.
+ */
 export const uploadJSONToIPFS = async (data: object): Promise<string> => {
-  return uploadToIPFS(data);
+  if (!PINATA_JWT) {
+    throw new Error("NEXT_PUBLIC_PINATA_JWT is not configured in the environment variables.");
+  }
+
+  try {
+    const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${PINATA_JWT}`,
+      },
+      body: JSON.stringify(data),
+    });
+    const resData = await res.json();
+    console.log("JSON uploaded to Pinata:", resData);
+    return resData.IpfsHash;
+  } catch (error) {
+    console.error("Error uploading JSON to Pinata:", error);
+    throw new Error("Failed to upload JSON to IPFS.");
+  }
 };
 
-// 上传文本到IPFS
-export const uploadTextToIPFS = async (text: string): Promise<string> => {
-  return uploadToIPFS(text);
-};
-
-// 上传图片到IPFS
+/**
+ * Uploads an image file to IPFS. This is a convenience wrapper around uploadToIPFS.
+ * @param imageFile The image file to upload.
+ * @returns The IPFS hash (CID) of the uploaded image.
+ */
 export const uploadImageToIPFS = async (imageFile: File): Promise<string> => {
   if (!imageFile.type.startsWith("image/")) {
-    throw new Error("文件类型必须是图片");
+    throw new Error("File must be an image type.");
   }
   return uploadToIPFS(imageFile);
 };
 
-// 从 IPFS 获取内容
-export const getFromIPFS = async (cid: string): Promise<string> => {
-  try {
-    // 尝试多个网关
-    for (const gateway of IPFS_GATEWAYS) {
-      try {
-        const response = await fetch(`${gateway}${cid}`, {
-          timeout: 5000,
-        });
-        
-        if (response.ok) {
-          return await response.text();
-        }
-      } catch (error) {
-        console.warn(`网关 ${gateway} 失败:`, error);
-        continue;
-      }
-    }
-    
-    throw new Error("所有 IPFS 网关都不可用");
-  } catch (error) {
-    console.error("从 IPFS 获取内容失败:", error);
-    throw new Error("获取 IPFS 内容失败");
-  }
-};
-
-// 从 IPFS 获取 JSON 数据
-export const getJSONFromIPFS = async (cid: string): Promise<any> => {
-  const text = await getFromIPFS(cid);
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    console.error("解析 JSON 失败:", error);
-    throw new Error("IPFS 内容不是有效的 JSON");
-  }
-};
-
-// 获取 IPFS 文件的 URL
+/**
+ * Constructs a URL to view an IPFS file through a gateway.
+ * @param cid The IPFS content identifier.
+ * @param gateway An optional IPFS gateway to use.
+ * @returns The full URL to the IPFS content.
+ */
 export const getIPFSUrl = (cid: string, gateway?: string): string => {
   const selectedGateway = gateway || IPFS_GATEWAYS[0];
   return `${selectedGateway}${cid}`;
 };
 
-// 检查 IPFS 内容是否可访问
-export const checkIPFSAvailability = async (cid: string): Promise<boolean> => {
-  try {
-    await getFromIPFS(cid);
-    return true;
-  } catch {
-    return false;
+/**
+ * Fetches content from IPFS using a gateway.
+ * @param cid The IPFS content identifier.
+ * @returns The content of the file as a string.
+ */
+export const getFromIPFS = async (cid: string): Promise<string> => {
+  for (const gateway of IPFS_GATEWAYS) {
+    try {
+      const response = await fetch(`${gateway}${cid}`, { signal: AbortSignal.timeout(5000) });
+      if (response.ok) {
+        return await response.text();
+      }
+    } catch (error) {
+      console.warn(`Gateway ${gateway} failed:`, error);
+      continue;
+    }
   }
+  throw new Error("All IPFS gateways failed to fetch the content.");
 };
 
-// 创建故事元数据
-export interface StoryMetadata {
-  title: string;
-  content: string;
-  author: string;
-  timestamp: number;
-  tags?: string[];
-  image?: string;
-  description?: string;
-}
-
-export const uploadStoryMetadata = async (metadata: StoryMetadata): Promise<string> => {
-  const storyData = {
-    name: metadata.title,
-    description: metadata.description || metadata.content.slice(0, 200) + "...",
-    content: metadata.content,
-    author: metadata.author,
-    timestamp: metadata.timestamp,
-    tags: metadata.tags || [],
-    image: metadata.image,
-    attributes: [
-      {
-        trait_type: "Author",
-        value: metadata.author,
-      },
-      {
-        trait_type: "Created",
-        value: new Date(metadata.timestamp).toISOString(),
-      },
-      {
-        trait_type: "Content Length",
-        value: metadata.content.length,
-      },
-    ],
-  };
-
-  return uploadJSONToIPFS(storyData);
-};
-
-// 创建章节元数据
-export interface ChapterMetadata {
-  title: string;
-  content: string;
-  author: string;
-  timestamp: number;
-  storyId: string;
-  parentChapterId?: string;
-  chapterNumber: number;
-  tags?: string[];
-  image?: string;
-}
-
-export const uploadChapterMetadata = async (metadata: ChapterMetadata): Promise<string> => {
-  const chapterData = {
-    name: metadata.title,
-    description: `第 ${metadata.chapterNumber} 章: ${metadata.content.slice(0, 200)}...`,
-    content: metadata.content,
-    author: metadata.author,
-    timestamp: metadata.timestamp,
-    storyId: metadata.storyId,
-    parentChapterId: metadata.parentChapterId,
-    chapterNumber: metadata.chapterNumber,
-    tags: metadata.tags || [],
-    image: metadata.image,
-    attributes: [
-      {
-        trait_type: "Author",
-        value: metadata.author,
-      },
-      {
-        trait_type: "Chapter Number",
-        value: metadata.chapterNumber,
-      },
-      {
-        trait_type: "Story ID",
-        value: metadata.storyId,
-      },
-      {
-        trait_type: "Created",
-        value: new Date(metadata.timestamp).toISOString(),
-      },
-    ],
-  };
-
-  return uploadJSONToIPFS(chapterData);
-};
-
-// 创建评论元数据
-export interface CommentMetadata {
-  content: string;
-  author: string;
-  timestamp: number;
-  tokenId: string;
-}
-
-export const uploadCommentMetadata = async (metadata: CommentMetadata): Promise<string> => {
-  const commentData = {
-    content: metadata.content,
-    author: metadata.author,
-    timestamp: metadata.timestamp,
-    tokenId: metadata.tokenId,
-    type: "comment",
-  };
-
-  return uploadJSONToIPFS(commentData);
+/**
+ * Fetches and parses JSON content from IPFS.
+ * @param cid The IPFS content identifier.
+ * @returns The parsed JSON object.
+ */
+export const getJSONFromIPFS = async (cid: string): Promise<any> => {
+  const text = await getFromIPFS(cid);
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Failed to parse JSON from IPFS:", error);
+    throw new Error("Content from IPFS is not valid JSON.");
+  }
 };
