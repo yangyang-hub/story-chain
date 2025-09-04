@@ -16,13 +16,11 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     // 前100个故事无需质押
     uint256 public constant FREE_STORY_COUNT = 100;
     // 新故事需提交的章节数量，才能返还质押金额
-    uint256 public constant MIN_CHAPTERS_FOR_DEPOSIT = 100;
-    // fork费用分配 故事作者 10%
-    uint256 public constant FORK_FEE_AUTHOR = 10;
+    uint256 public constant MIN_CHAPTERS_FOR_DEPOSIT = 0;
+    // fork费用分配 故事作者 15%
+    uint256 public constant FORK_FEE_AUTHOR = 15;
     // fork费用分配 章节作者 85%
     uint256 public constant FORK_FEE_CHAPTER_AUTHOR = 85;
-    // 平台手续费率5%
-    uint256 public constant PLATFORM_FEE_RATE = 5;
 
     // NFT Token ID计数器
     uint256 private _tokenIdCounter;
@@ -72,7 +70,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
 
     // 状态变量
     // 创建故事默认质押金额（提交100章节后返回质押金额）
-    uint256 public DEFAULT_STORY_DEPOSIT = 10 ether;
+    uint256 public DEFAULT_STORY_DEPOSIT = 0 ether;
     uint256[] public stories; // 故事集合
     mapping(uint256 => Story) public storiesMap; // 故事映射
     mapping(uint256 => Chapter) public chaptersMap; // 章节映射
@@ -265,7 +263,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         _setTokenURI(newChapterId, ipfsHash);
 
         // 判断是否满足创建质押资金返还条件
-        if (story.author == msg.sender && story.isDeposited && parentChapter.chapterNumber >= 99) {
+        if (story.author == msg.sender && story.isDeposited && parentChapter.chapterNumber >= MIN_CHAPTERS_FOR_DEPOSIT) {
             // 返还质押资金
             story.isDeposited = false;
             payable(msg.sender).transfer(story.deposited);
@@ -430,18 +428,9 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     ) internal returns (uint256 storyFee, uint256 chapterFee) {
         if (totalAmount == 0) return (0, 0);
 
-        // 扣除平台手续费
-        uint256 platformFee = (totalAmount * PLATFORM_FEE_RATE) / 100;
-        uint256 rewardPool = totalAmount - platformFee;
-
-        // 向owner转账平台费用
-        if (platformFee > 0) {
-            pendingWithdrawals[owner()] += platformFee;
-        }
-
-        uint256 storyAuthorFee = (rewardPool * FORK_FEE_AUTHOR) / 100;
+        uint256 storyAuthorFee = (totalAmount * FORK_FEE_AUTHOR) / 100;
         pendingWithdrawals[storyAuthor] += storyAuthorFee;
-        uint256 chapterAuthorFee = rewardPool - storyAuthorFee;
+        uint256 chapterAuthorFee = totalAmount - storyAuthorFee;
         pendingWithdrawals[chapterAuthor] += chapterAuthorFee;
         emit StoryRewardsDistributed(storyId, storyAuthor, storyAuthorFee);
         emit ChapterRewardsDistributed(

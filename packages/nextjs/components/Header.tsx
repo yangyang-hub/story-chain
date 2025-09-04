@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
-import { Bars3Icon, BookOpenIcon, BugAntIcon, PlusIcon, UserIcon } from "@heroicons/react/24/outline";
+import { Bars3Icon, BookOpenIcon, BugAntIcon, PlusIcon, UserIcon, ChartBarIcon } from "@heroicons/react/24/outline";
 import { LanguageSwitcher } from "~~/components/LanguageSwitcher";
 import { SwitchTheme } from "~~/components/SwitchTheme";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
@@ -36,6 +36,12 @@ const menuLinksConfig: HeaderMenuLink[] = [
     labelKey: "nav.explore",
     href: "/explore",
     icon: <BookOpenIcon className="h-4 w-4" />,
+  },
+  {
+    label: "Chain Data",
+    labelKey: "nav.chaindata",
+    href: "/chain-data",
+    icon: <ChartBarIcon className="h-4 w-4" />,
   },
   {
     label: "Profile",

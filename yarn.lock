@@ -2938,6 +2938,7 @@ __metadata:
     "@types/react": ~19.0.7
     "@uniswap/sdk-core": ~5.8.2
     "@uniswap/v2-sdk": ~4.6.1
+    "@vercel/edge-config": ^1.4.0
     abitype: 1.0.6
     autoprefixer: ~10.4.20
     bgipfs: ~0.0.12
@@ -3841,6 +3842,27 @@ __metadata:
   version: 8.6.0
   resolution: "@vercel/build-utils@npm:8.6.0"
   checksum: ad95a29afdb22beda34bf4ef55a54ff377ceac3ee1997e345eecda632da6c890d7efea5cff4ee552fa06516be2cf39592d24a478d8ead79603f5a216628cb603
+  languageName: node
+  linkType: hard
+
+"@vercel/edge-config-fs@npm:0.1.0":
+  version: 0.1.0
+  resolution: "@vercel/edge-config-fs@npm:0.1.0"
+  checksum: 4eb27927a1c6a9d77cee4457424e208c3ff7f01e1cd0249b133804d12fd7099bd1aed6a9d9574b122d3bd59289b294a913b4df05bb69aca6091c8a020cbc2121
+  languageName: node
+  linkType: hard
+
+"@vercel/edge-config@npm:^1.4.0":
+  version: 1.4.0
+  resolution: "@vercel/edge-config@npm:1.4.0"
+  dependencies:
+    "@vercel/edge-config-fs": 0.1.0
+  peerDependencies:
+    "@opentelemetry/api": ^1.7.0
+  peerDependenciesMeta:
+    "@opentelemetry/api":
+      optional: true
+  checksum: 8620c61b38a299ad7406f1242f869ed6448c1d4026d71e7e574fcb655895ea9c402d82b603e139ebaacf20cb2b9415c98fbcf49ffc551230c8c471d6cbf60aaf
   languageName: node
   linkType: hard
 
