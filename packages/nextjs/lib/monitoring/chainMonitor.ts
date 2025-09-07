@@ -62,12 +62,16 @@ export class ChainMonitor {
   }
 
   private async syncHistoricalData(fromBlock?: bigint) {
-    console.log("同步历史数据...");
+    const startBlock = fromBlock;
+    const currentBlock = await this.client.getBlockNumber();
+    
+    if (startBlock) {
+      console.log(`增量同步: 从区块 ${startBlock} 到 ${currentBlock}`);
+    } else {
+      console.log(`全量同步: 从创世区块到 ${currentBlock}`);
+    }
 
     try {
-      const currentBlock = await this.client.getBlockNumber();
-      const startBlock = fromBlock;
-
       // 监听所有相关事件
       const events = await this.client.getLogs({
         address: this.contractAddress,
@@ -80,6 +84,8 @@ export class ChainMonitor {
         const processedEvents = await this.processEvents(events);
         await this.updateEdgeConfig(processedEvents, Number(currentBlock));
         console.log(`同步了 ${events.length} 个事件`);
+      } else {
+        console.log("没有新事件需要同步");
       }
     } catch (error) {
       console.error("同步历史数据失败:", error);
@@ -113,7 +119,9 @@ export class ChainMonitor {
         }
 
         try {
-          await this.syncHistoricalData();
+          const lastUpdate = await this.edgeStore.getLastUpdateInfo();
+          const startBlock = lastUpdate ? BigInt(lastUpdate.block + 1) : undefined;
+          await this.syncHistoricalData(startBlock);
         } catch (error) {
           console.error("定期同步失败:", error);
         }

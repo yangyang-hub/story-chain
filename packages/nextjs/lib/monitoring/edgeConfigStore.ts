@@ -60,7 +60,12 @@ export interface AnalyticsData {
 }
 
 export class EdgeConfigStore {
-  private configKey = "chain_data";
+  private keys = {
+    stories: "stories_data",
+    chapters: "chapters_data", 
+    analytics: "analytics_data",
+    metadata: "chain_metadata"
+  };
   private client: EdgeConfigClient;
 
   constructor() {
@@ -74,8 +79,24 @@ export class EdgeConfigStore {
 
   async getData(): Promise<ChainDataStore | null> {
     try {
-      const data = await this.client.get(this.configKey);
-      return data as ChainDataStore | null;
+      const [stories, chapters, analytics, metadata] = await Promise.all([
+        this.client.get(this.keys.stories),
+        this.client.get(this.keys.chapters), 
+        this.client.get(this.keys.analytics),
+        this.client.get(this.keys.metadata)
+      ]);
+
+      if (!stories || !chapters || !analytics || !metadata) {
+        return null;
+      }
+
+      return {
+        stories: stories as StoryData[],
+        chapters: chapters as ChapterData[],
+        analytics: analytics as AnalyticsData,
+        lastUpdateBlock: (metadata as any).lastUpdateBlock || 0,
+        lastUpdateTime: (metadata as any).lastUpdateTime || ""
+      };
     } catch (error) {
       console.error("Failed to get data from Edge Config:", error);
       return null;
@@ -84,20 +105,54 @@ export class EdgeConfigStore {
 
   async updateData(newData: Partial<ChainDataStore>): Promise<void> {
     try {
-      console.log("newData:", newData);
-
-      // Edge Config client doesn't have update methods - it's read-only
-      // We need to use the Vercel Management API for updates
-      
-      // First, try to check if client has any update methods (it won't)
-      console.log("Available client methods:", Object.getOwnPropertyNames(Object.getPrototypeOf(this.client)));
-      
-      // Since this.client is read-only, we must use the Management API
       const edgeConfigId = process.env.NEXT_PUBLIC_EDGE_CONFIG_ID;
       const vercelApiToken = process.env.NEXT_PUBLIC_VERCEL_API_TOKEN;
 
       if (!edgeConfigId || !vercelApiToken) {
         throw new Error("Edge Config credentials not configured. Need VERCEL_API_TOKEN for updates.");
+      }
+
+      const items: Array<{operation: string, key: string, value: any}> = [];
+
+      if (newData.stories !== undefined) {
+        items.push({
+          operation: "upsert",
+          key: this.keys.stories,
+          value: newData.stories
+        });
+      }
+
+      if (newData.chapters !== undefined) {
+        items.push({
+          operation: "upsert", 
+          key: this.keys.chapters,
+          value: newData.chapters
+        });
+      }
+
+      if (newData.analytics !== undefined) {
+        items.push({
+          operation: "upsert",
+          key: this.keys.analytics, 
+          value: newData.analytics
+        });
+      }
+
+      if (newData.lastUpdateBlock !== undefined || newData.lastUpdateTime !== undefined) {
+        const currentMetadata = await this.client.get(this.keys.metadata) as any || {};
+        const metadata = {
+          lastUpdateBlock: newData.lastUpdateBlock ?? currentMetadata.lastUpdateBlock,
+          lastUpdateTime: newData.lastUpdateTime ?? currentMetadata.lastUpdateTime
+        };
+        items.push({
+          operation: "upsert",
+          key: this.keys.metadata,
+          value: metadata
+        });
+      }
+
+      if (items.length === 0) {
+        return;
       }
 
       const response = await fetch(`https://api.vercel.com/v1/edge-config/${edgeConfigId}/items`, {
@@ -107,15 +162,7 @@ export class EdgeConfigStore {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(
-          {
-            items: [
-              {
-                operation: "upsert",
-                key: this.configKey,
-                value: newData,
-              },
-            ],
-          },
+          { items },
           replacer,
         ),
       });
@@ -131,27 +178,47 @@ export class EdgeConfigStore {
   }
 
   async getStoriesData(): Promise<StoryData[]> {
-    const data = await this.getData();
-    return data?.stories || [];
+    try {
+      const stories = await this.client.get(this.keys.stories);
+      return (stories as unknown as StoryData[]) || [];
+    } catch (error) {
+      console.error("Failed to get stories data:", error);
+      return [];
+    }
   }
 
   async getChaptersData(): Promise<ChapterData[]> {
-    const data = await this.getData();
-    return data?.chapters || [];
+    try {
+      const chapters = await this.client.get(this.keys.chapters);
+      return (chapters as unknown as ChapterData[]) || [];
+    } catch (error) {
+      console.error("Failed to get chapters data:", error);
+      return [];
+    }
   }
 
   async getAnalyticsData(): Promise<AnalyticsData | null> {
-    const data = await this.getData();
-    return data?.analytics || null;
+    try {
+      const analytics = await this.client.get(this.keys.analytics);
+      return (analytics as unknown as AnalyticsData) || null;
+    } catch (error) {
+      console.error("Failed to get analytics data:", error);
+      return null;
+    }
   }
 
   async getLastUpdateInfo(): Promise<{ block: number; time: string } | null> {
-    const data = await this.getData();
-    if (!data) return null;
+    try {
+      const metadata = (await this.client.get(this.keys.metadata)) as any;
+      if (!metadata) return null;
 
-    return {
-      block: data.lastUpdateBlock,
-      time: data.lastUpdateTime,
-    };
+      return {
+        block: metadata.lastUpdateBlock || 0,
+        time: metadata.lastUpdateTime || "",
+      };
+    } catch (error) {
+      console.error("Failed to get metadata:", error);
+      return null;
+    }
   }
 }
