@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { useAccount } from "wagmi";
 import { HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
-import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
 
@@ -26,7 +25,6 @@ export const LikeButton: React.FC<LikeButtonProps> = ({
   onLikeSuccess,
 }) => {
   const { address } = useAccount();
-  const { t } = useLanguage();
   const { likeStory, likeChapter, isLoading } = useStoryChain();
   const [likes, setLikes] = useState(currentLikes);
 
@@ -34,7 +32,7 @@ export const LikeButton: React.FC<LikeButtonProps> = ({
   const { data: hasLiked, refetch: refetchLikeStatus } = useScaffoldReadContract({
     contractName: "StoryChain",
     functionName: "hasLiked",
-    args: address ? [address, tokenId] : undefined,
+    args: address ? [address, tokenId] : [undefined as unknown as string, undefined as unknown as bigint],
   });
 
   const handleLike = async () => {

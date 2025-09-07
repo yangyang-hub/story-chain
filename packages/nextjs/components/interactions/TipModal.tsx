@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { useAccount } from "wagmi";
 import { CurrencyDollarIcon, InformationCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
-import { useLanguage } from "~~/contexts/LanguageContext";
 import { useStoryChain } from "~~/hooks/useStoryChain";
 
 interface TipModalProps {
@@ -29,7 +28,6 @@ export const TipModal: React.FC<TipModalProps> = ({
   onTipSuccess,
 }) => {
   const { address } = useAccount();
-  const { t } = useLanguage();
   const { tip, isLoading } = useStoryChain();
 
   const [tipAmount, setTipAmount] = useState("0.01");

@@ -93,7 +93,7 @@ export const useStoryChain = () => {
   const { data: pendingRewards } = useScaffoldReadContract({
     contractName: "StoryChain",
     functionName: "pendingWithdrawals",
-    args: address ? [address] : undefined,
+    args: address ? [address] : [undefined as unknown as string],
   });
 
   // 1. 创建故事
@@ -325,7 +325,7 @@ export const useStoryChain = () => {
 
       await writeContractAsync({
         functionName: "withdrawRewards",
-        args: [],
+        args: undefined,
       });
 
       notification.success(`成功提取 ${formatEther(pendingRewards)} ETH`);
@@ -427,7 +427,7 @@ export const useStoryChain = () => {
     const { data: hasLiked } = useScaffoldReadContract({
       contractName: "StoryChain",
       functionName: "hasLiked",
-      args: address ? [address, tokenId] : undefined,
+      args: address ? [address, tokenId] : [undefined as unknown as string, undefined as unknown as bigint],
     });
 
     return hasLiked || false;

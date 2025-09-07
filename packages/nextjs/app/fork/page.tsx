@@ -49,14 +49,14 @@ const ForkStoryPage = () => {
   const { data: originalStory } = useScaffoldReadContract({
     contractName: "StoryChain",
     functionName: "getStory",
-    args: storyId ? [BigInt(storyId)] : undefined,
+    args: storyId ? [BigInt(storyId)] : [undefined as unknown as bigint],
   });
 
   // 获取原章节信息（如果是分叉章节）
   const { data: originalChapter } = useScaffoldReadContract({
     contractName: "StoryChain",
     functionName: "getChapter",
-    args: parentId && parentId !== "0" ? [BigInt(parentId)] : undefined,
+    args: parentId && parentId !== "0" ? [BigInt(parentId)] : [undefined as unknown as bigint],
   });
 
   useEffect(() => {

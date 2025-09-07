@@ -16,10 +16,8 @@ import {
   UserIcon,
 } from "@heroicons/react/24/outline";
 import { LikeButton } from "~~/components/interactions/LikeButton";
-import { TipModal } from "~~/components/interactions/TipModal";
 import { IPFSPreview } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
-import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
 import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
@@ -58,7 +56,6 @@ interface UserStats {
 
 const ProfilePage = () => {
   const { address } = useAccount();
-  const { t } = useLanguage();
   const { withdrawRewards, pendingRewards, isLoading } = useStoryChain();
 
   const [activeTab, setActiveTab] = useState<"stories" | "chapters" | "stats">("stories");
@@ -72,8 +69,6 @@ const ProfilePage = () => {
     totalForks: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [showTipModal, setShowTipModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   // 获取用户创建的故事事件
   const { data: storyEvents } = useScaffoldEventHistory({
@@ -108,9 +103,12 @@ const ProfilePage = () => {
       try {
         setLoading(true);
 
+        // Initialize arrays
+        const stories: UserStory[] = [];
+        const chapters: UserChapter[] = [];
+
         // 加载用户故事
         if (storyEvents && storyEvents.length > 0) {
-          const stories: UserStory[] = [];
           for (const event of storyEvents) {
             try {
               const metadata = await getJSONFromIPFS(event.args.ipfsHash as string);
@@ -133,7 +131,6 @@ const ProfilePage = () => {
 
         // 加载用户章节
         if (chapterEvents && chapterEvents.length > 0) {
-          const chapters: UserChapter[] = [];
           for (const event of chapterEvents) {
             try {
               const metadata = await getJSONFromIPFS(event.args.ipfsHash as string);
@@ -157,18 +154,18 @@ const ProfilePage = () => {
         }
 
         // 计算统计信息
-        const totalStories = userStories.length;
-        const totalChapters = userChapters.length;
+        const totalStories = stories.length;
+        const totalChapters = chapters.length;
         const stats: UserStats = {
           totalStories,
           totalChapters,
           totalLikes:
-            userStories.reduce((sum: number, story: any) => sum + story.likes, 0) +
-            userChapters.reduce((sum: number, chapter: any) => sum + chapter.likes, 0),
+            stories.reduce((sum: number, story: any) => sum + story.likes, 0) +
+            chapters.reduce((sum: number, chapter: any) => sum + chapter.likes, 0),
           totalTips: "0", // 需要计算
           totalForks:
-            userStories.reduce((sum: number, story: any) => sum + story.forkCount, 0) +
-            userChapters.reduce((sum: number, chapter: any) => sum + chapter.forkCount, 0),
+            stories.reduce((sum: number, story: any) => sum + story.forkCount, 0) +
+            chapters.reduce((sum: number, chapter: any) => sum + chapter.forkCount, 0),
         };
         setUserStats(stats);
       } catch (error) {
@@ -184,14 +181,9 @@ const ProfilePage = () => {
   const handleWithdrawRewards = async () => {
     try {
       await withdrawRewards();
-    } catch (error) {
+    } catch {
       // 错误处理已在 useStoryChain 中处理
     }
-  };
-
-  const handleTipClick = (item: any, type: "story" | "chapter") => {
-    setSelectedItem({ ...item, type });
-    setShowTipModal(true);
   };
 
   if (!address) {
@@ -539,22 +531,6 @@ const ProfilePage = () => {
           </>
         )}
       </div>
-
-      {/* 打赏模态框 */}
-      {showTipModal && selectedItem && (
-        <TipModal
-          isOpen={showTipModal}
-          onClose={() => setShowTipModal(false)}
-          storyId={BigInt(selectedItem.type === "story" ? selectedItem.id : selectedItem.storyId)}
-          chapterId={BigInt(selectedItem.id)}
-          recipientAddress={address}
-          recipientType={selectedItem.type}
-          title={selectedItem.title}
-          onTipSuccess={() => {
-            // 可以在这里刷新数据
-          }}
-        />
-      )}
     </div>
   );
 };

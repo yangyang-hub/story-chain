@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { formatEther, formatDistanceToNow, formatAddress, getActivityInfo } from '../utils/formatting';
-import MonitorDashboard from './MonitorDashboard';
+import { useCallback, useEffect, useState } from "react";
+import { formatAddress, formatDistanceToNow, formatEther, getActivityInfo } from "../utils/formatting";
+import MonitorDashboard from "./MonitorDashboard";
 
 interface Story {
   id: string;
@@ -55,7 +55,7 @@ interface Analytics {
 }
 
 export default function ChainDataBrowser() {
-  const [activeTab, setActiveTab] = useState<'stories' | 'chapters' | 'analytics' | 'monitor'>('stories');
+  const [activeTab, setActiveTab] = useState<"stories" | "chapters" | "analytics" | "monitor">("stories");
   const [stories, setStories] = useState<Story[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
@@ -66,27 +66,27 @@ export default function ChainDataBrowser() {
   const [storyFilters, setStoryFilters] = useState({
     page: 1,
     limit: 10,
-    author: '',
-    sortBy: 'createdTime',
-    sortOrder: 'desc'
+    author: "",
+    sortBy: "createdTime",
+    sortOrder: "desc",
   });
 
   // 章节筛选参数
   const [chapterFilters, setChapterFilters] = useState({
     page: 1,
     limit: 10,
-    storyId: '',
-    author: '',
-    parentId: '',
-    sortBy: 'createdTime',
-    sortOrder: 'desc'
+    storyId: "",
+    author: "",
+    parentId: "",
+    sortBy: "createdTime",
+    sortOrder: "desc",
   });
 
   // 获取故事数据
-  const fetchStories = async () => {
+  const fetchStories = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const params = new URLSearchParams();
       Object.entries(storyFilters).forEach(([key, value]) => {
@@ -94,22 +94,22 @@ export default function ChainDataBrowser() {
       });
 
       const response = await fetch(`/api/data/stories?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch stories');
-      
+      if (!response.ok) throw new Error("Failed to fetch stories");
+
       const data = await response.json();
       setStories(data.stories);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [storyFilters]);
 
   // 获取章节数据
-  const fetchChapters = async () => {
+  const fetchChapters = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const params = new URLSearchParams();
       Object.entries(chapterFilters).forEach(([key, value]) => {
@@ -117,44 +117,44 @@ export default function ChainDataBrowser() {
       });
 
       const response = await fetch(`/api/data/chapters?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch chapters');
-      
+      if (!response.ok) throw new Error("Failed to fetch chapters");
+
       const data = await response.json();
       setChapters(data.chapters);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [chapterFilters]);
 
   // 获取分析数据
   const fetchAnalytics = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/data/analytics');
-      if (!response.ok) throw new Error('Failed to fetch analytics');
-      
+      const response = await fetch("/api/data/analytics");
+      if (!response.ok) throw new Error("Failed to fetch analytics");
+
       const data = await response.json();
       setAnalytics(data.analytics);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === 'stories') {
+    if (activeTab === "stories") {
       fetchStories();
-    } else if (activeTab === 'chapters') {
+    } else if (activeTab === "chapters") {
       fetchChapters();
-    } else if (activeTab === 'analytics') {
+    } else if (activeTab === "analytics") {
       fetchAnalytics();
     }
-  }, [activeTab, storyFilters, chapterFilters]);
+  }, [activeTab, storyFilters, chapterFilters, fetchStories, fetchChapters]);
 
   const renderStories = () => (
     <div className="space-y-4">
@@ -166,12 +166,12 @@ export default function ChainDataBrowser() {
             placeholder="作者地址"
             className="input input-bordered"
             value={storyFilters.author}
-            onChange={(e) => setStoryFilters({ ...storyFilters, author: e.target.value, page: 1 })}
+            onChange={e => setStoryFilters({ ...storyFilters, author: e.target.value, page: 1 })}
           />
           <select
             className="select select-bordered"
             value={storyFilters.sortBy}
-            onChange={(e) => setStoryFilters({ ...storyFilters, sortBy: e.target.value, page: 1 })}
+            onChange={e => setStoryFilters({ ...storyFilters, sortBy: e.target.value, page: 1 })}
           >
             <option value="createdTime">创建时间</option>
             <option value="likes">点赞数</option>
@@ -181,15 +181,12 @@ export default function ChainDataBrowser() {
           <select
             className="select select-bordered"
             value={storyFilters.sortOrder}
-            onChange={(e) => setStoryFilters({ ...storyFilters, sortOrder: e.target.value, page: 1 })}
+            onChange={e => setStoryFilters({ ...storyFilters, sortOrder: e.target.value, page: 1 })}
           >
             <option value="desc">降序</option>
             <option value="asc">升序</option>
           </select>
-          <button
-            className="btn btn-primary"
-            onClick={fetchStories}
-          >
+          <button className="btn btn-primary" onClick={fetchStories}>
             刷新
           </button>
         </div>
@@ -202,20 +199,28 @@ export default function ChainDataBrowser() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {stories.map((story) => (
+          {stories.map(story => (
             <div key={story.id} className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <h2 className="card-title">故事 #{story.id}</h2>
                 <div className="space-y-2 text-sm">
-                  <div><strong>作者:</strong> <span className="font-mono text-xs">{formatAddress(story.author)}</span></div>
-                  <div><strong>创建时间:</strong> {new Date(story.createdTime * 1000).toLocaleString()}</div>
-                  <div><strong>IPFS:</strong> <span className="font-mono text-xs">{story.ipfsHash.slice(0, 12)}...</span></div>
+                  <div>
+                    <strong>作者:</strong> <span className="font-mono text-xs">{formatAddress(story.author)}</span>
+                  </div>
+                  <div>
+                    <strong>创建时间:</strong> {new Date(story.createdTime * 1000).toLocaleString()}
+                  </div>
+                  <div>
+                    <strong>IPFS:</strong> <span className="font-mono text-xs">{story.ipfsHash.slice(0, 12)}...</span>
+                  </div>
                   <div className="flex justify-between">
                     <span>❤️ {story.likes}</span>
                     <span>🍴 {story.forkCount}</span>
                     <span>💰 {formatEther(story.totalTips)} ETH</span>
                   </div>
-                  <div><strong>区块:</strong> #{story.blockNumber}</div>
+                  <div>
+                    <strong>区块:</strong> #{story.blockNumber}
+                  </div>
                 </div>
               </div>
             </div>
@@ -235,36 +240,33 @@ export default function ChainDataBrowser() {
             placeholder="故事ID"
             className="input input-bordered"
             value={chapterFilters.storyId}
-            onChange={(e) => setChapterFilters({ ...chapterFilters, storyId: e.target.value, page: 1 })}
+            onChange={e => setChapterFilters({ ...chapterFilters, storyId: e.target.value, page: 1 })}
           />
           <input
             type="text"
             placeholder="父章节ID"
             className="input input-bordered"
             value={chapterFilters.parentId}
-            onChange={(e) => setChapterFilters({ ...chapterFilters, parentId: e.target.value, page: 1 })}
+            onChange={e => setChapterFilters({ ...chapterFilters, parentId: e.target.value, page: 1 })}
           />
           <input
             type="text"
             placeholder="作者地址"
             className="input input-bordered"
             value={chapterFilters.author}
-            onChange={(e) => setChapterFilters({ ...chapterFilters, author: e.target.value, page: 1 })}
+            onChange={e => setChapterFilters({ ...chapterFilters, author: e.target.value, page: 1 })}
           />
           <select
             className="select select-bordered"
             value={chapterFilters.sortBy}
-            onChange={(e) => setChapterFilters({ ...chapterFilters, sortBy: e.target.value, page: 1 })}
+            onChange={e => setChapterFilters({ ...chapterFilters, sortBy: e.target.value, page: 1 })}
           >
             <option value="createdTime">创建时间</option>
             <option value="likes">点赞数</option>
             <option value="totalTips">打赏总额</option>
             <option value="chapterNumber">章节号</option>
           </select>
-          <button
-            className="btn btn-primary"
-            onClick={fetchChapters}
-          >
+          <button className="btn btn-primary" onClick={fetchChapters}>
             刷新
           </button>
         </div>
@@ -277,22 +279,34 @@ export default function ChainDataBrowser() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {chapters.map((chapter) => (
+          {chapters.map(chapter => (
             <div key={chapter.id} className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <h2 className="card-title">章节 #{chapter.id}</h2>
                 <div className="space-y-2 text-sm">
-                  <div><strong>故事ID:</strong> {chapter.storyId}</div>
-                  <div><strong>章节号:</strong> {chapter.chapterNumber}</div>
-                  <div><strong>父章节:</strong> {chapter.parentId}</div>
-                  <div><strong>作者:</strong> <span className="font-mono text-xs">{formatAddress(chapter.author)}</span></div>
-                  <div><strong>创建时间:</strong> {new Date(chapter.createdTime * 1000).toLocaleString()}</div>
+                  <div>
+                    <strong>故事ID:</strong> {chapter.storyId}
+                  </div>
+                  <div>
+                    <strong>章节号:</strong> {chapter.chapterNumber}
+                  </div>
+                  <div>
+                    <strong>父章节:</strong> {chapter.parentId}
+                  </div>
+                  <div>
+                    <strong>作者:</strong> <span className="font-mono text-xs">{formatAddress(chapter.author)}</span>
+                  </div>
+                  <div>
+                    <strong>创建时间:</strong> {new Date(chapter.createdTime * 1000).toLocaleString()}
+                  </div>
                   <div className="flex justify-between">
                     <span>❤️ {chapter.likes}</span>
                     <span>🍴 {chapter.forkCount}</span>
                     <span>💰 {formatEther(chapter.totalTips)} ETH</span>
                   </div>
-                  <div><strong>区块:</strong> #{chapter.blockNumber}</div>
+                  <div>
+                    <strong>区块:</strong> #{chapter.blockNumber}
+                  </div>
                 </div>
               </div>
             </div>
@@ -304,10 +318,7 @@ export default function ChainDataBrowser() {
 
   const renderAnalytics = () => (
     <div className="space-y-6">
-      <button
-        className="btn btn-primary"
-        onClick={fetchAnalytics}
-      >
+      <button className="btn btn-primary" onClick={fetchAnalytics}>
         刷新数据
       </button>
 
@@ -322,17 +333,17 @@ export default function ChainDataBrowser() {
             <div className="stat-title text-primary-content/70">总故事数</div>
             <div className="stat-value">{analytics.totalStories}</div>
           </div>
-          
+
           <div className="stat bg-secondary text-secondary-content rounded-lg">
             <div className="stat-title text-secondary-content/70">总章节数</div>
             <div className="stat-value">{analytics.totalChapters}</div>
           </div>
-          
+
           <div className="stat bg-accent text-accent-content rounded-lg">
             <div className="stat-title text-accent-content/70">作者数量</div>
             <div className="stat-value">{analytics.totalAuthors}</div>
           </div>
-          
+
           <div className="stat bg-info text-info-content rounded-lg">
             <div className="stat-title text-info-content/70">总点赞数</div>
             <div className="stat-value">{analytics.totalLikes}</div>
@@ -357,7 +368,7 @@ export default function ChainDataBrowser() {
                   </tr>
                 </thead>
                 <tbody>
-                  {analytics.topAuthors.slice(0, 5).map((author, index) => (
+                  {analytics.topAuthors.slice(0, 5).map(author => (
                     <tr key={author.address}>
                       <td className="font-mono text-xs">{author.address.slice(0, 8)}...</td>
                       <td>{author.storyCount}</td>
@@ -381,18 +392,12 @@ export default function ChainDataBrowser() {
                     <div className="flex justify-between items-center w-full">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{activityInfo.emoji}</span>
-                        <span className={`badge ${activityInfo.color}`}>
-                          {activityInfo.name}
-                        </span>
+                        <span className={`badge ${activityInfo.color}`}>{activityInfo.name}</span>
                         {activity.data?.storyId && (
-                          <span className="text-sm text-base-content/70">
-                            故事 #{activity.data.storyId}
-                          </span>
+                          <span className="text-sm text-base-content/70">故事 #{activity.data.storyId}</span>
                         )}
                       </div>
-                      <span className="text-sm text-base-content/70">
-                        {formatDistanceToNow(activity.timestamp)}
-                      </span>
+                      <span className="text-sm text-base-content/70">{formatDistanceToNow(activity.timestamp)}</span>
                     </div>
                   </div>
                 );
@@ -410,38 +415,40 @@ export default function ChainDataBrowser() {
     <div className="container mx-auto p-4">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-4">链上数据浏览器</h1>
-        
+
         {/* 错误提示 */}
         {error && (
           <div className="alert alert-error mb-4">
             <span>{error}</span>
-            <button className="btn btn-sm" onClick={() => setError(null)}>✕</button>
+            <button className="btn btn-sm" onClick={() => setError(null)}>
+              ✕
+            </button>
           </div>
         )}
 
         {/* 标签页 */}
         <div className="tabs tabs-bordered mb-6">
-          <button 
-            className={`tab tab-bordered ${activeTab === 'stories' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('stories')}
+          <button
+            className={`tab tab-bordered ${activeTab === "stories" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("stories")}
           >
             故事数据
           </button>
-          <button 
-            className={`tab tab-bordered ${activeTab === 'chapters' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('chapters')}
+          <button
+            className={`tab tab-bordered ${activeTab === "chapters" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("chapters")}
           >
             章节数据
           </button>
-          <button 
-            className={`tab tab-bordered ${activeTab === 'analytics' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('analytics')}
+          <button
+            className={`tab tab-bordered ${activeTab === "analytics" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("analytics")}
           >
             数据分析
           </button>
-          <button 
-            className={`tab tab-bordered ${activeTab === 'monitor' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('monitor')}
+          <button
+            className={`tab tab-bordered ${activeTab === "monitor" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("monitor")}
           >
             监控控制
           </button>
@@ -449,10 +456,10 @@ export default function ChainDataBrowser() {
 
         {/* 内容区域 */}
         <div>
-          {activeTab === 'stories' && renderStories()}
-          {activeTab === 'chapters' && renderChapters()}
-          {activeTab === 'analytics' && renderAnalytics()}
-          {activeTab === 'monitor' && renderMonitor()}
+          {activeTab === "stories" && renderStories()}
+          {activeTab === "chapters" && renderChapters()}
+          {activeTab === "analytics" && renderAnalytics()}
+          {activeTab === "monitor" && renderMonitor()}
         </div>
       </div>
     </div>

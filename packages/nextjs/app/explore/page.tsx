@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useAccount } from "wagmi";
 import {
   BookOpenIcon,
   ClockIcon,
@@ -37,7 +36,6 @@ interface StoryData {
 }
 
 const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
-  const { t } = useLanguage();
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -135,7 +133,7 @@ const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
         <div className="card-actions justify-end mt-4">
           <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm gap-1">
             <BookOpenIcon className="w-4 h-4" />
-            {t("story.read", "阅读")}
+            阅读
           </Link>
         </div>
       </div>
@@ -145,7 +143,6 @@ const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
 
 const ExplorePage = () => {
   const { t } = useLanguage();
-  const { address } = useAccount();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "popular" | "tips">("newest");
   const [stories, setStories] = useState<StoryData[]>([]);

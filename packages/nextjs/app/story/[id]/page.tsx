@@ -17,7 +17,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { CommentSection } from "~~/components/interactions/CommentSection";
 import { LikeButton } from "~~/components/interactions/LikeButton";
-import { TipModal } from "~~/components/interactions/TipModal";
 import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
@@ -46,28 +45,12 @@ interface ChapterData {
 
 const ChapterCard: React.FC<{
   chapter: ChapterData;
-  onLike: (chapterId: bigint) => void;
   onFork: (chapterId: bigint) => void;
   onTip: (storyId: bigint, chapterId: bigint) => void;
-}> = ({ chapter, onLike, onFork, onTip }) => {
+}> = ({ chapter, onFork, onTip }) => {
   const { address } = useAccount();
-  const { t } = useLanguage();
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [hasLiked, setHasLiked] = useState(false);
-
-  // 检查用户是否已点赞
-  const { data: likedData } = useScaffoldReadContract({
-    contractName: "StoryChain",
-    functionName: "hasLiked",
-    args: address ? [address, chapter.id] : undefined,
-  });
-
-  useEffect(() => {
-    if (likedData !== undefined) {
-      setHasLiked(likedData);
-    }
-  }, [likedData]);
 
   useEffect(() => {
     const loadMetadata = async () => {
@@ -340,7 +323,8 @@ const StoryDetailPage = () => {
   const { t } = useLanguage();
 
   const [story, setStory] = useState<any>(null);
-  const [chapters, setChapters] = useState<ChapterData[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [chapters, setChapters] = useState<any[]>([]); // TODO: Load chapters from contract/API
   const [loading, setLoading] = useState(true);
   const [showAddChapter, setShowAddChapter] = useState(false);
 
@@ -355,7 +339,6 @@ const StoryDetailPage = () => {
 
   // 合约调用函数
   const { writeContractAsync: likeStory } = useScaffoldWriteContract("StoryChain");
-  const { writeContractAsync: likeChapter } = useScaffoldWriteContract("StoryChain");
   const { writeContractAsync: tip } = useScaffoldWriteContract("StoryChain");
 
   useEffect(() => {
@@ -379,24 +362,6 @@ const StoryDetailPage = () => {
       await likeStory({
         functionName: "likeStory",
         args: [storyId],
-      });
-      notification.success(t("success.liked"));
-    } catch (error) {
-      console.error("点赞失败:", error);
-      notification.error("点赞失败");
-    }
-  };
-
-  const handleLikeChapter = async (chapterId: bigint) => {
-    if (!address) {
-      notification.error(t("wallet.connect"));
-      return;
-    }
-
-    try {
-      await likeChapter({
-        functionName: "likeChapter",
-        args: [chapterId],
       });
       notification.success(t("success.liked"));
     } catch (error) {
@@ -504,7 +469,6 @@ const StoryDetailPage = () => {
               <ChapterCard
                 key={chapter.id.toString()}
                 chapter={chapter}
-                onLike={handleLikeChapter}
                 onFork={chapterId => {
                   // 处理分叉逻辑
                   console.log("Fork chapter:", chapterId);

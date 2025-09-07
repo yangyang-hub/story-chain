@@ -1,46 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { EdgeConfigStore } from '../../../../lib/monitoring/edgeConfigStore';
+import { NextRequest, NextResponse } from "next/server";
+import { EdgeConfigStore } from "../../../../lib/monitoring/edgeConfigStore";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const storyId = searchParams.get('storyId');
-    const author = searchParams.get('author');
-    const parentId = searchParams.get('parentId');
-    const sortBy = searchParams.get('sortBy') || 'createdTime';
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
+    const storyId = searchParams.get("storyId");
+    const author = searchParams.get("author");
+    const parentId = searchParams.get("parentId");
+    const sortBy = searchParams.get("sortBy") || "createdTime";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
 
     const edgeStore = new EdgeConfigStore();
     const chapters = await edgeStore.getChaptersData();
 
     if (!chapters) {
-      return NextResponse.json(
-        { error: 'No chapters data found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No chapters data found" }, { status: 404 });
     }
 
     // 过滤
     let filteredChapters = chapters;
-    
+
     if (storyId) {
-      filteredChapters = filteredChapters.filter(chapter => 
-        chapter.storyId === storyId
-      );
+      filteredChapters = filteredChapters.filter(chapter => chapter.storyId === storyId);
     }
 
     if (author) {
-      filteredChapters = filteredChapters.filter(chapter => 
-        chapter.author.toLowerCase() === author.toLowerCase()
-      );
+      filteredChapters = filteredChapters.filter(chapter => chapter.author.toLowerCase() === author.toLowerCase());
     }
 
     if (parentId) {
-      filteredChapters = filteredChapters.filter(chapter => 
-        chapter.parentId === parentId
-      );
+      filteredChapters = filteredChapters.filter(chapter => chapter.parentId === parentId);
     }
 
     // 排序
@@ -48,12 +39,12 @@ export async function GET(request: NextRequest) {
       let aValue: any = a[sortBy as keyof typeof a];
       let bValue: any = b[sortBy as keyof typeof b];
 
-      if (sortBy === 'totalTips') {
+      if (sortBy === "totalTips") {
         aValue = BigInt(aValue);
         bValue = BigInt(bValue);
       }
 
-      if (sortOrder === 'desc') {
+      if (sortOrder === "desc") {
         return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
       } else {
         return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
@@ -73,15 +64,14 @@ export async function GET(request: NextRequest) {
         total: filteredChapters.length,
         totalPages: Math.ceil(filteredChapters.length / limit),
         hasNext: endIndex < filteredChapters.length,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
-
   } catch (error) {
-    console.error('Error fetching chapters:', error);
+    console.error("Error fetching chapters:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 },
     );
   }
 }

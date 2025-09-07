@@ -1,31 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { EdgeConfigStore } from '../../../../lib/monitoring/edgeConfigStore';
+import { NextRequest, NextResponse } from "next/server";
+import { EdgeConfigStore } from "../../../../lib/monitoring/edgeConfigStore";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const author = searchParams.get('author');
-    const sortBy = searchParams.get('sortBy') || 'createdTime'; // createdTime, likes, totalTips
-    const sortOrder = searchParams.get('sortOrder') || 'desc';
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "20");
+    const author = searchParams.get("author");
+    const sortBy = searchParams.get("sortBy") || "createdTime"; // createdTime, likes, totalTips
+    const sortOrder = searchParams.get("sortOrder") || "desc";
 
     const edgeStore = new EdgeConfigStore();
     const stories = await edgeStore.getStoriesData();
 
     if (!stories) {
-      return NextResponse.json(
-        { error: 'No stories data found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No stories data found" }, { status: 404 });
     }
 
     // 过滤
     let filteredStories = stories;
     if (author) {
-      filteredStories = stories.filter(story => 
-        story.author.toLowerCase() === author.toLowerCase()
-      );
+      filteredStories = stories.filter(story => story.author.toLowerCase() === author.toLowerCase());
     }
 
     // 排序
@@ -34,12 +29,12 @@ export async function GET(request: NextRequest) {
       let bValue: any = b[sortBy as keyof typeof b];
 
       // 特殊处理数字字符串
-      if (sortBy === 'totalTips') {
+      if (sortBy === "totalTips") {
         aValue = BigInt(aValue);
         bValue = BigInt(bValue);
       }
 
-      if (sortOrder === 'desc') {
+      if (sortOrder === "desc") {
         return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
       } else {
         return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
@@ -59,15 +54,14 @@ export async function GET(request: NextRequest) {
         total: filteredStories.length,
         totalPages: Math.ceil(filteredStories.length / limit),
         hasNext: endIndex < filteredStories.length,
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     });
-
   } catch (error) {
-    console.error('Error fetching stories:', error);
+    console.error("Error fetching stories:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 },
     );
   }
 }

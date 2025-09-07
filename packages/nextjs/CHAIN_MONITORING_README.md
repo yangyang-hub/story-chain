@@ -5,22 +5,26 @@
 ## ✨ 功能特性
 
 ### 📊 实时监控
+
 - **事件监听**: 实时监听智能合约事件（故事创建、章节创建、点赞、打赏等）
 - **历史数据同步**: 支持同步历史区块数据
 - **自动更新**: 定期检查新数据，防止遗漏事件
 
 ### 💾 数据存储
+
 - **Edge Config 集成**: 使用 Vercel Edge Config 存储数据，全球边缘分发
 - **结构化数据**: 故事、章节、分析数据分类存储
 - **实时更新**: 监控到新事件立即更新存储
 
 ### 🔍 数据查询
+
 - **RESTful API**: 提供完整的数据查询 API
 - **分页支持**: 支持分页查询大量数据
 - **灵活筛选**: 支持按作者、时间、类型等多维度筛选
 - **排序功能**: 支持多种排序方式
 
 ### 📱 前端界面
+
 - **数据浏览器**: 直观的数据浏览界面
 - **监控面板**: 实时监控状态控制
 - **数据分析**: 统计分析和可视化展示
@@ -93,16 +97,19 @@ yarn dev
 ### 数据查询 API
 
 #### 获取故事列表
+
 ```http
 GET /api/data/stories?page=1&limit=10&author=0x123...&sortBy=createdTime&sortOrder=desc
 ```
 
 #### 获取章节列表
+
 ```http
 GET /api/data/chapters?storyId=1&page=1&limit=10&sortBy=createdTime
 ```
 
 #### 获取分析数据
+
 ```http
 GET /api/data/analytics
 ```
@@ -110,11 +117,13 @@ GET /api/data/analytics
 ### 监控控制 API
 
 #### 获取监控状态
+
 ```http
 GET /api/monitor/control
 ```
 
 #### 启动/停止监控
+
 ```http
 POST /api/monitor/control
 Content-Type: application/json
@@ -127,16 +136,19 @@ Content-Type: application/json
 ## 💼 使用场景
 
 ### 1. 数据分析师
+
 - 查看平台统计数据
 - 分析用户行为趋势
 - 导出数据进行深度分析
 
 ### 2. 开发者
+
 - 监控合约事件
 - 调试智能合约
 - API 集成开发
 
 ### 3. 项目管理者
+
 - 监控平台健康状况
 - 查看用户增长数据
 - 制定运营策略
@@ -144,21 +156,25 @@ Content-Type: application/json
 ## 🔧 核心组件
 
 ### ChainMonitor (链上监控器)
+
 - **职责**: 监听区块链事件，处理数据
 - **位置**: `lib/monitoring/chainMonitor.ts`
 - **特性**: 支持历史数据同步、实时监听、错误恢复
 
 ### EdgeConfigStore (数据存储)
+
 - **职责**: 管理 Edge Config 数据存储
-- **位置**: `lib/monitoring/edgeConfigStore.ts`  
+- **位置**: `lib/monitoring/edgeConfigStore.ts`
 - **特性**: 类型安全、异步操作、错误处理
 
 ### ChainDataBrowser (数据浏览器)
+
 - **职责**: 前端数据展示和交互
 - **位置**: `components/ChainDataBrowser.tsx`
 - **特性**: 分页查询、实时刷新、响应式设计
 
 ### MonitorDashboard (监控面板)
+
 - **职责**: 监控状态控制和展示
 - **位置**: `components/MonitorDashboard.tsx`
 - **特性**: 实时状态、一键控制、系统信息
@@ -166,6 +182,7 @@ Content-Type: application/json
 ## 📊 数据结构
 
 ### Story (故事数据)
+
 ```typescript
 interface StoryData {
   id: string;
@@ -182,6 +199,7 @@ interface StoryData {
 ```
 
 ### Chapter (章节数据)
+
 ```typescript
 interface ChapterData {
   id: string;
@@ -201,6 +219,7 @@ interface ChapterData {
 ```
 
 ### Analytics (分析数据)
+
 ```typescript
 interface AnalyticsData {
   totalStories: number;
@@ -227,11 +246,13 @@ interface AnalyticsData {
 ## 🛡️ 安全考虑
 
 ### API 安全
+
 - 内部 API 使用密钥保护
 - 输入验证和错误处理
 - 速率限制（建议在生产环境配置）
 
 ### 数据隐私
+
 - 不存储敏感信息
 - 链上公开数据为主
 - 遵循最小权限原则
@@ -241,11 +262,13 @@ interface AnalyticsData {
 ### 常见问题
 
 1. **监控无法启动**
+
    - 检查 RPC 连接是否正常
    - 验证合约地址和 ABI
    - 查看控制台错误日志
 
 2. **Edge Config 更新失败**
+
    - 确认 Token 权限正确
    - 检查网络连接
    - 验证数据格式
@@ -271,16 +294,19 @@ yarn dev
 ## 📈 性能优化
 
 ### 监控性能
+
 - 调整 `MONITORING_INTERVAL_MS` 减少轮询频率
 - 使用 `BLOCKS_RANGE` 限制历史数据范围
 - 实现事件去重和缓存
 
 ### 存储优化
+
 - Edge Config 有大小限制，注意数据量
 - 定期清理过期数据
 - 考虑数据压缩
 
 ### 前端优化
+
 - 使用分页减少数据传输
 - 实现虚拟滚动处理大列表
 - 添加加载状态和错误边界
@@ -290,11 +316,13 @@ yarn dev
 ### Vercel 部署
 
 1. **推送代码**
+
    ```bash
    git push origin main
    ```
 
 2. **配置环境变量**
+
    - 在 Vercel Dashboard 设置所有环境变量
    - 确保 Edge Config 正确配置
 
@@ -317,12 +345,14 @@ MONITORING_INTERVAL_MS=60000
 欢迎提交 Issue 和 Pull Request！
 
 ### 开发流程
+
 1. Fork 项目
 2. 创建功能分支
 3. 提交更改
 4. 发起 Pull Request
 
 ### 代码规范
+
 - 使用 TypeScript 类型注解
 - 遵循 ESLint 规则
 - 编写单元测试（建议）

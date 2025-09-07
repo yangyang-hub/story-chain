@@ -5,7 +5,6 @@ import { useAccount } from "wagmi";
 import { ChatBubbleLeftIcon, ClockIcon, PaperAirplaneIcon, UserIcon } from "@heroicons/react/24/outline";
 import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
-import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
 import { type CommentMetadata } from "~~/services/ipfs/ipfsService";
@@ -26,7 +25,6 @@ interface CommentDisplay {
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenType, className = "" }) => {
   const { address } = useAccount();
-  const { t } = useLanguage();
   const { addComment, isLoading } = useStoryChain();
 
   const [commentText, setCommentText] = useState("");
@@ -98,6 +96,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
         content: commentText.trim(),
         author: address,
         timestamp: Date.now(),
+        storyId: tokenType === "story" ? tokenId.toString() : "0", // TODO: handle chapter case properly
         tokenId: tokenId.toString(),
       };
 
