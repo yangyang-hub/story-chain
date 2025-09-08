@@ -62,7 +62,7 @@ export class ChainMonitor {
     console.log("停止监控链上数据");
   }
 
-  private async syncHistoricalData(fromBlock?: bigint) {
+  async syncHistoricalData(fromBlock?: bigint) {
     const startBlock = fromBlock;
     const currentBlock = await this.client.getBlockNumber();
 

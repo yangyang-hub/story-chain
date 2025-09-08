@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { formatEther, parseEther } from "viem";
 import { useAccount } from "wagmi";
@@ -21,32 +21,20 @@ import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useStoryPageData } from "~~/hooks/useChainData";
+import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { ChapterData } from "~~/lib/monitoring/types";
 import { type ChapterMetadata, getJSONFromIPFS, uploadChapterMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
-interface ChapterData {
-  id: bigint;
-  parentId: bigint;
-  storyId: bigint;
-  author: string;
-  ipfsHash: string;
-  createdTime: bigint;
-  likes: bigint;
-  forkCount: bigint;
-  forkFee: bigint;
-  totalForkFees: bigint;
-  totalTips: bigint;
-  totalTipCount: bigint;
-  chapterNumber: bigint;
-  childChapterIds: bigint[];
+interface ChapterWithMetadata extends ChapterData {
   metadata?: any;
 }
 
 const ChapterCard: React.FC<{
-  chapter: ChapterData;
-  onFork: (chapterId: bigint) => void;
-  onTip: (storyId: bigint, chapterId: bigint) => void;
+  chapter: ChapterWithMetadata;
+  onFork: (chapterId: string) => void;
+  onTip: (storyId: string, chapterId: string) => void;
 }> = ({ chapter, onFork, onTip }) => {
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<any>(null);
@@ -89,9 +77,9 @@ const ChapterCard: React.FC<{
         {/* 章节标题和编号 */}
         <div className="flex justify-between items-start mb-3">
           <h3 className="card-title text-lg">
-            第 {chapter.chapterNumber.toString()} 章{metadata?.name && `: ${metadata.name}`}
+            第 {chapter.chapterNumber} 章{metadata?.title && `: ${metadata.title}`}
           </h3>
-          <div className="badge badge-primary badge-sm">#{chapter.id.toString()}</div>
+          <div className="badge badge-primary badge-sm">#{chapter.id}</div>
         </div>
 
         {/* 作者和时间 */}
@@ -102,7 +90,7 @@ const ChapterCard: React.FC<{
           </div>
           <div className="flex items-center gap-1">
             <ClockIcon className="w-4 h-4" />
-            <span>{new Date(Number(chapter.createdTime) * 1000).toLocaleDateString()}</span>
+            <span>{new Date(chapter.createdTime * 1000).toLocaleDateString()}</span>
           </div>
         </div>
 
@@ -114,20 +102,18 @@ const ChapterCard: React.FC<{
         {/* 统计信息和交互 */}
         <div className="flex justify-between items-center text-sm mb-4">
           <div className="flex items-center gap-4">
-            <LikeButton tokenId={chapter.id} isStory={false} currentLikes={Number(chapter.likes)} showCount={true} />
+            <LikeButton tokenId={BigInt(chapter.id)} isStory={false} currentLikes={chapter.likes} showCount={true} />
 
             <div className="flex items-center gap-1 text-base-content/70">
               <ShareIcon className="w-4 h-4" />
-              <span>{chapter.forkCount.toString()}</span>
+              <span>{chapter.forkCount}</span>
             </div>
 
             <div className="flex items-center gap-1 text-base-content/70">
               <CurrencyDollarIcon className="w-4 h-4" />
-              <span>{formatEther(chapter.totalTips)} ETH</span>
+              <span>{formatEther(BigInt(chapter.totalTips))} ETH</span>
             </div>
           </div>
-
-          <div className="text-xs text-base-content/60">分叉费: {formatEther(chapter.forkFee)} ETH</div>
         </div>
 
         {/* 操作按钮 */}
@@ -153,8 +139,8 @@ const ChapterCard: React.FC<{
 const AddChapterModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  storyId: bigint;
-  parentId: bigint;
+  storyId: string;
+  parentId: string;
   onChapterAdded: () => void;
 }> = ({ isOpen, onClose, storyId, parentId, onChapterAdded }) => {
   const { address } = useAccount();
@@ -203,7 +189,7 @@ const AddChapterModal: React.FC<{
       // 调用合约创建章节
       await createChapter({
         functionName: "createChapter",
-        args: [storyId, parentId, ipfsHash, parseEther(formData.forkFee)],
+        args: [BigInt(storyId), BigInt(parentId), ipfsHash, parseEther(formData.forkFee)],
       });
 
       notification.success("章节创建成功！");
@@ -322,35 +308,22 @@ const StoryDetailPage = () => {
   const { address } = useAccount();
   const { t } = useLanguage();
 
-  const [story, setStory] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [chapters, setChapters] = useState<any[]>([]); // TODO: Load chapters from contract/API
-  const [loading, setLoading] = useState(true);
   const [showAddChapter, setShowAddChapter] = useState(false);
 
-  const storyId = BigInt(id as string);
+  const storyId = id as string;
 
-  // 获取故事信息
-  const { data: storyData } = useScaffoldReadContract({
-    contractName: "StoryChain",
-    functionName: "getStory",
-    args: [storyId],
-  });
+  // 使用 useStoryPageData hook 获取故事和章节数据
+  const { story, chapters, loading, error, refetch } = useStoryPageData(storyId);
+
+  // 为每个章节添加 metadata 字段以支持类型检查
+  const chaptersWithMetadata: ChapterWithMetadata[] = (chapters || []).map(chapter => ({
+    ...chapter,
+    metadata: undefined, // 将由 ChapterCard 组件异步加载
+  }));
 
   // 合约调用函数
   const { writeContractAsync: likeStory } = useScaffoldWriteContract("StoryChain");
   const { writeContractAsync: tip } = useScaffoldWriteContract("StoryChain");
-
-  useEffect(() => {
-    if (storyData && storyData.id !== 0n) {
-      setStory(storyData);
-      setLoading(false);
-
-      // 加载章节（这里需要根据实际合约实现）
-      // loadChapters();
-      // loadComments();
-    }
-  }, [storyData]);
 
   const handleLikeStory = async () => {
     if (!address) {
@@ -361,16 +334,17 @@ const StoryDetailPage = () => {
     try {
       await likeStory({
         functionName: "likeStory",
-        args: [storyId],
+        args: [BigInt(storyId)],
       });
       notification.success(t("success.liked"));
+      refetch(); // 重新获取数据
     } catch (error) {
       console.error("点赞失败:", error);
       notification.error("点赞失败");
     }
   };
 
-  const handleTip = async (storyId: bigint, chapterId: bigint) => {
+  const handleTip = async (storyId: string, chapterId: string) => {
     if (!address) {
       notification.error(t("wallet.connect"));
       return;
@@ -382,10 +356,11 @@ const StoryDetailPage = () => {
     try {
       await tip({
         functionName: "tip",
-        args: [storyId, chapterId],
+        args: [BigInt(storyId), BigInt(chapterId)],
         value: parseEther(tipAmount),
       });
       notification.success(t("success.tipped"));
+      refetch(); // 重新获取数据
     } catch (error) {
       console.error("打赏失败:", error);
       notification.error("打赏失败");
@@ -402,6 +377,18 @@ const StoryDetailPage = () => {
             <div className="h-6 bg-base-300 rounded"></div>
             <div className="h-6 bg-base-300 rounded"></div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl text-center">
+        <div className="alert alert-error">
+          <InformationCircleIcon className="w-6 h-6" />
+          <span>加载失败: {error}</span>
+          <button className="btn btn-sm" onClick={refetch}>重试</button>
         </div>
       </div>
     );
@@ -435,17 +422,17 @@ const StoryDetailPage = () => {
             <div className="flex items-center gap-4">
               <button onClick={handleLikeStory} className="btn btn-outline btn-sm gap-2" disabled={!address}>
                 <HeartIcon className="w-4 h-4" />
-                点赞 ({story.likes.toString()})
+                点赞 ({story.likes})
               </button>
 
               <div className="flex items-center gap-1 text-sm text-base-content/70">
                 <ShareIcon className="w-4 h-4" />
-                <span>{story.forkCount.toString()} 分叉</span>
+                <span>{story.forkCount} 分叉</span>
               </div>
 
               <div className="flex items-center gap-1 text-sm text-base-content/70">
                 <CurrencyDollarIcon className="w-4 h-4" />
-                <span>{formatEther(story.totalTips)} ETH 打赏</span>
+                <span>{formatEther(BigInt(story.totalTips))} ETH 打赏</span>
               </div>
             </div>
 
@@ -463,11 +450,11 @@ const StoryDetailPage = () => {
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">章节列表</h2>
 
-        {chapters.length > 0 ? (
+        {chaptersWithMetadata.length > 0 ? (
           <div className="space-y-4">
-            {chapters.map(chapter => (
+            {chaptersWithMetadata.map(chapter => (
               <ChapterCard
-                key={chapter.id.toString()}
+                key={chapter.id}
                 chapter={chapter}
                 onFork={chapterId => {
                   // 处理分叉逻辑
@@ -492,17 +479,18 @@ const StoryDetailPage = () => {
       </div>
 
       {/* 评论区 */}
-      <CommentSection tokenId={storyId} tokenType="story" className="card bg-base-100 shadow-lg mt-8 card-body" />
+      <CommentSection tokenId={BigInt(storyId)} tokenType="story" className="card bg-base-100 shadow-lg mt-8 card-body" />
 
       {/* 添加章节模态框 */}
       <AddChapterModal
         isOpen={showAddChapter}
         onClose={() => setShowAddChapter(false)}
         storyId={storyId}
-        parentId={story.firstChapterId || 0n}
+        parentId="0"
         onChapterAdded={() => {
           // 重新加载章节列表
-          console.log("Chapter added, reload chapters");
+          refetch();
+          console.log("Chapter added, reloaded data");
         }}
       />
     </div>

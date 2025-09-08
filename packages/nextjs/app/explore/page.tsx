@@ -14,28 +14,16 @@ import {
 import { LikeButton } from "~~/components/interactions/LikeButton";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useStories } from "~~/hooks/useChainData";
+import { StoryData } from "~~/lib/monitoring/types";
 import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
-interface StoryData {
-  id: bigint;
-  author: string;
-  ipfsHash: string;
-  createdTime: bigint;
-  likes: bigint;
-  forkCount: bigint;
-  forkFee: bigint;
-  isDeposited: boolean;
-  deposited: bigint;
-  totalTips: bigint;
-  totalTipCount: bigint;
-  totalForkFees: bigint;
-  firstChapterId: bigint;
+interface StoryWithMetadata extends StoryData {
   metadata?: any;
 }
 
-const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
+const StoryCard: React.FC<{ story: StoryWithMetadata }> = ({ story }) => {
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,9 +64,9 @@ const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
         {/* 标题和作者 */}
         <div className="flex justify-between items-start mb-3">
           <h2 className="card-title text-lg font-bold line-clamp-2">
-            {metadata?.name || `故事 #${story.id.toString()}`}
+            {metadata?.title || `故事 #${story.id}`}
           </h2>
-          <div className="badge badge-secondary badge-sm">#{story.id.toString()}</div>
+          <div className="badge badge-secondary badge-sm">#{story.id}</div>
         </div>
 
         {/* 作者和创建时间 */}
@@ -89,7 +77,7 @@ const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
           </div>
           <div className="flex items-center gap-1">
             <ClockIcon className="w-4 h-4" />
-            <span>{new Date(Number(story.createdTime) * 1000).toLocaleDateString()}</span>
+            <span>{new Date(story.createdTime * 1000).toLocaleDateString()}</span>
           </div>
         </div>
 
@@ -113,11 +101,11 @@ const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
         {/* 统计信息 */}
         <div className="flex justify-between items-center text-sm">
           <div className="flex items-center gap-4">
-            <LikeButton tokenId={story.id} isStory={true} currentLikes={Number(story.likes)} showCount={true} />
+            <LikeButton tokenId={BigInt(story.id)} isStory={true} currentLikes={story.likes} showCount={true} />
 
             <div className="flex items-center gap-1 text-base-content/70">
               <ShareIcon className="w-4 h-4" />
-              <span>{story.forkCount.toString()}</span>
+              <span>{story.forkCount}</span>
             </div>
 
             <div className="flex items-center gap-1 text-base-content/70">
@@ -125,8 +113,6 @@ const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
               <span>{(Number(story.totalTips) / 1e18).toFixed(3)} ETH</span>
             </div>
           </div>
-
-          <div className="text-xs text-base-content/60">分叉费: {(Number(story.forkFee) / 1e18).toFixed(3)} ETH</div>
         </div>
 
         {/* 操作按钮 */}
@@ -144,67 +130,58 @@ const StoryCard: React.FC<{ story: StoryData }> = ({ story }) => {
 const ExplorePage = () => {
   const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"newest" | "popular" | "tips">("newest");
-  const [stories, setStories] = useState<StoryData[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // 获取故事总数
-  const { data: totalStories } = useScaffoldReadContract({
-    contractName: "StoryChain",
-    functionName: "stories",
-    args: [BigInt(0)],
+  const [sortBy, setSortBy] = useState<"createdTime" | "likes" | "totalTips">("createdTime");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  
+  // 使用 useStories hook 获取数据
+  const { data: storiesResponse, loading, error, refetch } = useStories({
+    sortBy,
+    sortOrder,
+    limit: 50, // 获取更多数据以支持前端筛选
   });
 
-  // 点赞故事
-  // const { writeContractAsync: likeStory } = useScaffoldWriteContract("StoryChain");
-
-  // 获取所有故事
-  useEffect(() => {
-    const loadStories = async () => {
-      if (!totalStories) return;
-
-      try {
-        setLoading(true);
-        const storyPromises = [];
-
-        // 假设我们有一些故事，从合约中获取
-        for (let i = 1; i <= Math.min(Number(totalStories), 20); i++) {
-          storyPromises
-            .push
-            // 这里应该调用 getStory(i)，但由于合约结构，我们需要其他方式获取故事列表
-            // 暂时创建模拟数据
-            ();
-        }
-
-        // 暂时使用空数组，实际应用中需要从合约事件或其他方式获取故事列表
-        setStories([]);
-      } catch (error) {
-        console.error("加载故事失败:", error);
-        notification.error("加载故事失败");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStories();
-  }, [totalStories]);
-
-  const filteredStories = stories.filter(story => {
+  const stories = storiesResponse?.data || [];
+  
+  // 为每个故事添加 metadata 字段以支持类型检查
+  const storiesWithMetadata: StoryWithMetadata[] = stories.map(story => ({
+    ...story,
+    metadata: undefined, // 将由 StoryCard 组件异步加载
+  }));
+  
+  // 客户端筛选（基于搜索词）
+  const filteredStories = storiesWithMetadata.filter(story => {
     if (!searchTerm) return true;
-    return (
-      story.metadata?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      story.metadata?.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    
+    // 搜索标题和描述（需要从 metadata 获取）
+    const metadata = story.metadata;
+    const titleMatch = metadata?.title?.toLowerCase().includes(searchTerm.toLowerCase());
+    const descMatch = metadata?.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return titleMatch || descMatch;
   });
 
+  // 本地排序（如果需要的话）
   const sortedStories = [...filteredStories].sort((a, b) => {
+    let aValue: any, bValue: any;
+    
     switch (sortBy) {
-      case "popular":
-        return Number(b.likes) - Number(a.likes);
-      case "tips":
-        return Number(b.totalTips) - Number(a.totalTips);
-      default: // newest
-        return Number(b.createdTime) - Number(a.createdTime);
+      case "likes":
+        aValue = a.likes;
+        bValue = b.likes;
+        break;
+      case "totalTips":
+        aValue = Number(a.totalTips);
+        bValue = Number(b.totalTips);
+        break;
+      default: // createdTime
+        aValue = a.createdTime;
+        bValue = b.createdTime;
+    }
+    
+    if (sortOrder === "desc") {
+      return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+    } else {
+      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
     }
   });
 
@@ -245,9 +222,9 @@ const ExplorePage = () => {
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as any)}
                 >
-                  <option value="newest">最新创建</option>
-                  <option value="popular">最受欢迎</option>
-                  <option value="tips">最多打赏</option>
+                  <option value="createdTime">最新创建</option>
+                  <option value="likes">最受欢迎</option>
+                  <option value="totalTips">最多打赏</option>
                 </select>
               </div>
             </div>
@@ -256,6 +233,13 @@ const ExplorePage = () => {
       </div>
 
       {/* 故事列表 */}
+      {error && (
+        <div className="alert alert-error mb-6">
+          <span>加载故事失败: {error}</span>
+          <button className="btn btn-sm" onClick={refetch}>重试</button>
+        </div>
+      )}
+      
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, index) => (
@@ -273,7 +257,7 @@ const ExplorePage = () => {
       ) : sortedStories.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedStories.map(story => (
-            <StoryCard key={story.id.toString()} story={story} />
+            <StoryCard key={story.id} story={story} />
           ))}
         </div>
       ) : (
