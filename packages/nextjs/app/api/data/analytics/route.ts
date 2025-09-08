@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { EdgeConfigStore } from "../../../../lib/monitoring/edgeConfigStore";
+import { PostgreSQLStore } from "../../../../lib/database/postgreSQLStore";
 
 export async function GET() {
   try {
-    const edgeStore = new EdgeConfigStore();
-    const analytics = await edgeStore.getAnalyticsData();
+    const store = new PostgreSQLStore();
+    const analytics = await store.getAnalyticsData();
 
     if (!analytics) {
       return NextResponse.json({ error: "No analytics data found" }, { status: 404 });

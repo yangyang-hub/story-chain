@@ -1,5 +1,6 @@
 import deployedContracts from "../../contracts/deployedContracts";
-import { AnalyticsData, ChapterData, EdgeConfigStore, StoryData } from "./edgeConfigStore";
+import { PostgreSQLStore } from "../database/postgreSQLStore";
+import { AnalyticsData, ChapterData, StoryData } from "./types";
 import { Log, createPublicClient, http, parseAbiItem } from "viem";
 import { foundry } from "viem/chains";
 
@@ -15,7 +16,7 @@ export class ChainMonitor {
   private client;
   private contractAddress;
   private contractAbi;
-  private edgeStore: EdgeConfigStore;
+  private edgeStore: PostgreSQLStore;
   private isMonitoring = false;
 
   constructor() {
@@ -31,7 +32,7 @@ export class ChainMonitor {
 
     this.contractAddress = contract.address as `0x${string}`;
     this.contractAbi = contract.abi;
-    this.edgeStore = new EdgeConfigStore();
+    this.edgeStore = new PostgreSQLStore();
   }
 
   async startMonitoring() {
@@ -64,7 +65,7 @@ export class ChainMonitor {
   private async syncHistoricalData(fromBlock?: bigint) {
     const startBlock = fromBlock;
     const currentBlock = await this.client.getBlockNumber();
-    
+
     if (startBlock) {
       console.log(`增量同步: 从区块 ${startBlock} 到 ${currentBlock}`);
     } else {

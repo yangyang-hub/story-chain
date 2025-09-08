@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EdgeConfigStore } from "../../../../lib/monitoring/edgeConfigStore";
+import { PostgreSQLStore } from "../../../../lib/database/postgreSQLStore";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "createdTime"; // createdTime, likes, totalTips
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
-    const edgeStore = new EdgeConfigStore();
-    const stories = await edgeStore.getStoriesData();
+    const store = new PostgreSQLStore();
+    const stories = await store.getStoriesData();
 
     if (!stories) {
       return NextResponse.json({ error: "No stories data found" }, { status: 404 });
