@@ -10,13 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const store = new PostgreSQLStore();
-    const chapters = await store.getChaptersData();
-
-    if (!chapters) {
-      return NextResponse.json({ error: "No chapters data found" }, { status: 404 });
-    }
-
-    const chapter = chapters.find(c => c.id === id);
+    const chapter = await store.getChapterById(id);
 
     if (!chapter) {
       return NextResponse.json({ error: "Chapter not found" }, { status: 404 });

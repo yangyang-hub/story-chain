@@ -106,6 +106,41 @@ export class PostgreSQLStore {
     }
   }
 
+  async getStoryById(id: string): Promise<StoryData | null> {
+    try {
+      const result = await db.query(
+        `
+        SELECT 
+          id,
+          author,
+          ipfs_hash as "ipfsHash",
+          created_time as "createdTime",
+          likes,
+          fork_count as "forkCount",
+          total_tips as "totalTips",
+          total_tip_count as "totalTipCount",
+          block_number as "blockNumber",
+          transaction_hash as "transactionHash"
+        FROM stories
+        WHERE id = $1
+      `,
+        [id],
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return {
+        ...result.rows[0],
+        totalTips: result.rows[0].totalTips.toString(),
+      };
+    } catch (error) {
+      console.error("Failed to get story by id:", error);
+      return null;
+    }
+  }
+
   async getChaptersData(): Promise<ChapterData[]> {
     try {
       const result = await db.query(`
@@ -134,6 +169,44 @@ export class PostgreSQLStore {
     } catch (error) {
       console.error("Failed to get chapters data:", error);
       return [];
+    }
+  }
+
+  async getChapterById(id: string): Promise<ChapterData | null> {
+    try {
+      const result = await db.query(
+        `
+        SELECT 
+          id,
+          story_id as "storyId",
+          parent_id as "parentId",
+          author,
+          ipfs_hash as "ipfsHash",
+          created_time as "createdTime",
+          likes,
+          fork_count as "forkCount",
+          chapter_number as "chapterNumber",
+          total_tips as "totalTips",
+          total_tip_count as "totalTipCount",
+          block_number as "blockNumber",
+          transaction_hash as "transactionHash"
+        FROM chapters
+        WHERE id = $1
+      `,
+        [id],
+      );
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return {
+        ...result.rows[0],
+        totalTips: result.rows[0].totalTips.toString(),
+      };
+    } catch (error) {
+      console.error("Failed to get chapter by id:", error);
+      return null;
     }
   }
 

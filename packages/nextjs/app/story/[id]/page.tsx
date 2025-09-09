@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { formatEther, parseEther } from "viem";
 import { useAccount } from "wagmi";
@@ -22,7 +22,6 @@ import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { useStoryPageData } from "~~/hooks/useChainData";
 import { ChapterData } from "~~/lib/monitoring/types";
 import { type ChapterMetadata, getJSONFromIPFS, uploadChapterMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
@@ -309,11 +308,47 @@ const StoryDetailPage = () => {
   const { t } = useLanguage();
 
   const [showAddChapter, setShowAddChapter] = useState(false);
+  const [story, setStory] = useState<any>(null);
+  const [chapters, setChapters] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const storyId = id as string;
 
-  // 使用 useStoryPageData hook 获取故事和章节数据
-  const { story, chapters, loading, error, refetch } = useStoryPageData(storyId);
+  // 直接使用fetch获取数据，避开hook问题
+  const fetchData = useCallback(async () => {
+    if (!storyId) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      // 获取故事数据
+      const storyRes = await fetch(`/api/data/stories/${storyId}`);
+      if (storyRes.ok) {
+        const storyData = await storyRes.json();
+        setStory(storyData.story);
+      } else {
+        throw new Error(`故事数据获取失败: ${storyRes.status}`);
+      }
+
+      // 获取章节数据
+      const chaptersRes = await fetch(`/api/data/chapters?storyId=${storyId}`);
+      if (chaptersRes.ok) {
+        const chaptersData = await chaptersRes.json();
+        setChapters(chaptersData.chapters || []);
+      }
+    } catch (err) {
+      console.error("获取数据失败:", err);
+      setError(err instanceof Error ? err.message : "获取数据失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [storyId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // 为每个章节添加 metadata 字段以支持类型检查
   const chaptersWithMetadata: ChapterWithMetadata[] = (chapters || []).map(chapter => ({
@@ -337,7 +372,7 @@ const StoryDetailPage = () => {
         args: [BigInt(storyId)],
       });
       notification.success(t("success.liked"));
-      refetch(); // 重新获取数据
+      fetchData(); // 重新获取数据
     } catch (error) {
       console.error("点赞失败:", error);
       notification.error("点赞失败");
@@ -360,7 +395,7 @@ const StoryDetailPage = () => {
         value: parseEther(tipAmount),
       });
       notification.success(t("success.tipped"));
-      refetch(); // 重新获取数据
+      fetchData(); // 重新获取数据
     } catch (error) {
       console.error("打赏失败:", error);
       notification.error("打赏失败");
@@ -388,7 +423,7 @@ const StoryDetailPage = () => {
         <div className="alert alert-error">
           <InformationCircleIcon className="w-6 h-6" />
           <span>加载失败: {error}</span>
-          <button className="btn btn-sm" onClick={refetch}>
+          <button className="btn btn-sm" onClick={fetchData}>
             重试
           </button>
         </div>
@@ -495,7 +530,7 @@ const StoryDetailPage = () => {
         parentId="0"
         onChapterAdded={() => {
           // 重新加载章节列表
-          refetch();
+          fetchData();
           console.log("Chapter added, reloaded data");
         }}
       />

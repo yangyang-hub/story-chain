@@ -10,13 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const store = new PostgreSQLStore();
-    const stories = await store.getStoriesData();
-
-    if (!stories) {
-      return NextResponse.json({ error: "No stories data found" }, { status: 404 });
-    }
-
-    const story = stories.find(s => s.id === id);
+    const story = await store.getStoryById(id);
 
     if (!story) {
       return NextResponse.json({ error: "Story not found" }, { status: 404 });
