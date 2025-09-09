@@ -21,8 +21,8 @@ import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
-import { useStoryPageData } from "~~/hooks/useChainData";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useStoryPageData } from "~~/hooks/useChainData";
 import { ChapterData } from "~~/lib/monitoring/types";
 import { type ChapterMetadata, getJSONFromIPFS, uploadChapterMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
@@ -388,7 +388,9 @@ const StoryDetailPage = () => {
         <div className="alert alert-error">
           <InformationCircleIcon className="w-6 h-6" />
           <span>加载失败: {error}</span>
-          <button className="btn btn-sm" onClick={refetch}>重试</button>
+          <button className="btn btn-sm" onClick={refetch}>
+            重试
+          </button>
         </div>
       </div>
     );
@@ -479,7 +481,11 @@ const StoryDetailPage = () => {
       </div>
 
       {/* 评论区 */}
-      <CommentSection tokenId={BigInt(storyId)} tokenType="story" className="card bg-base-100 shadow-lg mt-8 card-body" />
+      <CommentSection
+        tokenId={BigInt(storyId)}
+        tokenType="story"
+        className="card bg-base-100 shadow-lg mt-8 card-body"
+      />
 
       {/* 添加章节模态框 */}
       <AddChapterModal

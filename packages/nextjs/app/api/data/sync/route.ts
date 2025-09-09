@@ -17,26 +17,28 @@ export async function POST(request: NextRequest) {
     // 获取请求参数
     const { searchParams } = new URL(request.url);
     const fromBlock = searchParams.get("fromBlock");
-    
+
     // 手动触发数据同步
     const lastUpdate = await monitor.getStatus();
-    const startBlock = fromBlock ? BigInt(fromBlock) : 
-      lastUpdate.lastUpdate ? BigInt(lastUpdate.lastUpdate.block + 1) : undefined;
+    const startBlock = fromBlock
+      ? BigInt(fromBlock)
+      : lastUpdate.lastUpdate
+        ? BigInt(lastUpdate.lastUpdate.block + 1)
+        : undefined;
 
     // 调用公开的同步方法
     await monitor.syncHistoricalData(startBlock);
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Data sync triggered successfully",
-      lastUpdate: await monitor.getStatus()
+      lastUpdate: await monitor.getStatus(),
     });
-
   } catch (error) {
     console.error("Error triggering data sync:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -50,12 +52,11 @@ export async function GET() {
 
     const status = await monitor.getStatus();
     return NextResponse.json({ status });
-
   } catch (error) {
     console.error("Error getting monitor status:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

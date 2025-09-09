@@ -78,9 +78,9 @@ class ChainDataService {
   async getStories(filters: StoryFilters = {}): Promise<PaginatedResponse<StoryData>> {
     const queryString = this.buildQueryString(filters);
     const url = `/api/data/stories?${queryString}`;
-    
+
     const response = await this.fetchWithCache<{ stories: StoryData[]; pagination: any }>(url);
-    
+
     return {
       data: response.stories,
       pagination: response.pagination,
@@ -90,7 +90,7 @@ class ChainDataService {
   async getChapters(filters: ChapterFilters = {}): Promise<PaginatedResponse<ChapterData>> {
     const queryString = this.buildQueryString(filters);
     const url = `/api/data/chapters?${queryString}`;
-    
+
     const response = await this.fetchWithCache<{ chapters: ChapterData[]; pagination: any }>(url);
     return {
       data: response.chapters,
@@ -147,7 +147,7 @@ class ChainDataService {
   // 触发数据同步
   async triggerDataSync(fromBlock?: string): Promise<{ success: boolean; message: string }> {
     const url = `/api/data/sync${fromBlock ? `?fromBlock=${fromBlock}` : ""}`;
-    
+
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -162,7 +162,7 @@ class ChainDataService {
 
       // 清除缓存，强制下次获取最新数据
       this.clearCache();
-      
+
       return await response.json();
     } catch (error) {
       console.error("Failed to trigger data sync:", error);
@@ -196,11 +196,7 @@ class ChainDataService {
   // 预热缓存
   async preloadData(): Promise<void> {
     try {
-      await Promise.all([
-        this.getStories({ limit: 20 }),
-        this.getChapters({ limit: 20 }),
-        this.getAnalytics(),
-      ]);
+      await Promise.all([this.getStories({ limit: 20 }), this.getChapters({ limit: 20 }), this.getAnalytics()]);
     } catch (error) {
       console.warn("Failed to preload data:", error);
     }
