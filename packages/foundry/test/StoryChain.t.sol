@@ -9,6 +9,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract StoryChainTest is Test {
     StoryChain public storyChain;
 
+    // Event declarations for testing
+    event StoryCreated(uint256 indexed storyId, address indexed author, string ipfsHash);
+
     address public owner;
     address public storyAuthor;
     address public chapterAuthor;
@@ -46,6 +49,10 @@ contract StoryChainTest is Test {
     // =================================
 
     function test_CreateStory_Success_Free() public {
+        // Expect the StoryCreated event to be emitted
+        vm.expectEmit(true, true, false, true);
+        emit StoryCreated(1, storyAuthor, STORY_IPFS);
+        
         vm.prank(storyAuthor);
         storyChain.createStory(STORY_IPFS, FORK_FEE);
 
@@ -191,13 +198,12 @@ contract StoryChainTest is Test {
         StoryChain.Story memory story = storyChain.getStory(1);
         assertEq(story.forkCount, 1);
 
-        // 4. Verify Reward Distribution
-        uint256 platformFee = (FORK_FEE * storyChain.PLATFORM_FEE_RATE()) / 100;
-        uint256 rewardPool = FORK_FEE - platformFee;
-        uint256 storyAuthorFee = (rewardPool * storyChain.FORK_FEE_AUTHOR()) / 100;
-        uint256 chapterAuthorFee = rewardPool - storyAuthorFee;
+        // 4. Verify Reward Distribution (no platform fee, all goes to authors)
+        uint256 storyAuthorFee = (FORK_FEE * storyChain.FORK_FEE_AUTHOR()) / 100;
+        uint256 chapterAuthorFee = FORK_FEE - storyAuthorFee;
 
-        assertEq(storyChain.pendingWithdrawals(owner), platformFee);
+        // No platform fee, so owner should have no pending withdrawals
+        assertEq(storyChain.pendingWithdrawals(owner), 0);
         // In this case, storyAuthor is also the chapterAuthor, so their rewards are combined
         assertEq(storyChain.pendingWithdrawals(storyAuthor), storyAuthorFee + chapterAuthorFee);
     }

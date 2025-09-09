@@ -176,7 +176,7 @@ const ProfilePage = () => {
     };
 
     loadUserData();
-  }, [address, storyEvents, chapterEvents, tipEvents]);
+  }, [address, storyEvents?.length, chapterEvents?.length, tipEvents?.length]);
 
   const handleWithdrawRewards = async () => {
     try {
