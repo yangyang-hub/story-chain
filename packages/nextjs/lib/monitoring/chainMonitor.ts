@@ -1,7 +1,6 @@
 import deployedContracts from "../../contracts/deployedContracts";
 import { PostgreSQLStore } from "../database/postgreSQLStore";
-import { AnalyticsData, ChapterData, StoryData } from "./types";
-import { Log, createPublicClient, http, parseAbiItem } from "viem";
+import { Log, createPublicClient, decodeEventLog, http, parseAbiItem } from "viem";
 import { foundry } from "viem/chains";
 
 interface ProcessedEvent {
@@ -15,8 +14,7 @@ interface ProcessedEvent {
 export class ChainMonitor {
   private client;
   private contractAddress;
-  private contractAbi;
-  private edgeStore: PostgreSQLStore;
+  private postgresqlStore: PostgreSQLStore;
   private isMonitoring = false;
 
   constructor() {
@@ -31,8 +29,7 @@ export class ChainMonitor {
     }
 
     this.contractAddress = contract.address as `0x${string}`;
-    this.contractAbi = contract.abi;
-    this.edgeStore = new PostgreSQLStore();
+    this.postgresqlStore = new PostgreSQLStore();
   }
 
   async startMonitoring() {
@@ -46,7 +43,7 @@ export class ChainMonitor {
 
     try {
       // 获取最新数据的起始块
-      const lastUpdate = await this.edgeStore.getLastUpdateInfo();
+      const lastUpdate = await this.postgresqlStore.getLastUpdateInfo();
       const startBlock = lastUpdate ? BigInt(lastUpdate.block + 1) : undefined;
 
       await this.syncHistoricalData(startBlock);
@@ -63,49 +60,79 @@ export class ChainMonitor {
   }
 
   async syncHistoricalData(fromBlock?: bigint) {
-    const startBlock = fromBlock;
+    const startBlock = fromBlock || 0n; // 确保首次同步从区块0开始
     const currentBlock = await this.client.getBlockNumber();
 
-    if (startBlock) {
+    if (fromBlock) {
       console.log(`增量同步: 从区块 ${startBlock} 到 ${currentBlock}`);
     } else {
-      console.log(`全量同步: 从创世区块到 ${currentBlock}`);
+      console.log(`全量同步: 从创世区块(${startBlock}) 到 ${currentBlock}`);
     }
 
     try {
-      // 监听所有相关事件
+      // 获取所有相关事件日志（不指定events参数，让processEvents来解析）
+      console.log(`正在获取区块范围 ${startBlock} - ${currentBlock} 的事件日志...`);
+
       const events = await this.client.getLogs({
         address: this.contractAddress,
-        events: this.getEventAbis(),
         fromBlock: startBlock,
         toBlock: currentBlock,
       });
 
+      console.log(`从区块 ${startBlock} 到 ${currentBlock} 获取到 ${events.length} 个原始日志`);
+
       if (events.length > 0) {
+        console.log(`开始解析 ${events.length} 个日志...`);
         const processedEvents = await this.processEvents(events);
-        await this.updateEdgeConfig(processedEvents, Number(currentBlock));
-        console.log(`同步了 ${events.length} 个事件`);
+        console.log(`成功解析出 ${processedEvents.length} 个有效事件`);
+
+        if (processedEvents.length > 0) {
+          await this.updateEdgeConfig(processedEvents, Number(currentBlock));
+          console.log(`✅ 成功同步 ${processedEvents.length} 个事件到数据库`);
+        } else {
+          console.log("⚠️  没有解析出任何有效事件");
+        }
       } else {
         console.log("没有新事件需要同步");
+        // 即使没有事件，也要更新同步状态
+        await this.postgresqlStore.updateDataIncremental({
+          lastUpdateBlock: Number(currentBlock),
+          lastUpdateTime: new Date().toISOString(),
+        });
       }
     } catch (error) {
       console.error("同步历史数据失败:", error);
+      console.error("错误详情:", {
+        contractAddress: this.contractAddress,
+        startBlock: startBlock.toString(),
+        currentBlock: currentBlock.toString(),
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
   private startRealtimeMonitoring() {
     console.log("开始实时监控...");
 
-    // 监听新事件
-    const unwatch = this.client.watchEvent({
-      address: this.contractAddress,
-      events: this.getEventAbis(),
-      onLogs: async logs => {
-        if (logs.length > 0) {
-          const processedEvents = await this.processEvents(logs);
-          const latestBlock = Math.max(...logs.map(log => Number(log.blockNumber)));
-          await this.updateEdgeConfig(processedEvents, latestBlock);
-          console.log(`处理了 ${logs.length} 个新事件`);
+    // 使用watchBlocks来监控新区块，然后手动获取事件
+    const unwatch = this.client.watchBlocks({
+      onBlock: async block => {
+        try {
+          // 获取该区块的所有合约事件
+          const logs = await this.client.getLogs({
+            address: this.contractAddress,
+            fromBlock: block.number,
+            toBlock: block.number,
+          });
+
+          if (logs.length > 0) {
+            console.log(`区块 ${block.number} 中发现 ${logs.length} 个合约事件`);
+            const processedEvents = await this.processEvents(logs);
+            await this.updateEdgeConfig(processedEvents, Number(block.number));
+            console.log(`✅ 实时处理了 ${processedEvents.length} 个有效事件`);
+          }
+        } catch (error) {
+          console.error(`处理区块 ${block.number} 的事件时出错:`, error);
         }
       },
     });
@@ -115,13 +142,13 @@ export class ChainMonitor {
       async () => {
         if (!this.isMonitoring) {
           clearInterval(interval);
-          unwatch?.();
+          unwatch();
           return;
         }
 
         try {
-          const lastUpdate = await this.edgeStore.getLastUpdateInfo();
-          const startBlock = lastUpdate ? BigInt(lastUpdate.block + 1) : undefined;
+          const lastUpdate = await this.postgresqlStore.getLastUpdateInfo();
+          const startBlock = lastUpdate ? BigInt(lastUpdate.block + 1) : 0n;
           await this.syncHistoricalData(startBlock);
         } catch (error) {
           console.error("定期同步失败:", error);
@@ -150,6 +177,7 @@ export class ChainMonitor {
 
   private async processEvents(logs: Log[]): Promise<ProcessedEvent[]> {
     const processedEvents: ProcessedEvent[] = [];
+    const eventAbis = this.getEventAbis();
 
     for (const log of logs) {
       try {
@@ -157,17 +185,40 @@ export class ChainMonitor {
         const block = await this.client.getBlock({ blockNumber: log.blockNumber || undefined });
         const timestamp = Number(block.timestamp);
 
+        // 尝试解析每个可能的事件类型
+        let eventName = "unknown";
+        let eventArgs: any = null;
+
+        for (const eventAbi of eventAbis) {
+          try {
+            const decoded = decodeEventLog({
+              abi: [eventAbi],
+              data: log.data,
+              topics: log.topics,
+            });
+
+            eventName = decoded.eventName;
+            eventArgs = decoded.args;
+            break;
+          } catch {
+            // 继续尝试下一个事件ABI
+            continue;
+          }
+        }
+
         const processedEvent: ProcessedEvent = {
-          type: (log as any).eventName || "unknown",
+          type: eventName,
           blockNumber: Number(log.blockNumber),
           transactionHash: log.transactionHash || "",
           timestamp,
-          data: (log as any).args || null,
+          data: eventArgs,
         };
 
         processedEvents.push(processedEvent);
+        console.log(`处理事件: ${eventName}, 区块: ${processedEvent.blockNumber}`);
       } catch (error) {
         console.error("处理事件失败:", error);
+        console.error("日志详情:", log);
       }
     }
 
@@ -176,215 +227,50 @@ export class ChainMonitor {
 
   private async updateEdgeConfig(events: ProcessedEvent[], latestBlock: number) {
     try {
-      // 获取当前存储的数据
-      const currentData = await this.edgeStore.getData();
+      console.log(`处理 ${events.length} 个事件...`);
 
-      const stories: StoryData[] = currentData?.stories || [];
-      const chapters: ChapterData[] = currentData?.chapters || [];
-
-      // 处理事件并更新数据
+      // 直接处理每个事件，避免加载全量数据到内存
       for (const event of events) {
-        switch (event.type) {
-          case "StoryCreated":
-            await this.handleStoryCreated(event, stories);
-            break;
-          case "ChapterCreated":
-          case "ChapterForked":
-            await this.handleChapterCreated(event, chapters);
-            break;
-          case "StoryLiked":
-            this.handleStoryLiked(event, stories);
-            break;
-          case "ChapterLiked":
-            this.handleChapterLiked(event, chapters);
-            break;
-          case "tipSent":
-            this.handleTipSent(event, stories, chapters);
-            break;
-        }
+        await this.postgresqlStore.processEventDirectly(
+          event.type,
+          event.data,
+          event.blockNumber,
+          event.transactionHash,
+          event.timestamp,
+        );
       }
 
-      // 计算分析数据
-      const analytics = this.calculateAnalytics(stories, chapters, events);
+      // 直接在数据库计算分析数据，避免加载全量数据
+      const analytics = await this.postgresqlStore.calculateAnalyticsDirect();
 
-      // 更新 Edge Config
-      await this.edgeStore.updateData({
-        stories,
-        chapters,
+      // 更新同步状态
+      await this.postgresqlStore.updateDataIncremental({
         analytics,
         lastUpdateBlock: latestBlock,
         lastUpdateTime: new Date().toISOString(),
       });
+
+      console.log(`✅ 成功处理 ${events.length} 个事件，内存使用优化`);
     } catch (error) {
-      console.error("更新 Edge Config 失败:", error);
+      console.error("事件处理失败:", error);
     }
-  }
-
-  private async handleStoryCreated(event: ProcessedEvent, stories: StoryData[]) {
-    const { storyId, author, ipfsHash } = event.data;
-
-    // 检查是否已存在
-    if (stories.find(s => s.id === storyId.toString())) {
-      return;
-    }
-
-    const storyData: StoryData = {
-      id: storyId.toString(),
-      author: author.toLowerCase(),
-      ipfsHash,
-      createdTime: event.timestamp,
-      likes: 0,
-      forkCount: 0,
-      totalTips: "0",
-      totalTipCount: 0,
-      blockNumber: event.blockNumber,
-      transactionHash: event.transactionHash,
-    };
-
-    stories.push(storyData);
-  }
-
-  private async handleChapterCreated(event: ProcessedEvent, chapters: ChapterData[]) {
-    const { storyId, chapterId, parentId, author, ipfsHash } = event.data;
-
-    // 检查是否已存在
-    if (chapters.find(c => c.id === chapterId.toString())) {
-      return;
-    }
-
-    // 获取章节详细信息
-    try {
-      const chapterInfo = await this.client.readContract({
-        address: this.contractAddress,
-        abi: this.contractAbi,
-        functionName: "getChapter",
-        args: [chapterId],
-      });
-
-      const chapterData: ChapterData = {
-        id: chapterId.toString(),
-        storyId: storyId.toString(),
-        parentId: parentId.toString(),
-        author: author.toLowerCase(),
-        ipfsHash,
-        createdTime: event.timestamp,
-        likes: 0,
-        forkCount: 0,
-        chapterNumber: Number(chapterInfo.chapterNumber),
-        totalTips: "0",
-        totalTipCount: 0,
-        blockNumber: event.blockNumber,
-        transactionHash: event.transactionHash,
-      };
-
-      chapters.push(chapterData);
-    } catch (error) {
-      console.error("获取章节信息失败:", error);
-    }
-  }
-
-  private handleStoryLiked(event: ProcessedEvent, stories: StoryData[]) {
-    const { storyId, newLikeCount } = event.data;
-    const story = stories.find(s => s.id === storyId.toString());
-    if (story) {
-      story.likes = Number(newLikeCount);
-    }
-  }
-
-  private handleChapterLiked(event: ProcessedEvent, chapters: ChapterData[]) {
-    const { chapterId, newLikeCount } = event.data;
-    const chapter = chapters.find(c => c.id === chapterId.toString());
-    if (chapter) {
-      chapter.likes = Number(newLikeCount);
-    }
-  }
-
-  private handleTipSent(event: ProcessedEvent, stories: StoryData[], chapters: ChapterData[]) {
-    const { storyId, chapterId, amount } = event.data;
-
-    const story = stories.find(s => s.id === storyId.toString());
-    if (story) {
-      story.totalTips = (BigInt(story.totalTips) + BigInt(amount)).toString();
-      story.totalTipCount += 1;
-    }
-
-    const chapter = chapters.find(c => c.id === chapterId.toString());
-    if (chapter) {
-      chapter.totalTips = (BigInt(chapter.totalTips) + BigInt(amount)).toString();
-      chapter.totalTipCount += 1;
-    }
-  }
-
-  private calculateAnalytics(
-    stories: StoryData[],
-    chapters: ChapterData[],
-    recentEvents: ProcessedEvent[],
-  ): AnalyticsData {
-    const totalLikes = stories.reduce((sum, s) => sum + s.likes, 0) + chapters.reduce((sum, c) => sum + c.likes, 0);
-
-    const totalTips =
-      stories.reduce((sum, s) => sum + BigInt(s.totalTips), BigInt(0)) +
-      chapters.reduce((sum, c) => sum + BigInt(c.totalTips), BigInt(0));
-
-    const authors = new Set([...stories.map(s => s.author), ...chapters.map(c => c.author)]);
-
-    // 找出最受欢迎的故事
-    const mostLikedStory = stories.reduce((prev, current) => (current.likes > prev.likes ? current : prev), stories[0]);
-
-    const mostForkedStory = stories.reduce(
-      (prev, current) => (current.forkCount > prev.forkCount ? current : prev),
-      stories[0],
-    );
-
-    // 计算顶级作者
-    const authorStats = new Map<string, { storyCount: number; chapterCount: number; totalEarnings: bigint }>();
-
-    stories.forEach(story => {
-      const stats = authorStats.get(story.author) || { storyCount: 0, chapterCount: 0, totalEarnings: BigInt(0) };
-      stats.storyCount++;
-      stats.totalEarnings += BigInt(story.totalTips);
-      authorStats.set(story.author, stats);
-    });
-
-    chapters.forEach(chapter => {
-      const stats = authorStats.get(chapter.author) || { storyCount: 0, chapterCount: 0, totalEarnings: BigInt(0) };
-      stats.chapterCount++;
-      stats.totalEarnings += BigInt(chapter.totalTips);
-      authorStats.set(chapter.author, stats);
-    });
-
-    const topAuthors = Array.from(authorStats.entries())
-      .sort((a, b) => Number(b[1].totalEarnings - a[1].totalEarnings))
-      .slice(0, 10)
-      .map(([address, stats]) => ({
-        address,
-        storyCount: stats.storyCount,
-        chapterCount: stats.chapterCount,
-        totalEarnings: stats.totalEarnings.toString(),
-      }));
-
-    return {
-      totalStories: stories.length,
-      totalChapters: chapters.length,
-      totalAuthors: authors.size,
-      totalLikes,
-      totalTips: totalTips.toString(),
-      mostLikedStoryId: mostLikedStory?.id,
-      mostForkedStoryId: mostForkedStory?.id,
-      topAuthors,
-      recentActivity: recentEvents.slice(-50).map(event => ({
-        type: event.type as any,
-        timestamp: event.timestamp,
-        data: event.data,
-      })),
-    };
   }
 
   async getStatus() {
     return {
       isMonitoring: this.isMonitoring,
       contractAddress: this.contractAddress,
-      lastUpdate: await this.edgeStore.getLastUpdateInfo(),
+      lastUpdate: await this.postgresqlStore.getLastUpdateInfo(),
     };
+  }
+
+  // 测试方法：暴露processEvents用于诊断
+  async processEventsForDiagnosis(logs: any[]) {
+    return await this.processEvents(logs);
+  }
+
+  // 测试方法：暴露client用于诊断
+  getClientForDiagnosis() {
+    return this.client;
   }
 }

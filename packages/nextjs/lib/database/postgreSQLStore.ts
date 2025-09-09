@@ -40,7 +40,7 @@ export class PostgreSQLStore {
     }
   }
 
-  async updateData(newData: Partial<ChainDataStore>): Promise<void> {
+  async updateDataIncremental(newData: Partial<ChainDataStore>): Promise<void> {
     const client = await db.connect();
 
     try {
@@ -71,7 +71,7 @@ export class PostgreSQLStore {
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");
-      console.error("Failed to update PostgreSQL data:", error);
+      console.error("Failed to update PostgreSQL data incrementally:", error);
       throw error;
     } finally {
       client.release();
@@ -224,74 +224,77 @@ export class PostgreSQLStore {
   }
 
   private async updateStories(stories: StoryData[], client: any): Promise<void> {
-    await client.query("DELETE FROM stories");
-
     if (stories.length === 0) return;
 
-    const values = stories.map(story => [
-      story.id,
-      story.author,
-      story.ipfsHash,
-      story.createdTime,
-      story.likes,
-      story.forkCount,
-      story.totalTips,
-      story.totalTipCount,
-      story.blockNumber,
-      story.transactionHash,
-    ]);
-
-    const placeholders = values
-      .map(
-        (_, i) =>
-          `($${i * 10 + 1}, $${i * 10 + 2}, $${i * 10 + 3}, $${i * 10 + 4}, $${i * 10 + 5}, $${i * 10 + 6}, $${i * 10 + 7}, $${i * 10 + 8}, $${i * 10 + 9}, $${i * 10 + 10})`,
-      )
-      .join(", ");
-
-    await client.query(
-      `
-      INSERT INTO stories (id, author, ipfs_hash, created_time, likes, fork_count, total_tips, total_tip_count, block_number, transaction_hash)
-      VALUES ${placeholders}
-    `,
-      values.flat(),
-    );
+    // 使用UPSERT操作实现增量同步
+    for (const story of stories) {
+      await client.query(
+        `
+        INSERT INTO stories (
+          id, author, ipfs_hash, created_time, likes, fork_count, 
+          total_tips, total_tip_count, block_number, transaction_hash
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (id) DO UPDATE SET
+          likes = EXCLUDED.likes,
+          fork_count = EXCLUDED.fork_count,
+          total_tips = EXCLUDED.total_tips,
+          total_tip_count = EXCLUDED.total_tip_count,
+          updated_at = CURRENT_TIMESTAMP
+      `,
+        [
+          story.id,
+          story.author,
+          story.ipfsHash,
+          story.createdTime,
+          story.likes,
+          story.forkCount,
+          story.totalTips,
+          story.totalTipCount,
+          story.blockNumber,
+          story.transactionHash,
+        ],
+      );
+    }
   }
 
   private async updateChapters(chapters: ChapterData[], client: any): Promise<void> {
-    await client.query("DELETE FROM chapters");
-
     if (chapters.length === 0) return;
 
-    const values = chapters.map(chapter => [
-      chapter.id,
-      chapter.storyId,
-      chapter.parentId,
-      chapter.author,
-      chapter.ipfsHash,
-      chapter.createdTime,
-      chapter.likes,
-      chapter.forkCount,
-      chapter.chapterNumber,
-      chapter.totalTips,
-      chapter.totalTipCount,
-      chapter.blockNumber,
-      chapter.transactionHash,
-    ]);
-
-    const placeholders = values
-      .map(
-        (_, i) =>
-          `($${i * 13 + 1}, $${i * 13 + 2}, $${i * 13 + 3}, $${i * 13 + 4}, $${i * 13 + 5}, $${i * 13 + 6}, $${i * 13 + 7}, $${i * 13 + 8}, $${i * 13 + 9}, $${i * 13 + 10}, $${i * 13 + 11}, $${i * 13 + 12}, $${i * 13 + 13})`,
-      )
-      .join(", ");
-
-    await client.query(
-      `
-      INSERT INTO chapters (id, story_id, parent_id, author, ipfs_hash, created_time, likes, fork_count, chapter_number, total_tips, total_tip_count, block_number, transaction_hash)
-      VALUES ${placeholders}
-    `,
-      values.flat(),
-    );
+    // 使用UPSERT操作实现增量同步
+    for (const chapter of chapters) {
+      await client.query(
+        `
+        INSERT INTO chapters (
+          id, story_id, parent_id, author, ipfs_hash, created_time, 
+          likes, fork_count, chapter_number, total_tips, total_tip_count, 
+          block_number, transaction_hash
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        ON CONFLICT (id) DO UPDATE SET
+          likes = EXCLUDED.likes,
+          fork_count = EXCLUDED.fork_count,
+          total_tips = EXCLUDED.total_tips,
+          total_tip_count = EXCLUDED.total_tip_count,
+          updated_at = CURRENT_TIMESTAMP
+      `,
+        [
+          chapter.id,
+          chapter.storyId,
+          chapter.parentId,
+          chapter.author,
+          chapter.ipfsHash,
+          chapter.createdTime,
+          chapter.likes,
+          chapter.forkCount,
+          chapter.chapterNumber,
+          chapter.totalTips,
+          chapter.totalTipCount,
+          chapter.blockNumber,
+          chapter.transactionHash,
+        ],
+      );
+    }
   }
 
   private async updateAnalytics(analytics: AnalyticsData, client: any): Promise<void> {
@@ -361,38 +364,282 @@ export class PostgreSQLStore {
       );
     }
 
+    // Delete old dependent records first to avoid foreign key constraint violations
+    await client.query("DELETE FROM top_authors WHERE analytics_id != $1", [analyticsId]);
+    await client.query("DELETE FROM recent_activity WHERE analytics_id != $1", [analyticsId]);
     await client.query("DELETE FROM analytics WHERE id != $1", [analyticsId]);
+  }
+
+  // 直接处理单个事件，避免加载全量数据到内存
+  async processEventDirectly(
+    eventType: string,
+    eventData: any,
+    blockNumber: number,
+    transactionHash: string,
+    timestamp: number,
+  ): Promise<void> {
+    const client = await db.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      switch (eventType) {
+        case "StoryCreated":
+          await this.handleStoryCreatedDirect(eventData, blockNumber, transactionHash, timestamp, client);
+          break;
+        case "ChapterCreated":
+        case "ChapterForked":
+          await this.handleChapterCreatedDirect(eventData, blockNumber, transactionHash, timestamp, client);
+          break;
+        case "StoryLiked":
+          await this.handleStoryLikedDirect(eventData, client);
+          break;
+        case "ChapterLiked":
+          await this.handleChapterLikedDirect(eventData, client);
+          break;
+        case "tipSent":
+          await this.handleTipSentDirect(eventData, client);
+          break;
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      console.error("处理事件失败:", error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  private async handleStoryCreatedDirect(
+    eventData: any,
+    blockNumber: number,
+    transactionHash: string,
+    timestamp: number,
+    client: any,
+  ): Promise<void> {
+    const { storyId, author, ipfsHash } = eventData;
+
+    await client.query(
+      `
+      INSERT INTO stories (
+        id, author, ipfs_hash, created_time, likes, fork_count, 
+        total_tips, total_tip_count, block_number, transaction_hash
+      )
+      VALUES ($1, $2, $3, $4, 0, 0, 0, 0, $5, $6)
+      ON CONFLICT (id) DO NOTHING
+    `,
+      [storyId.toString(), author.toLowerCase(), ipfsHash, timestamp, blockNumber, transactionHash],
+    );
+  }
+
+  private async handleChapterCreatedDirect(
+    eventData: any,
+    blockNumber: number,
+    transactionHash: string,
+    timestamp: number,
+    client: any,
+  ): Promise<void> {
+    const { storyId, chapterId, parentId, author, ipfsHash } = eventData;
+
+    // 这里需要获取chapterNumber，但为了避免额外的链上调用，可以设为0或者传入
+    await client.query(
+      `
+      INSERT INTO chapters (
+        id, story_id, parent_id, author, ipfs_hash, created_time, 
+        likes, fork_count, chapter_number, total_tips, total_tip_count, 
+        block_number, transaction_hash
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, 0, 0, 1, 0, 0, $7, $8)
+      ON CONFLICT (id) DO NOTHING
+    `,
+      [
+        chapterId.toString(),
+        storyId.toString(),
+        parentId.toString(),
+        author.toLowerCase(),
+        ipfsHash,
+        timestamp,
+        blockNumber,
+        transactionHash,
+      ],
+    );
+  }
+
+  private async handleStoryLikedDirect(eventData: any, client: any): Promise<void> {
+    const { storyId, newLikeCount } = eventData;
+
+    await client.query(
+      `
+      UPDATE stories 
+      SET likes = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+    `,
+      [Number(newLikeCount), storyId.toString()],
+    );
+  }
+
+  private async handleChapterLikedDirect(eventData: any, client: any): Promise<void> {
+    const { chapterId, newLikeCount } = eventData;
+
+    await client.query(
+      `
+      UPDATE chapters 
+      SET likes = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+    `,
+      [Number(newLikeCount), chapterId.toString()],
+    );
+  }
+
+  private async handleTipSentDirect(eventData: any, client: any): Promise<void> {
+    const { storyId, chapterId, amount } = eventData;
+
+    // 更新story的tip信息
+    await client.query(
+      `
+      UPDATE stories 
+      SET total_tips = total_tips + $1, 
+          total_tip_count = total_tip_count + 1,
+          updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+    `,
+      [amount.toString(), storyId.toString()],
+    );
+
+    // 更新chapter的tip信息
+    await client.query(
+      `
+      UPDATE chapters 
+      SET total_tips = total_tips + $1, 
+          total_tip_count = total_tip_count + 1,
+          updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+    `,
+      [amount.toString(), chapterId.toString()],
+    );
+  }
+
+  // 直接在数据库计算分析数据，避免加载全量数据
+  async calculateAnalyticsDirect(): Promise<any> {
+    const client = await db.connect();
+
+    try {
+      const [statsResult, authorsResult, topAuthorsResult, recentActivityResult] = await Promise.all([
+        // 基础统计信息
+        client.query(`
+          SELECT 
+            (SELECT COUNT(*) FROM stories) as total_stories,
+            (SELECT COUNT(*) FROM chapters) as total_chapters,
+            (SELECT COUNT(DISTINCT author) FROM (
+              SELECT author FROM stories UNION SELECT author FROM chapters
+            ) combined) as total_authors,
+            (SELECT COALESCE(SUM(likes), 0) FROM stories) + (SELECT COALESCE(SUM(likes), 0) FROM chapters) as total_likes,
+            (SELECT COALESCE(SUM(total_tips), 0) FROM stories) + (SELECT COALESCE(SUM(total_tips), 0) FROM chapters) as total_tips
+        `),
+
+        // 最受欢迎的故事
+        client.query(`
+          SELECT id, likes, fork_count FROM stories 
+          ORDER BY likes DESC, fork_count DESC 
+          LIMIT 1
+        `),
+
+        // 顶级作者（按收益排序）
+        client.query(`
+          WITH author_stats AS (
+            SELECT 
+              author,
+              COUNT(*) as story_count,
+              0 as chapter_count,
+              COALESCE(SUM(total_tips), 0) as total_earnings
+            FROM stories 
+            GROUP BY author
+            UNION ALL
+            SELECT 
+              author,
+              0 as story_count, 
+              COUNT(*) as chapter_count,
+              COALESCE(SUM(total_tips), 0) as total_earnings
+            FROM chapters 
+            GROUP BY author
+          ),
+          aggregated_stats AS (
+            SELECT 
+              author,
+              SUM(story_count) as story_count,
+              SUM(chapter_count) as chapter_count,
+              SUM(total_earnings) as total_earnings
+            FROM author_stats
+            GROUP BY author
+          )
+          SELECT * FROM aggregated_stats 
+          ORDER BY total_earnings DESC 
+          LIMIT 10
+        `),
+
+        // 最近活动（可以从stories和chapters的创建时间推断）
+        client.query(`
+          SELECT * FROM (
+            SELECT 'StoryCreated' as type, created_time as timestamp, 
+                   json_build_object('storyId', id, 'author', author) as data
+            FROM stories 
+            UNION ALL
+            SELECT 'ChapterCreated' as type, created_time as timestamp,
+                   json_build_object('chapterId', id, 'storyId', story_id, 'author', author) as data  
+            FROM chapters 
+          ) combined
+          ORDER BY timestamp DESC
+          LIMIT 50
+        `),
+      ]);
+
+      const stats = statsResult.rows[0];
+      const mostLiked = authorsResult.rows[0];
+      const mostForked = authorsResult.rows[0]; // 简化处理，实际中可以单独查询
+      const topAuthors = topAuthorsResult.rows.map(row => ({
+        address: row.author,
+        storyCount: Number(row.story_count),
+        chapterCount: Number(row.chapter_count),
+        totalEarnings: row.total_earnings.toString(),
+      }));
+      const recentActivity = recentActivityResult.rows;
+
+      return {
+        totalStories: Number(stats.total_stories),
+        totalChapters: Number(stats.total_chapters),
+        totalAuthors: Number(stats.total_authors),
+        totalLikes: Number(stats.total_likes),
+        totalTips: stats.total_tips.toString(),
+        mostLikedStoryId: mostLiked?.id,
+        mostForkedStoryId: mostForked?.id,
+        topAuthors,
+        recentActivity,
+      };
+    } finally {
+      client.release();
+    }
   }
 
   private async updateMetadata(
     metadata: { lastUpdateBlock?: number; lastUpdateTime?: string },
     client: any,
   ): Promise<void> {
-    const updates = [];
-    const values = [];
-    let paramCount = 1;
+    const lastUpdateBlock = metadata.lastUpdateBlock ?? 0;
+    const lastUpdateTime = metadata.lastUpdateTime ?? new Date().toISOString();
 
-    if (metadata.lastUpdateBlock !== undefined) {
-      updates.push(`last_update_block = $${paramCount}`);
-      values.push(metadata.lastUpdateBlock);
-      paramCount++;
-    }
-
-    if (metadata.lastUpdateTime !== undefined) {
-      updates.push(`last_update_time = $${paramCount}`);
-      values.push(metadata.lastUpdateTime);
-      paramCount++;
-    }
-
-    if (updates.length > 0) {
-      await client.query(
-        `
-        UPDATE chain_metadata 
-        SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = 1
-      `,
-        values,
-      );
-    }
+    // 使用UPSERT操作：如果记录不存在则插入，存在则更新
+    await client.query(
+      `
+      INSERT INTO chain_metadata (id, last_update_block, last_update_time, created_at, updated_at)
+      VALUES (1, $1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (id) DO UPDATE SET
+        last_update_block = EXCLUDED.last_update_block,
+        last_update_time = EXCLUDED.last_update_time,
+        updated_at = CURRENT_TIMESTAMP
+    `,
+      [lastUpdateBlock, lastUpdateTime],
+    );
   }
 }

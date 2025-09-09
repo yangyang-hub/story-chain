@@ -81,60 +81,23 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     mapping(address => uint256) public pendingWithdrawals;
 
     // 事件定义
-    event StoryCreated(
-        uint256 indexed storyId,
-        address indexed author,
-        string ipfsHash
-    );
+    event StoryCreated(uint256 indexed storyId, address indexed author, string ipfsHash);
     event ChapterCreated(
-        uint256 indexed storyId,
-        uint256 indexed chapterId,
-        uint256 parentId,
-        address indexed author,
-        string ipfsHash
+        uint256 indexed storyId, uint256 indexed chapterId, uint256 parentId, address indexed author, string ipfsHash
     );
     event ChapterForked(
-        uint256 indexed storyId,
-        uint256 indexed chapterId,
-        uint256 parentId,
-        address indexed author,
-        string ipfsHash
+        uint256 indexed storyId, uint256 indexed chapterId, uint256 parentId, address indexed author, string ipfsHash
     );
-    event ChapterLiked(
-        uint256 indexed chapterId,
-        address indexed liker,
-        uint256 newLikeCount
-    );
-    event StoryLiked(
-        uint256 indexed storyId,
-        address indexed liker,
-        uint256 newLikeCount
-    );
+    event ChapterLiked(uint256 indexed chapterId, address indexed liker, uint256 newLikeCount);
+    event StoryLiked(uint256 indexed storyId, address indexed liker, uint256 newLikeCount);
     event CommentAdded(uint256 indexed chapterId, address indexed commenter);
-    event StoryRewardsDistributed(
-        uint256 indexed storyId,
-        address indexed storyAuthor,
-        uint256 amount
-    );
-    event ChapterRewardsDistributed(
-        uint256 indexed chapterId,
-        address indexed chapterAuthor,
-        uint256 amount
-    );
-    event tipSent(
-        uint256 indexed storyId,
-        uint256 indexed chapterId,
-        address indexed tipper,
-        uint256 amount
-    );
+    event StoryRewardsDistributed(uint256 indexed storyId, address indexed storyAuthor, uint256 amount);
+    event ChapterRewardsDistributed(uint256 indexed chapterId, address indexed chapterAuthor, uint256 amount);
+    event tipSent(uint256 indexed storyId, uint256 indexed chapterId, address indexed tipper, uint256 amount);
     event RewardsWithdrawn(address indexed user, uint256 amount);
-    event DepositRefunded(
-        uint256 indexed storyId,
-        address indexed author,
-        uint256 amount
-    );
+    event DepositRefunded(uint256 indexed storyId, address indexed author, uint256 amount);
 
-    constructor() ERC721("StoryChain", "STORY") Ownable(msg.sender) {}
+    constructor() ERC721("StoryChain", "STORY") Ownable(msg.sender) { }
 
     /**
      * @dev 检查章节是否存在
@@ -146,18 +109,12 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     // 创建新的故事
-    function createStory(
-        string memory ipfsHash,
-        uint256 forkFee
-    ) external payable nonReentrant {
+    function createStory(string memory ipfsHash, uint256 forkFee) external payable nonReentrant {
         require(bytes(ipfsHash).length > 0, "IPFS hash cannot be empty");
 
         // 检查是否需要质押
         if (stories.length < FREE_STORY_COUNT) {
-            require(
-                msg.value == 0,
-                "No deposit required for first 100 stories"
-            );
+            require(msg.value == 0, "No deposit required for first 100 stories");
         } else {
             require(msg.value >= DEFAULT_STORY_DEPOSIT, "Insufficient deposit");
         }
@@ -196,12 +153,10 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      * @param parentId 父章节ID（0表示新故事开头）
      * @param ipfsHash 章节内容的IPFS哈希
      */
-    function createChapter(
-        uint256 storyId,
-        uint256 parentId,
-        string memory ipfsHash,
-        uint256 forkFee
-    ) external nonReentrant {
+    function createChapter(uint256 storyId, uint256 parentId, string memory ipfsHash, uint256 forkFee)
+        external
+        nonReentrant
+    {
         require(bytes(ipfsHash).length > 0, "IPFS hash cannot be empty");
 
         // 检查是否是创建新故事开头
@@ -214,23 +169,14 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             // 新的故事开头 校验是否为故事的所有者
             require(msg.sender == story.author, "Not the story owner");
             // 校验故事是否已经存在开头
-            require(
-                story.firstChapterId == 0,
-                "Story already has a start chapter"
-            );
+            require(story.firstChapterId == 0, "Story already has a start chapter");
         } else {
             // 校验章节是否存在
             require(parentChapter.id != 0, "Parent chapter does not exist");
             // 校验章节是否属于该故事
-            require(
-                parentChapter.storyId == storyId,
-                "Chapter does not belong to this story"
-            );
+            require(parentChapter.storyId == storyId, "Chapter does not belong to this story");
             // 校验是否有用该章节的续写权（仅支持上一章节的作者续写）
-            require(
-                msg.sender == _ownerOf(parentId),
-                "Not the chapter author"
-            );
+            require(msg.sender == _ownerOf(parentId), "Not the chapter author");
         }
         // 创建新章节
         _tokenIdCounter++;
@@ -263,7 +209,8 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         _setTokenURI(newChapterId, ipfsHash);
 
         // 判断是否满足创建质押资金返还条件
-        if (story.author == msg.sender && story.isDeposited && parentChapter.chapterNumber >= MIN_CHAPTERS_FOR_DEPOSIT) {
+        if (story.author == msg.sender && story.isDeposited && parentChapter.chapterNumber >= MIN_CHAPTERS_FOR_DEPOSIT)
+        {
             // 返还质押资金
             story.isDeposited = false;
             payable(msg.sender).transfer(story.deposited);
@@ -271,13 +218,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             emit DepositRefunded(storyId, msg.sender, story.deposited);
         }
 
-        emit ChapterCreated(
-            storyId,
-            newChapterId,
-            parentId,
-            msg.sender,
-            ipfsHash
-        );
+        emit ChapterCreated(storyId, newChapterId, parentId, msg.sender, ipfsHash);
     }
 
     /**
@@ -286,12 +227,11 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      * @param parentId 原章节ID
      * @param ipfsHash 新章节内容的IPFS哈希
      */
-    function forkStory(
-        uint256 storyId,
-        uint256 parentId,
-        string memory ipfsHash,
-        uint256 forkFee
-    ) external payable nonReentrant {
+    function forkStory(uint256 storyId, uint256 parentId, string memory ipfsHash, uint256 forkFee)
+        external
+        payable
+        nonReentrant
+    {
         require(bytes(ipfsHash).length > 0, "IPFS hash cannot be empty");
         // 校验fork费用
         Story storage story = storiesMap[storyId];
@@ -302,10 +242,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         // 校验章节是否存在
         require(parentChapter.id != 0, "Parent chapter does not exist");
         // 校验章节是否属于该故事
-        require(
-            parentChapter.storyId == storyId,
-            "Chapter does not belong to this story"
-        );
+        require(parentChapter.storyId == storyId, "Chapter does not belong to this story");
 
         // 创建分叉章节
         _tokenIdCounter++;
@@ -315,7 +252,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
             id: newChapterId,
             parentId: parentId,
             storyId: storyId,
-            author: msg.sender, 
+            author: msg.sender,
             ipfsHash: ipfsHash,
             createdTime: block.timestamp,
             likes: 0,
@@ -334,26 +271,15 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         _setTokenURI(newChapterId, ipfsHash);
 
         // 分配分叉费用（分给原故事链的作者们）
-        (uint256 storyFee, uint256 chapterFee) = _distributeRewards(
-            storyId,
-            parentId,
-            story.author,
-            parentChapter.author,
-            msg.value
-        );
+        (uint256 storyFee, uint256 chapterFee) =
+            _distributeRewards(storyId, parentId, story.author, parentChapter.author, msg.value);
         story.totalForkFees += storyFee;
         parentChapter.totalForkFees += chapterFee;
 
         story.forkCount++;
         parentChapter.forkCount++;
 
-        emit ChapterForked(
-            storyId,
-            parentId,
-            newChapterId,
-            msg.sender,
-            ipfsHash
-        );
+        emit ChapterForked(storyId, parentId, newChapterId, msg.sender, ipfsHash);
     }
 
     /**
@@ -394,18 +320,10 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      */
     function addComment(uint256 tokenId, string memory ipfsHash) external {
         require(_exists(tokenId), "Chapter does not exist");
-        require(
-            bytes(ipfsHash).length > 0,
-            "Comment IPFS hash cannot be empty"
-        );
+        require(bytes(ipfsHash).length > 0, "Comment IPFS hash cannot be empty");
 
         comments[tokenId].push(
-            Comment({
-                tokenId: tokenId,
-                commenter: msg.sender,
-                ipfsHash: ipfsHash,
-                timestamp: block.timestamp
-            })
+            Comment({ tokenId: tokenId, commenter: msg.sender, ipfsHash: ipfsHash, timestamp: block.timestamp })
         );
 
         emit CommentAdded(tokenId, msg.sender);
@@ -433,11 +351,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         uint256 chapterAuthorFee = totalAmount - storyAuthorFee;
         pendingWithdrawals[chapterAuthor] += chapterAuthorFee;
         emit StoryRewardsDistributed(storyId, storyAuthor, storyAuthorFee);
-        emit ChapterRewardsDistributed(
-            chapterId,
-            chapterAuthor,
-            chapterAuthorFee
-        );
+        emit ChapterRewardsDistributed(chapterId, chapterAuthor, chapterAuthorFee);
         return (storyAuthorFee, chapterAuthorFee);
     }
 
@@ -446,13 +360,8 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         require(msg.value > 0, "Tip amount must be greater than 0");
         Story storage story = storiesMap[storyId];
         Chapter storage chapter = chaptersMap[chapterId];
-        (uint256 storyFee, uint256 chapterFee) = _distributeRewards(
-            storyId,
-            chapterId,
-            story.author,
-            chapter.author,
-            msg.value
-        );
+        (uint256 storyFee, uint256 chapterFee) =
+            _distributeRewards(storyId, chapterId, story.author, chapter.author, msg.value);
         story.totalTips += storyFee;
         chapter.totalTips += chapterFee;
         story.totalTipCount += 1;
@@ -472,14 +381,14 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     // 章节作者修改fork费用
-    function updateChapterForkFee(uint256 chapterId, uint256 newForkFee) external  {
+    function updateChapterForkFee(uint256 chapterId, uint256 newForkFee) external {
         Chapter storage chapter = chaptersMap[chapterId];
         require(chapter.author == msg.sender, "Not the chapter author");
         chapter.forkFee = newForkFee;
     }
 
     // 故事作者修改fork费用
-    function updateStoryForkFee(uint256 storyId, uint256 newForkFee) external  {
+    function updateStoryForkFee(uint256 storyId, uint256 newForkFee) external {
         Story storage story = storiesMap[storyId];
         require(story.author == msg.sender, "Not the story author");
         story.forkFee = newForkFee;
@@ -499,9 +408,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      * @param chapterId 章节ID
      * @return Chapter结构体
      */
-    function getChapter(
-        uint256 chapterId
-    ) external view returns (Chapter memory) {
+    function getChapter(uint256 chapterId) external view returns (Chapter memory) {
         return chaptersMap[chapterId];
     }
 
@@ -511,15 +418,11 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     // 重写必要的函数
-    function tokenURI(
-        uint256 tokenId
-    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
+    function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view override(ERC721, ERC721URIStorage) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 

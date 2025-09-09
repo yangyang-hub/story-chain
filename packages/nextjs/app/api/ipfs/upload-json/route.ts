@@ -3,7 +3,6 @@ import { pinata } from "../../../../utils/config";
 
 export async function POST(request: NextRequest) {
   try {
-
     const body = await request.json();
 
     if (!body || typeof body !== "object") {

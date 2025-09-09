@@ -52,7 +52,7 @@ contract StoryChainTest is Test {
         // Expect the StoryCreated event to be emitted
         vm.expectEmit(true, true, false, true);
         emit StoryCreated(1, storyAuthor, STORY_IPFS);
-        
+
         vm.prank(storyAuthor);
         storyChain.createStory(STORY_IPFS, FORK_FEE);
 
@@ -68,7 +68,7 @@ contract StoryChainTest is Test {
     function test_CreateStory_Fail_FreeWithDeposit() public {
         vm.prank(storyAuthor);
         vm.expectRevert("No deposit required for first 100 stories");
-        storyChain.createStory{value: 1 ether}(STORY_IPFS, FORK_FEE);
+        storyChain.createStory{ value: 1 ether }(STORY_IPFS, FORK_FEE);
     }
 
     function test_CreateStory_Success_WithDeposit() public {
@@ -79,7 +79,7 @@ contract StoryChainTest is Test {
         }
 
         vm.prank(storyAuthor);
-        storyChain.createStory{value: INITIAL_DEPOSIT}(STORY_IPFS, FORK_FEE);
+        storyChain.createStory{ value: INITIAL_DEPOSIT }(STORY_IPFS, FORK_FEE);
 
         uint256 storyId = storyChain.FREE_STORY_COUNT() + 1;
         StoryChain.Story memory story = storyChain.getStory(storyId);
@@ -98,7 +98,7 @@ contract StoryChainTest is Test {
 
         vm.prank(storyAuthor);
         vm.expectRevert("Insufficient deposit");
-        storyChain.createStory{value: INITIAL_DEPOSIT - 1}(STORY_IPFS, FORK_FEE);
+        storyChain.createStory{ value: INITIAL_DEPOSIT - 1 }(STORY_IPFS, FORK_FEE);
     }
 
     // =================================
@@ -136,14 +136,14 @@ contract StoryChainTest is Test {
         vm.expectRevert("Not the story owner");
         storyChain.createChapter(1, 0, CHAPTER_1_IPFS, FORK_FEE);
     }
-    
+
     function test_CreateChapter_Success_Continuation() public {
         // 1. Create Story and First Chapter
         vm.prank(storyAuthor);
         storyChain.createStory(STORY_IPFS, FORK_FEE);
         vm.prank(storyAuthor);
         storyChain.createChapter(1, 0, CHAPTER_1_IPFS, FORK_FEE);
-        
+
         // Transfer chapter ownership to chapterAuthor for continuation
         vm.prank(storyAuthor);
         storyChain.transferFrom(storyAuthor, chapterAuthor, 2);
@@ -187,7 +187,7 @@ contract StoryChainTest is Test {
 
         // 2. Fork
         vm.prank(forker);
-        storyChain.forkStory{value: FORK_FEE}(1, 2, FORK_IPFS, FORK_FEE);
+        storyChain.forkStory{ value: FORK_FEE }(1, 2, FORK_IPFS, FORK_FEE);
         uint256 forkChapterId = 3;
 
         // 3. Verify Fork
@@ -236,7 +236,7 @@ contract StoryChainTest is Test {
         }
         uint256 storyId = storyChain.FREE_STORY_COUNT() + 1;
         vm.prank(storyAuthor);
-        storyChain.createStory{value: INITIAL_DEPOSIT}(STORY_IPFS, FORK_FEE);
+        storyChain.createStory{ value: INITIAL_DEPOSIT }(STORY_IPFS, FORK_FEE);
 
         // 2. Create 100 chapters
         vm.prank(storyAuthor);
@@ -250,7 +250,7 @@ contract StoryChainTest is Test {
             storyChain.createChapter(storyId, parentId, "ipfs", FORK_FEE);
             parentId++;
         }
-        
+
         // The 100th chapter creation should trigger the refund
         vm.prank(storyAuthor);
         storyChain.createChapter(storyId, parentId, "ipfs", FORK_FEE);
@@ -291,7 +291,8 @@ contract StoryChainTest is Test {
 
         // The public getter for a mapping to an array requires an index.
         // It returns the struct's fields, not the struct itself.
-        (uint256 tokenId, address commenter, string memory ipfsHash, uint256 timestamp) = storyChain.comments(storyId, 0);
+        (uint256 tokenId, address commenter, string memory ipfsHash, uint256 timestamp) =
+            storyChain.comments(storyId, 0);
 
         assertEq(tokenId, storyId);
         assertEq(commenter, randomUser);

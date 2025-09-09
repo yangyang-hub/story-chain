@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getGlobalMonitor } from "../lib/monitoring";
 import { formatAddress } from "../utils/formatting";
 
 interface MonitorStatus {
@@ -32,11 +31,12 @@ export default function MonitorDashboard() {
   // 获取监控状态
   const fetchMonitorStatus = useCallback(async () => {
     try {
-      const monitor = getGlobalMonitor();
-      if (monitor) {
-        const status = await monitor.getStatus();
+      const response = await fetch("/api/data/sync");
+      if (response.ok) {
+        const status = await response.json();
         setMonitorStatus({
-          ...status,
+          isMonitoring: status.isMonitoring || false,
+          contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "Unknown",
           lastUpdate: status.lastUpdate || undefined,
         });
       } else {

@@ -132,10 +132,10 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
 
         {type === "json" && (
           <div className="space-y-2">
-            {content.name && (
+            {(content.name || content.title) && (
               <div>
                 <label className="text-sm font-medium text-base-content/70">标题:</label>
-                <p className="text-lg font-semibold">{content.name}</p>
+                <p className="text-lg font-semibold">{content.name || content.title}</p>
               </div>
             )}
 

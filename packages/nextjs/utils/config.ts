@@ -1,8 +1,8 @@
-"server only"
+"server only";
 
-import { PinataSDK } from "pinata"
+import { PinataSDK } from "pinata";
 
 export const pinata = new PinataSDK({
   pinataJwt: `${process.env.PINATA_JWT}`,
-  pinataGateway: `${process.env.PINATA_GATEWAY}`
-})
+  pinataGateway: `${process.env.PINATA_GATEWAY}`,
+});
