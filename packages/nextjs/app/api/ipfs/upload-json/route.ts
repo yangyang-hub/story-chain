@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     // 上传到Pinata
     const { cid } = await pinata.upload.public.json(body);
 
-    return NextResponse.json(cid, { status: 200 });
+    return NextResponse.json({ ipfsHash: cid }, { status: 200 });
   } catch (error) {
     console.error("IPFS upload error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
