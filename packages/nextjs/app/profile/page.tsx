@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import {
@@ -70,113 +70,155 @@ const ProfilePage = () => {
   });
   const [loading, setLoading] = useState(true);
 
-  // 获取用户创建的故事事件
-  const { data: storyEvents } = useScaffoldEventHistory({
-    contractName: "StoryChain",
-    eventName: "StoryCreated",
-    fromBlock: 0n,
-    filters: address ? { author: address } : undefined,
-  });
-
-  // 获取用户创建的章节事件
-  const { data: chapterEvents } = useScaffoldEventHistory({
-    contractName: "StoryChain",
-    eventName: "ChapterCreated",
-    fromBlock: 0n,
-    filters: address ? { author: address } : undefined,
-  });
-
-  // 获取用户收到的打赏事件
+  // 获取用户收到的打赏事件（用于计算奖励，保留但暂未使用）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { data: tipEvents } = useScaffoldEventHistory({
     contractName: "StoryChain",
     eventName: "tipSent",
     fromBlock: 0n,
   });
 
-  useEffect(() => {
+  const loadUserData = useCallback(async () => {
     if (!address) {
       setLoading(false);
       return;
     }
 
-    const loadUserData = async () => {
+    try {
+      setLoading(true);
+
+      // Initialize arrays
+      const stories: UserStory[] = [];
+      const chapters: UserChapter[] = [];
+
+      // 使用 API 获取用户故事数据（与 explore 页面一致）
       try {
-        setLoading(true);
+        const storiesRes = await fetch(`/api/data/stories?author=${address}`);
+        if (storiesRes.ok) {
+          const storiesData = await storiesRes.json();
+          if (storiesData.stories) {
+            for (const storyData of storiesData.stories) {
+              try {
+                // 加载 IPFS 元数据以获取标题等信息
+                let metadata = null;
+                let title = `故事 #${storyData.id}`;
 
-        // Initialize arrays
-        const stories: UserStory[] = [];
-        const chapters: UserChapter[] = [];
+                if (storyData.ipfsHash) {
+                  try {
+                    metadata = await getJSONFromIPFS(storyData.ipfsHash);
+                    title = metadata?.title || metadata?.name || title;
+                  } catch (error) {
+                    console.error("加载故事元数据失败:", error);
+                  }
+                }
 
-        // 加载用户故事
-        if (storyEvents && storyEvents.length > 0) {
-          for (const event of storyEvents) {
-            try {
-              const metadata = await getJSONFromIPFS(event.args.ipfsHash as string);
-              stories.push({
-                id: event.args.storyId?.toString() || "",
-                title: metadata.name || "未命名故事",
-                ipfsHash: event.args.ipfsHash as string,
-                createdTime: Date.now(), // 实际应用中应该从区块时间戳获取
-                likes: 0, // 需要从合约获取
-                forkCount: 0, // 需要从合约获取
-                totalTips: "0", // 需要从合约获取
-                metadata,
-              });
-            } catch (error) {
-              console.error("加载故事元数据失败:", error);
+                stories.push({
+                  id: storyData.id,
+                  title: title,
+                  ipfsHash: storyData.ipfsHash,
+                  createdTime: storyData.createdTime * 1000, // 转换为毫秒
+                  likes: Number(storyData.likes) || 0,
+                  forkCount: Number(storyData.forkCount) || 0,
+                  totalTips: storyData.totalTips || "0",
+                  metadata,
+                });
+              } catch (error) {
+                console.error("处理故事数据失败:", error);
+              }
             }
           }
-          setUserStories(stories);
         }
-
-        // 加载用户章节
-        if (chapterEvents && chapterEvents.length > 0) {
-          for (const event of chapterEvents) {
-            try {
-              const metadata = await getJSONFromIPFS(event.args.ipfsHash as string);
-              chapters.push({
-                id: event.args.chapterId?.toString() || "",
-                storyId: event.args.storyId?.toString() || "",
-                title: metadata.name || "未命名章节",
-                ipfsHash: event.args.ipfsHash as string,
-                createdTime: Date.now(),
-                likes: 0,
-                forkCount: 0,
-                totalTips: "0",
-                chapterNumber: metadata.chapterNumber || 1,
-                metadata,
-              });
-            } catch (error) {
-              console.error("加载章节元数据失败:", error);
-            }
-          }
-          setUserChapters(chapters);
-        }
-
-        // 计算统计信息
-        const totalStories = stories.length;
-        const totalChapters = chapters.length;
-        const stats: UserStats = {
-          totalStories,
-          totalChapters,
-          totalLikes:
-            stories.reduce((sum: number, story: any) => sum + story.likes, 0) +
-            chapters.reduce((sum: number, chapter: any) => sum + chapter.likes, 0),
-          totalTips: "0", // 需要计算
-          totalForks:
-            stories.reduce((sum: number, story: any) => sum + story.forkCount, 0) +
-            chapters.reduce((sum: number, chapter: any) => sum + chapter.forkCount, 0),
-        };
-        setUserStats(stats);
       } catch (error) {
-        console.error("加载用户数据失败:", error);
-      } finally {
-        setLoading(false);
+        console.error("获取用户故事失败:", error);
       }
-    };
 
+      // 使用 API 获取用户章节数据（与其他页面一致）
+      try {
+        const chaptersRes = await fetch(`/api/data/chapters?author=${address}`);
+        if (chaptersRes.ok) {
+          const chaptersData = await chaptersRes.json();
+          if (chaptersData.chapters) {
+            for (const chapterData of chaptersData.chapters) {
+              try {
+                // 加载 IPFS 元数据以获取标题等信息
+                let metadata = null;
+                let title = `章节 #${chapterData.id}`;
+                let chapterNumber = 1;
+
+                if (chapterData.ipfsHash) {
+                  try {
+                    metadata = await getJSONFromIPFS(chapterData.ipfsHash);
+                    title = metadata?.title || metadata?.name || title;
+                    chapterNumber = metadata?.chapterNumber || 1;
+                  } catch (error) {
+                    console.error("加载章节元数据失败:", error);
+                  }
+                }
+
+                chapters.push({
+                  id: chapterData.id,
+                  storyId: chapterData.storyId,
+                  title: title,
+                  ipfsHash: chapterData.ipfsHash,
+                  createdTime: chapterData.createdTime * 1000, // 转换为毫秒
+                  likes: Number(chapterData.likes) || 0,
+                  forkCount: Number(chapterData.forkCount) || 0,
+                  totalTips: chapterData.totalTips || "0",
+                  chapterNumber: chapterNumber,
+                  metadata,
+                });
+              } catch (error) {
+                console.error("处理章节数据失败:", error);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("获取用户章节失败:", error);
+      }
+
+      // 更新状态
+      setUserStories(stories);
+      setUserChapters(chapters);
+
+      // 计算统计信息（使用真实数据）
+      const totalStories = stories.length;
+      const totalChapters = chapters.length;
+      const totalLikes =
+        stories.reduce((sum: number, story: UserStory) => sum + story.likes, 0) +
+        chapters.reduce((sum: number, chapter: UserChapter) => sum + chapter.likes, 0);
+
+      const totalTipsValue =
+        stories.reduce((sum: number, story: UserStory) => sum + parseFloat(story.totalTips), 0) +
+        chapters.reduce((sum: number, chapter: UserChapter) => sum + parseFloat(chapter.totalTips), 0);
+
+      const totalForks =
+        stories.reduce((sum: number, story: UserStory) => sum + story.forkCount, 0) +
+        chapters.reduce((sum: number, chapter: UserChapter) => sum + chapter.forkCount, 0);
+
+      const stats: UserStats = {
+        totalStories,
+        totalChapters,
+        totalLikes,
+        totalTips: totalTipsValue.toString(),
+        totalForks,
+      };
+      setUserStats(stats);
+    } catch (error) {
+      console.error("加载用户数据失败:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [address]);
+
+  useEffect(() => {
     loadUserData();
-  }, [address, storyEvents?.length, chapterEvents?.length, tipEvents?.length]);
+  }, [loadUserData]);
+
+  // 点赞成功后的回调函数，重新加载数据以确保一致性
+  const handleLikeSuccess = () => {
+    loadUserData();
+  };
 
   const handleWithdrawRewards = async () => {
     try {
@@ -352,6 +394,7 @@ const ProfilePage = () => {
                                 isStory={true}
                                 currentLikes={story.likes}
                                 className="text-xs"
+                                onLikeSuccess={handleLikeSuccess}
                               />
                               <span className="flex items-center gap-1">
                                 <ShareIcon className="w-4 h-4" />
@@ -418,6 +461,7 @@ const ProfilePage = () => {
                                 isStory={false}
                                 currentLikes={chapter.likes}
                                 className="text-xs"
+                                onLikeSuccess={handleLikeSuccess}
                               />
                               <span className="flex items-center gap-1">
                                 <ShareIcon className="w-4 h-4" />
