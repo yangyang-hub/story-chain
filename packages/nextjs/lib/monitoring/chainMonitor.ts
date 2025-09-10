@@ -218,15 +218,17 @@ export class ChainMonitor {
         };
 
         processedEvents.push(processedEvent);
-        console.log(`✅ 处理事件: ${eventName}, 区块: ${processedEvent.blockNumber}, logIndex: ${processedEvent.logIndex}`);
-        
+        console.log(
+          `✅ 处理事件: ${eventName}, 区块: ${processedEvent.blockNumber}, logIndex: ${processedEvent.logIndex}`,
+        );
+
         // 特别记录CommentAdded事件
         if (eventName === "CommentAdded") {
           console.log(`📝 评论事件详情:`, {
             chapterId: eventArgs?.chapterId?.toString(),
             commenter: eventArgs?.commenter,
             transactionHash: log.transactionHash,
-            logIndex: processedEvent.logIndex
+            logIndex: processedEvent.logIndex,
           });
         }
       } catch (error) {

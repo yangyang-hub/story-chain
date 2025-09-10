@@ -9,7 +9,6 @@ import {
   BookOpenIcon,
   ClockIcon,
   CurrencyDollarIcon,
-  HeartIcon,
   InformationCircleIcon,
   PlusIcon,
   ShareIcon,
@@ -25,6 +24,81 @@ import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { ChapterData } from "~~/lib/monitoring/types";
 import { type ChapterMetadata, getJSONFromIPFS, uploadChapterMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
+
+interface StoryMetadata {
+  title?: string;
+  description?: string;
+  tags?: string[];
+  content?: string;
+  image?: string; // 封面图片IPFS哈希
+}
+
+// 故事封面组件
+const StoryCover: React.FC<{
+  image?: string;
+  title: string;
+  storyId: string;
+  className?: string;
+}> = ({ image, title, storyId, className = "" }) => {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(!!image);
+
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoading(false);
+  };
+
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
+
+  // 获取显示文字（取标题的前几个字或故事ID）
+  const getDisplayText = (title: string, storyId: string) => {
+    if (title && title.trim()) {
+      // 中文取前2个字，英文取前4个字母
+      const isChinese = /[一-龥]/.test(title);
+      return isChinese ? title.substring(0, 2) : title.substring(0, 4).toUpperCase();
+    }
+    return `#${storyId}`;
+  };
+
+  const displayText = getDisplayText(title, storyId);
+
+  if (!image || imageError) {
+    return (
+      <div
+        className={`${className} bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-2xl relative overflow-hidden`}
+      >
+        <div className="absolute inset-0 bg-black/10"></div>
+        <span className="relative z-10">{displayText}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${className} relative overflow-hidden bg-base-200`}>
+      {imageLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500">
+          <div className="loading loading-spinner loading-lg text-white"></div>
+        </div>
+      )}
+      <img
+        src={`https://gateway.pinata.cloud/ipfs/${image}`}
+        alt={title || `故事 #${storyId}`}
+        className="w-full h-full object-cover"
+        onError={handleImageError}
+        onLoad={handleImageLoad}
+        loading="lazy"
+      />
+      {imageError && (
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-2xl">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <span className="relative z-10">{displayText}</span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface ChapterWithMetadata extends ChapterData {
   metadata?: any;
@@ -312,13 +386,15 @@ const StoryDetailPage = () => {
   const [chapters, setChapters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [storyMetadata, setStoryMetadata] = useState<StoryMetadata | null>(null);
+  const [metadataLoading, setMetadataLoading] = useState(false);
 
   const storyId = id as string;
 
   // 直接使用fetch获取数据，避开hook问题
   const fetchData = useCallback(async () => {
     if (!storyId) return;
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -327,7 +403,13 @@ const StoryDetailPage = () => {
       const storyRes = await fetch(`/api/data/stories/${storyId}`);
       if (storyRes.ok) {
         const storyData = await storyRes.json();
-        setStory(storyData.story);
+        const storyInfo = storyData.story;
+        setStory(storyInfo);
+
+        // 异步加载故事元数据
+        if (storyInfo?.ipfsHash) {
+          loadStoryMetadata(storyInfo.ipfsHash);
+        }
       } else {
         throw new Error(`故事数据获取失败: ${storyRes.status}`);
       }
@@ -346,6 +428,28 @@ const StoryDetailPage = () => {
     }
   }, [storyId]);
 
+  // 加载故事元数据
+  const loadStoryMetadata = useCallback(async (ipfsHash: string) => {
+    if (!ipfsHash) return;
+
+    setMetadataLoading(true);
+    try {
+      const data = await getJSONFromIPFS(ipfsHash);
+      const validatedMetadata: StoryMetadata = {
+        title: data?.title || undefined,
+        description: data?.description || undefined,
+        tags: Array.isArray(data?.tags) ? data.tags : undefined,
+        content: data?.content || undefined,
+        image: data?.image || undefined,
+      };
+      setStoryMetadata(validatedMetadata);
+    } catch (err) {
+      console.error("加载故事元数据失败:", err);
+    } finally {
+      setMetadataLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
   }, [storyId]);
@@ -357,26 +461,11 @@ const StoryDetailPage = () => {
   }));
 
   // 合约调用函数
-  const { writeContractAsync: likeStory } = useScaffoldWriteContract("StoryChain");
   const { writeContractAsync: tip } = useScaffoldWriteContract("StoryChain");
 
-  const handleLikeStory = async () => {
-    if (!address) {
-      notification.error(t("wallet.connect"));
-      return;
-    }
-
-    try {
-      await likeStory({
-        functionName: "likeStory",
-        args: [BigInt(storyId)],
-      });
-      notification.success(t("success.liked"));
-      fetchData(); // 重新获取数据
-    } catch (error) {
-      console.error("点赞失败:", error);
-      notification.error("点赞失败");
-    }
+  const handleLikeSuccess = () => {
+    // 点赞成功后重新获取数据
+    fetchData();
   };
 
   const handleTip = async (storyId: string, chapterId: string) => {
@@ -451,16 +540,74 @@ const StoryDetailPage = () => {
       </button>
 
       {/* 故事信息 */}
-      <div className="card bg-base-100 shadow-xl mb-8">
-        <div className="card-body">
-          <IPFSContentViewer cid={story.ipfsHash} contentType="json" showUrl={true} />
+      <div className="card bg-base-100 shadow-xl mb-8 overflow-hidden">
+        {/* 故事封面 */}
+        {(storyMetadata?.image || metadataLoading) && (
+          <div className="relative">
+            {metadataLoading ? (
+              <div className="h-64 bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <div className="loading loading-spinner loading-lg text-white"></div>
+              </div>
+            ) : (
+              <StoryCover
+                image={storyMetadata?.image}
+                title={storyMetadata?.title || `故事 #${storyId}`}
+                storyId={storyId}
+                className="h-64 w-full"
+              />
+            )}
+          </div>
+        )}
 
-          <div className="flex justify-between items-center mt-6">
+        <div className="card-body">
+          {/* 标题和基本信息 */}
+          <div className="mb-4">
+            <h1 className="text-3xl font-bold mb-2">{storyMetadata?.title || `故事 #${storyId}`}</h1>
+            {storyMetadata?.description && <p className="text-base-content/70 mb-4">{storyMetadata.description}</p>}
+
+            {/* 标签 */}
+            {storyMetadata?.tags && storyMetadata.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {storyMetadata.tags.map((tag: string, index: number) => (
+                  <span key={index} className="badge badge-outline badge-sm">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* 作者和时间信息 */}
+            <div className="flex items-center gap-4 text-sm text-base-content/70 mb-4">
+              <div className="flex items-center gap-1">
+                <UserIcon className="w-4 h-4" />
+                <Address address={story.author} size="sm" />
+              </div>
+              <div className="flex items-center gap-1">
+                <ClockIcon className="w-4 h-4" />
+                <span>{new Date(story.createdTime * 1000).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* IPFS 内容查看器（详细内容） */}
+          <div className="mb-6">
+            <details className="collapse collapse-arrow bg-base-200">
+              <summary className="collapse-title text-lg font-medium">查看完整内容</summary>
+              <div className="collapse-content">
+                <IPFSContentViewer cid={story.ipfsHash} contentType="json" showUrl={true} />
+              </div>
+            </details>
+          </div>
+
+          <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <button onClick={handleLikeStory} className="btn btn-outline btn-sm gap-2" disabled={!address}>
-                <HeartIcon className="w-4 h-4" />
-                点赞 ({story.likes})
-              </button>
+              <LikeButton
+                tokenId={BigInt(storyId)}
+                isStory={true}
+                currentLikes={story.likes}
+                showCount={true}
+                onLikeSuccess={handleLikeSuccess}
+              />
 
               <div className="flex items-center gap-1 text-sm text-base-content/70">
                 <ShareIcon className="w-4 h-4" />

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initializeMonitoring, getGlobalMonitor } from "../../../../lib/monitoring";
+import { getGlobalMonitor, initializeMonitoring } from "../../../../lib/monitoring";
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,16 +20,16 @@ export async function GET(request: NextRequest) {
       const monitor = getGlobalMonitor();
       if (monitor) {
         const status = await monitor.getStatus();
-        return NextResponse.json({ 
-          success: true, 
+        return NextResponse.json({
+          success: true,
           monitoring: true,
-          status 
+          status,
         });
       } else {
-        return NextResponse.json({ 
-          success: true, 
+        return NextResponse.json({
+          success: true,
           monitoring: false,
-          message: "监控未运行" 
+          message: "监控未运行",
         });
       }
     } else if (action === "test-comment") {
@@ -44,15 +44,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      actions: ["start", "status", "test-comment"] 
+    return NextResponse.json({
+      success: true,
+      actions: ["start", "status", "test-comment"],
     });
   } catch (error) {
     console.error("监控API错误:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "未知错误" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     if (tokenId) {
       // 获取特定故事/章节的评论
       const comments = await store.getCommentsByTokenId(tokenId);
-      
+
       // 分页
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     } else {
       // 获取所有评论
       const comments = await store.getCommentsData();
-      
+
       // 分页
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;

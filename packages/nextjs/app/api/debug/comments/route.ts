@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
         success: true,
         tokenId,
         count: comments.length,
-        comments
+        comments,
       });
     }
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       // 插入测试评论
       const testEvent = {
         chapterId: tokenId || "1",
-        commenter: testData?.commenter || "0x1234567890123456789012345678901234567890"
+        commenter: testData?.commenter || "0x1234567890123456789012345678901234567890",
       };
 
       await store.processEventDirectly(
@@ -33,13 +33,13 @@ export async function POST(request: NextRequest) {
         12345,
         testData?.transactionHash || `0xtest${Date.now()}`,
         testData?.logIndex || 0,
-        Date.now()
+        Date.now(),
       );
 
       return NextResponse.json({
         success: true,
         message: "测试评论已插入",
-        testEvent
+        testEvent,
       });
     }
 
@@ -50,13 +50,16 @@ export async function POST(request: NextRequest) {
         await monitor.syncHistoricalData();
         return NextResponse.json({
           success: true,
-          message: "已手动触发事件同步"
+          message: "已手动触发事件同步",
         });
       } else {
-        return NextResponse.json({
-          success: false,
-          message: "监控未运行"
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            success: false,
+            message: "监控未运行",
+          },
+          { status: 400 },
+        );
       }
     }
 
@@ -66,7 +69,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         count: comments.length,
-        comments
+        comments,
       });
     }
 
@@ -75,21 +78,29 @@ export async function POST(request: NextRequest) {
       await store.updateMissingCommentHashes();
       return NextResponse.json({
         success: true,
-        message: "已尝试更新缺少ipfsHash的评论"
+        message: "已尝试更新缺少ipfsHash的评论",
       });
     }
 
-    return NextResponse.json({
-      success: false,
-      message: "未知操作",
-      availableActions: ["check-comments", "insert-test-comment", "sync-events", "get-all-comments", "update-missing-hashes"]
-    }, { status: 400 });
-
+    return NextResponse.json(
+      {
+        success: false,
+        message: "未知操作",
+        availableActions: [
+          "check-comments",
+          "insert-test-comment",
+          "sync-events",
+          "get-all-comments",
+          "update-missing-hashes",
+        ],
+      },
+      { status: 400 },
+    );
   } catch (error) {
     console.error("评论测试API错误:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "未知错误" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

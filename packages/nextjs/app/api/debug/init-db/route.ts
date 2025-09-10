@@ -70,9 +70,9 @@ CREATE TRIGGER update_comments_updated_at
           tables: {
             comments: {
               exists: result.rows.length > 0,
-              columns: result.rows
-            }
-          }
+              columns: result.rows,
+            },
+          },
         });
       } finally {
         client.release();
@@ -89,17 +89,19 @@ CREATE TRIGGER update_comments_updated_at
       }
     }
 
-    return NextResponse.json({
-      success: false,
-      message: "未知操作",
-      availableActions: ["init-tables", "check-tables", "clear-comments"]
-    }, { status: 400 });
-
+    return NextResponse.json(
+      {
+        success: false,
+        message: "未知操作",
+        availableActions: ["init-tables", "check-tables", "clear-comments"],
+      },
+      { status: 400 },
+    );
   } catch (error) {
     console.error("数据库初始化错误:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "未知错误" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

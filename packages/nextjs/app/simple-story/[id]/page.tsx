@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 
 interface StoryData {
   id: string;
@@ -88,10 +88,7 @@ export default function SimpleStoryPage() {
       <div className="container mx-auto px-4 py-8 max-w-6xl text-center">
         <div className="alert alert-error">
           <span>加载失败: {error}</span>
-          <button 
-            className="btn btn-sm" 
-            onClick={() => window.location.reload()}
-          >
+          <button className="btn btn-sm" onClick={() => window.location.reload()}>
             重试
           </button>
         </div>
@@ -112,37 +109,49 @@ export default function SimpleStoryPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <h1 className="text-3xl font-bold mb-6">故事详情</h1>
-      
+
       {/* 故事信息 */}
       <div className="card bg-base-100 shadow-xl mb-8">
         <div className="card-body">
           <h2 className="card-title">故事 #{story.id}</h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div><strong>作者:</strong> {story.author}</div>
-            <div><strong>创建时间:</strong> {new Date(parseInt(story.createdTime) * 1000).toLocaleString()}</div>
-            <div><strong>点赞数:</strong> {story.likes}</div>
-            <div><strong>分叉数:</strong> {story.forkCount}</div>
-            <div><strong>总打赏:</strong> {story.totalTips} ETH</div>
-            <div><strong>打赏次数:</strong> {story.totalTipCount}</div>
+            <div>
+              <strong>作者:</strong> {story.author}
+            </div>
+            <div>
+              <strong>创建时间:</strong> {new Date(parseInt(story.createdTime) * 1000).toLocaleString()}
+            </div>
+            <div>
+              <strong>点赞数:</strong> {story.likes}
+            </div>
+            <div>
+              <strong>分叉数:</strong> {story.forkCount}
+            </div>
+            <div>
+              <strong>总打赏:</strong> {story.totalTips} ETH
+            </div>
+            <div>
+              <strong>打赏次数:</strong> {story.totalTipCount}
+            </div>
           </div>
-          
+
           <div className="mt-4">
-            <strong>IPFS Hash:</strong> 
+            <strong>IPFS Hash:</strong>
             <code className="ml-2 bg-base-200 px-2 py-1 rounded text-xs">{story.ipfsHash}</code>
           </div>
-          
+
           <div className="mt-2">
             <strong>区块号:</strong> {story.blockNumber}
           </div>
-          
+
           <div className="mt-2">
-            <strong>交易哈希:</strong> 
+            <strong>交易哈希:</strong>
             <code className="ml-2 bg-base-200 px-2 py-1 rounded text-xs break-all">{story.transactionHash}</code>
           </div>
         </div>
       </div>
-      
+
       {/* 章节信息 */}
       <div className="card bg-base-100 shadow-xl">
         <div className="card-body">

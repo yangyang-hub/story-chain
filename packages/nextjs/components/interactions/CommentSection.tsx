@@ -35,7 +35,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
     try {
       setLoadingComments(true);
       const response = await fetch(`/api/data/comments?tokenId=${tokenId.toString()}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         const fetchedComments: CommentDisplay[] = data.comments.map((comment: any) => ({
@@ -195,9 +195,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
                       className="bg-transparent border-none p-0"
                     />
                   ) : (
-                    <div className="text-base-content/60 italic">
-                      评论内容正在从IPFS加载...
-                    </div>
+                    <div className="text-base-content/60 italic">评论内容正在从IPFS加载...</div>
                   )}
                 </div>
               </div>

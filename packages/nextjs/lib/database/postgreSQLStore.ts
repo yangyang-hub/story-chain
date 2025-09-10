@@ -665,13 +665,13 @@ export class PostgreSQLStore {
     try {
       // 从合约中获取评论的完整数据
       let ipfsHash = "";
-      
+
       try {
         // 创建合约客户端来读取评论数据
         const { createPublicClient, http } = await import("viem");
         const { foundry } = await import("viem/chains");
         const deployedContracts = await import("../../contracts/deployedContracts");
-        
+
         const contractClient = createPublicClient({
           chain: foundry,
           transport: http(),
@@ -680,29 +680,30 @@ export class PostgreSQLStore {
         const contract = deployedContracts.default[31337]?.StoryChain;
         if (contract) {
           console.log(`🔍 尝试从合约获取评论数据，chapterId: ${chapterId}, commenter: ${commenter}`);
-          
+
           // 由于我们不知道确切的评论索引，需要遍历查找最新的评论
           // 通过匹配commenter和时间戳范围来找到对应的评论
           let commentFound = false;
-          
+
           // 尝试查找最近的几个评论索引（假设新评论在最后几个位置）
           for (let index = 0; index < 10; index++) {
             try {
               const commentResult = await contractClient.readContract({
                 address: contract.address as `0x${string}`,
                 abi: contract.abi,
-                functionName: 'comments',
-                args: [BigInt(chapterId.toString()), BigInt(index)]
+                functionName: "comments",
+                args: [BigInt(chapterId.toString()), BigInt(index)],
               });
 
               if (commentResult && Array.isArray(commentResult)) {
                 const [tokenId, commentCommenter, commentIpfsHash, commentTimestamp] = commentResult;
-                
+
                 // 检查是否是我们要找的评论（通过commenter匹配）
                 if (commentCommenter && commentCommenter.toLowerCase() === commenter.toLowerCase()) {
                   // 检查时间戳是否接近（允许一定范围的差异）
                   const timeDiff = Math.abs(Number(commentTimestamp) - timestamp);
-                  if (timeDiff < 300) { // 允许5分钟的时间差异
+                  if (timeDiff < 300) {
+                    // 允许5分钟的时间差异
                     ipfsHash = commentIpfsHash as string;
                     commentFound = true;
                     console.log(`✅ 找到匹配的评论，索引: ${index}, ipfsHash: ${ipfsHash}`);
@@ -719,7 +720,7 @@ export class PostgreSQLStore {
               if (index > 2) break;
             }
           }
-          
+
           if (!commentFound) {
             console.log(`⚠️  未能在合约中找到匹配的评论，将使用空的ipfsHash`);
           }
@@ -751,8 +752,8 @@ export class PostgreSQLStore {
         ],
       );
 
-      console.log(`✅ 成功插入评论: ${commentId} for token ${chapterId}, ipfsHash: ${ipfsHash || '(empty)'}`);
-      
+      console.log(`✅ 成功插入评论: ${commentId} for token ${chapterId}, ipfsHash: ${ipfsHash || "(empty)"}`);
+
       // 如果ipfsHash为空，记录需要后续处理的评论
       if (!ipfsHash) {
         console.log(`⚠️  评论 ${commentId} 的 ipfsHash 为空，需要后续更新`);
@@ -912,7 +913,7 @@ export class PostgreSQLStore {
       const { createPublicClient, http } = await import("viem");
       const { foundry } = await import("viem/chains");
       const deployedContracts = await import("../../contracts/deployedContracts");
-      
+
       const contractClient = createPublicClient({
         chain: foundry,
         transport: http(),
@@ -929,7 +930,7 @@ export class PostgreSQLStore {
       for (const comment of result.rows) {
         try {
           const { id, token_id: tokenId, commenter, created_time: createdTime } = comment;
-          
+
           console.log(`尝试更新评论 ${id} 的 ipfsHash...`);
 
           // 遍历查找匹配的评论
@@ -939,18 +940,18 @@ export class PostgreSQLStore {
               const commentResult = await contractClient.readContract({
                 address: contract.address as `0x${string}`,
                 abi: contract.abi,
-                functionName: 'comments',
-                args: [BigInt(tokenId), BigInt(index)]
+                functionName: "comments",
+                args: [BigInt(tokenId), BigInt(index)],
               });
 
               if (commentResult && Array.isArray(commentResult)) {
                 const [, commentCommenter, commentIpfsHash, commentTimestamp] = commentResult;
-                
+
                 // 匹配commenter和时间戳
-                if (commentCommenter && 
-                    commentCommenter.toLowerCase() === commenter.toLowerCase()) {
+                if (commentCommenter && commentCommenter.toLowerCase() === commenter.toLowerCase()) {
                   const timeDiff = Math.abs(Number(commentTimestamp) * 1000 - createdTime);
-                  if (timeDiff < 300000) { // 5分钟的差异
+                  if (timeDiff < 300000) {
+                    // 5分钟的差异
                     ipfsHash = commentIpfsHash as string;
                     console.log(`✅ 找到匹配的评论，索引: ${index}, ipfsHash: ${ipfsHash}`);
                     break;
@@ -965,10 +966,10 @@ export class PostgreSQLStore {
 
           if (ipfsHash) {
             // 更新数据库中的ipfsHash
-            await client.query(
-              'UPDATE comments SET ipfs_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-              [ipfsHash, id]
-            );
+            await client.query("UPDATE comments SET ipfs_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", [
+              ipfsHash,
+              id,
+            ]);
             updatedCount++;
             console.log(`✅ 成功更新评论 ${id} 的 ipfsHash: ${ipfsHash}`);
           } else {

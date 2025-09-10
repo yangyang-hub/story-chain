@@ -4,7 +4,7 @@ import { PostgreSQLStore } from "../../../../lib/database/postgreSQLStore";
 export async function GET(request: NextRequest) {
   try {
     const store = new PostgreSQLStore();
-    
+
     // 测试数据库连接
     const testConnection = async () => {
       try {
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
           12345,
           "0xtest123",
           0,
-          Date.now()
+          Date.now(),
         );
         return { success: true, message: "测试评论插入成功" };
       } catch (error) {
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     const [connection, comments, insertion] = await Promise.all([
       testConnection(),
       getCommentsTest(),
-      testInsertComment()
+      testInsertComment(),
     ]);
 
     return NextResponse.json({
@@ -54,14 +54,14 @@ export async function GET(request: NextRequest) {
       tests: {
         connection,
         comments,
-        insertion
-      }
+        insertion,
+      },
     });
   } catch (error) {
     console.error("数据库测试错误:", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "未知错误" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
