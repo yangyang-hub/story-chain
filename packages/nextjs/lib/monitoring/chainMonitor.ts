@@ -7,6 +7,7 @@ interface ProcessedEvent {
   type: string;
   blockNumber: number;
   transactionHash: string;
+  logIndex: number;
   timestamp: number;
   data: any;
 }
@@ -169,6 +170,7 @@ export class ChainMonitor {
       ),
       parseAbiItem("event StoryLiked(uint256 indexed storyId, address indexed liker, uint256 newLikeCount)"),
       parseAbiItem("event ChapterLiked(uint256 indexed chapterId, address indexed liker, uint256 newLikeCount)"),
+      parseAbiItem("event CommentAdded(uint256 indexed chapterId, address indexed commenter)"),
       parseAbiItem(
         "event tipSent(uint256 indexed storyId, uint256 indexed chapterId, address indexed tipper, uint256 amount)",
       ),
@@ -210,12 +212,23 @@ export class ChainMonitor {
           type: eventName,
           blockNumber: Number(log.blockNumber),
           transactionHash: log.transactionHash || "",
+          logIndex: Number(log.logIndex || 0),
           timestamp,
           data: eventArgs,
         };
 
         processedEvents.push(processedEvent);
-        console.log(`处理事件: ${eventName}, 区块: ${processedEvent.blockNumber}`);
+        console.log(`✅ 处理事件: ${eventName}, 区块: ${processedEvent.blockNumber}, logIndex: ${processedEvent.logIndex}`);
+        
+        // 特别记录CommentAdded事件
+        if (eventName === "CommentAdded") {
+          console.log(`📝 评论事件详情:`, {
+            chapterId: eventArgs?.chapterId?.toString(),
+            commenter: eventArgs?.commenter,
+            transactionHash: log.transactionHash,
+            logIndex: processedEvent.logIndex
+          });
+        }
       } catch (error) {
         console.error("处理事件失败:", error);
         console.error("日志详情:", log);
@@ -236,6 +249,7 @@ export class ChainMonitor {
           event.data,
           event.blockNumber,
           event.transactionHash,
+          event.logIndex,
           event.timestamp,
         );
       }

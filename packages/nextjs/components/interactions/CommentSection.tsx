@@ -5,7 +5,6 @@ import { useAccount } from "wagmi";
 import { ChatBubbleLeftIcon, ClockIcon, PaperAirplaneIcon, UserIcon } from "@heroicons/react/24/outline";
 import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
-import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
 import { type CommentMetadata } from "~~/services/ipfs/ipfsService";
 
@@ -31,53 +30,44 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
   const [comments, setComments] = useState<CommentDisplay[]>([]);
   const [loadingComments, setLoadingComments] = useState(true);
 
-  // 获取评论事件
-  const { data: commentEvents, refetch: refetchComments } = useScaffoldEventHistory({
-    contractName: "StoryChain",
-    eventName: "CommentAdded",
-    fromBlock: 0n,
-    filters: { chapterId: tokenId }, // 注意：合约中事件参数名是 chapterId，但可用于故事和章节
-  });
+  // 从API获取评论数据
+  const fetchComments = async () => {
+    try {
+      setLoadingComments(true);
+      const response = await fetch(`/api/data/comments?tokenId=${tokenId.toString()}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        const fetchedComments: CommentDisplay[] = data.comments.map((comment: any) => ({
+          id: comment.id,
+          commenter: comment.commenter,
+          ipfsHash: comment.ipfsHash,
+          timestamp: parseInt(comment.createdTime) * 1000, // 转换为毫秒
+        }));
+        setComments(fetchedComments);
+      } else {
+        console.error("Failed to fetch comments:", response.status);
+        setComments([]);
+      }
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      setComments([]);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
 
-  // 加载评论内容
+  // 初始加载评论
   useEffect(() => {
-    const loadComments = async () => {
-      if (!commentEvents || commentEvents.length === 0) {
-        setLoadingComments(false);
-        return;
-      }
+    fetchComments();
+  }, [tokenId]);
 
-      try {
-        setLoadingComments(true);
-
-        // 从合约的评论映射获取详细信息
-        const commentsWithContent: CommentDisplay[] = [];
-
-        for (let i = 0; i < commentEvents.length; i++) {
-          const event = commentEvents[i];
-
-          // 这里需要调用合约的comments映射来获取详细信息
-          // 由于合约结构限制，我们使用事件数据
-          const comment: CommentDisplay = {
-            id: `${event.transactionHash}-${event.logIndex}`,
-            commenter: event.args.commenter as string,
-            ipfsHash: "", // 需要从合约映射获取
-            timestamp: Date.now(), // 需要从区块时间戳获取
-          };
-
-          commentsWithContent.push(comment);
-        }
-
-        setComments(commentsWithContent);
-      } catch (error) {
-        console.error("加载评论失败:", error);
-      } finally {
-        setLoadingComments(false);
-      }
-    };
-
-    loadComments();
-  }, [commentEvents]);
+  // 提交评论后重新获取评论列表
+  const refetchComments = () => {
+    setTimeout(() => {
+      fetchComments();
+    }, 2000); // 给链上数据一点时间来同步
+  };
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,9 +97,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
       setCommentText("");
 
       // 刷新评论列表
-      setTimeout(() => {
-        refetchComments();
-      }, 2000);
+      refetchComments();
     } catch (error) {
       console.error("添加评论失败:", error);
     }
@@ -207,7 +195,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
                       className="bg-transparent border-none p-0"
                     />
                   ) : (
-                    <p className="text-base-content/90 whitespace-pre-wrap">{comment.content || "评论加载中..."}</p>
+                    <div className="text-base-content/60 italic">
+                      评论内容正在从IPFS加载...
+                    </div>
                   )}
                 </div>
               </div>

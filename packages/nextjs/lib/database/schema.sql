@@ -34,6 +34,19 @@ CREATE TABLE IF NOT EXISTS chapters (
     FOREIGN KEY (story_id) REFERENCES stories(id)
 );
 
+-- Comments table to store comment data
+CREATE TABLE IF NOT EXISTS comments (
+    id VARCHAR(100) PRIMARY KEY, -- transactionHash-logIndex
+    token_id VARCHAR(50) NOT NULL, -- story or chapter ID
+    commenter VARCHAR(42) NOT NULL,
+    ipfs_hash TEXT NOT NULL,
+    created_time BIGINT NOT NULL,
+    block_number BIGINT NOT NULL,
+    transaction_hash VARCHAR(66) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Analytics table to store aggregated analytics data
 CREATE TABLE IF NOT EXISTS analytics (
     id SERIAL PRIMARY KEY,
@@ -95,6 +108,11 @@ CREATE INDEX IF NOT EXISTS idx_chapters_created_time ON chapters(created_time);
 CREATE INDEX IF NOT EXISTS idx_chapters_likes ON chapters(likes);
 CREATE INDEX IF NOT EXISTS idx_chapters_block_number ON chapters(block_number);
 
+CREATE INDEX IF NOT EXISTS idx_comments_token_id ON comments(token_id);
+CREATE INDEX IF NOT EXISTS idx_comments_commenter ON comments(commenter);
+CREATE INDEX IF NOT EXISTS idx_comments_created_time ON comments(created_time);
+CREATE INDEX IF NOT EXISTS idx_comments_block_number ON comments(block_number);
+
 CREATE INDEX IF NOT EXISTS idx_recent_activity_timestamp ON recent_activity(timestamp);
 CREATE INDEX IF NOT EXISTS idx_recent_activity_type ON recent_activity(activity_type);
 CREATE INDEX IF NOT EXISTS idx_recent_activity_analytics_id ON recent_activity(analytics_id);
@@ -127,6 +145,12 @@ CREATE TRIGGER update_stories_updated_at
 DROP TRIGGER IF EXISTS update_chapters_updated_at ON chapters;
 CREATE TRIGGER update_chapters_updated_at 
     BEFORE UPDATE ON chapters 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_comments_updated_at ON comments;
+CREATE TRIGGER update_comments_updated_at 
+    BEFORE UPDATE ON comments 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 

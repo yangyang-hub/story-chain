@@ -1,16 +1,17 @@
-import { AnalyticsData, ChainDataStore, ChapterData, StoryData } from "../monitoring/types";
+import { AnalyticsData, ChainDataStore, ChapterData, CommentData, StoryData } from "../monitoring/types";
 import { db } from "./config";
 
 function jsonStringifyWithBigInt(obj: any): string {
-  return JSON.stringify(obj, (key, value) => (typeof value === "bigint" ? value.toString() : value));
+  return JSON.stringify(obj, (_key, value) => (typeof value === "bigint" ? value.toString() : value));
 }
 
 export class PostgreSQLStore {
   async getData(): Promise<ChainDataStore | null> {
     try {
-      const [stories, chapters, analytics, metadata] = await Promise.all([
+      const [stories, chapters, comments, analytics, metadata] = await Promise.all([
         this.getStoriesData(),
         this.getChaptersData(),
+        this.getCommentsData(),
         this.getAnalyticsData(),
         this.getLastUpdateInfo(),
       ]);
@@ -22,9 +23,11 @@ export class PostgreSQLStore {
       return {
         stories,
         chapters,
+        comments,
         analytics: analytics || {
           totalStories: 0,
           totalChapters: 0,
+          totalComments: 0,
           totalAuthors: 0,
           totalLikes: 0,
           totalTips: "0",
@@ -207,6 +210,54 @@ export class PostgreSQLStore {
     } catch (error) {
       console.error("Failed to get chapter by id:", error);
       return null;
+    }
+  }
+
+  async getCommentsData(): Promise<CommentData[]> {
+    try {
+      const result = await db.query(`
+        SELECT 
+          id,
+          token_id as "tokenId",
+          commenter,
+          ipfs_hash as "ipfsHash",
+          created_time as "createdTime",
+          block_number as "blockNumber",
+          transaction_hash as "transactionHash"
+        FROM comments
+        ORDER BY created_time DESC
+      `);
+
+      return result.rows;
+    } catch (error) {
+      console.error("Failed to get comments data:", error);
+      return [];
+    }
+  }
+
+  async getCommentsByTokenId(tokenId: string): Promise<CommentData[]> {
+    try {
+      const result = await db.query(
+        `
+        SELECT 
+          id,
+          token_id as "tokenId",
+          commenter,
+          ipfs_hash as "ipfsHash",
+          created_time as "createdTime",
+          block_number as "blockNumber",
+          transaction_hash as "transactionHash"
+        FROM comments
+        WHERE token_id = $1
+        ORDER BY created_time ASC
+      `,
+        [tokenId],
+      );
+
+      return result.rows;
+    } catch (error) {
+      console.error("Failed to get comments by token id:", error);
+      return [];
     }
   }
 
@@ -449,6 +500,7 @@ export class PostgreSQLStore {
     eventData: any,
     blockNumber: number,
     transactionHash: string,
+    logIndex: number,
     timestamp: number,
   ): Promise<void> {
     const client = await db.connect();
@@ -469,6 +521,9 @@ export class PostgreSQLStore {
           break;
         case "ChapterLiked":
           await this.handleChapterLikedDirect(eventData, client);
+          break;
+        case "CommentAdded":
+          await this.handleCommentAddedDirect(eventData, blockNumber, transactionHash, logIndex, timestamp, client);
           break;
         case "tipSent":
           await this.handleTipSentDirect(eventData, client);
@@ -594,6 +649,120 @@ export class PostgreSQLStore {
     );
   }
 
+  private async handleCommentAddedDirect(
+    eventData: any,
+    blockNumber: number,
+    transactionHash: string,
+    logIndex: number,
+    timestamp: number,
+    client: any,
+  ): Promise<void> {
+    const { chapterId, commenter } = eventData;
+
+    // 使用transactionHash-logIndex作为唯一ID
+    const commentId = `${transactionHash}-${logIndex}`;
+
+    try {
+      // 从合约中获取评论的完整数据
+      let ipfsHash = "";
+      
+      try {
+        // 创建合约客户端来读取评论数据
+        const { createPublicClient, http } = await import("viem");
+        const { foundry } = await import("viem/chains");
+        const deployedContracts = await import("../../contracts/deployedContracts");
+        
+        const contractClient = createPublicClient({
+          chain: foundry,
+          transport: http(),
+        });
+
+        const contract = deployedContracts.default[31337]?.StoryChain;
+        if (contract) {
+          console.log(`🔍 尝试从合约获取评论数据，chapterId: ${chapterId}, commenter: ${commenter}`);
+          
+          // 由于我们不知道确切的评论索引，需要遍历查找最新的评论
+          // 通过匹配commenter和时间戳范围来找到对应的评论
+          let commentFound = false;
+          
+          // 尝试查找最近的几个评论索引（假设新评论在最后几个位置）
+          for (let index = 0; index < 10; index++) {
+            try {
+              const commentResult = await contractClient.readContract({
+                address: contract.address as `0x${string}`,
+                abi: contract.abi,
+                functionName: 'comments',
+                args: [BigInt(chapterId.toString()), BigInt(index)]
+              });
+
+              if (commentResult && Array.isArray(commentResult)) {
+                const [tokenId, commentCommenter, commentIpfsHash, commentTimestamp] = commentResult;
+                
+                // 检查是否是我们要找的评论（通过commenter匹配）
+                if (commentCommenter && commentCommenter.toLowerCase() === commenter.toLowerCase()) {
+                  // 检查时间戳是否接近（允许一定范围的差异）
+                  const timeDiff = Math.abs(Number(commentTimestamp) - timestamp);
+                  if (timeDiff < 300) { // 允许5分钟的时间差异
+                    ipfsHash = commentIpfsHash as string;
+                    commentFound = true;
+                    console.log(`✅ 找到匹配的评论，索引: ${index}, ipfsHash: ${ipfsHash}`);
+                    break;
+                  }
+                }
+              }
+            } catch (indexError) {
+              // 如果索引不存在，继续尝试下一个
+              if (index === 0) {
+                console.log(`⚠️  索引 ${index} 不存在或无法访问，可能还没有评论`);
+              }
+              // 如果连续几个索引都失败，可能已经超出范围
+              if (index > 2) break;
+            }
+          }
+          
+          if (!commentFound) {
+            console.log(`⚠️  未能在合约中找到匹配的评论，将使用空的ipfsHash`);
+          }
+        }
+      } catch (contractError) {
+        console.warn(`无法从合约获取评论数据: ${contractError}`);
+      }
+
+      // 插入评论记录
+      await client.query(
+        `
+        INSERT INTO comments (
+          id, token_id, commenter, ipfs_hash, created_time, 
+          block_number, transaction_hash
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (id) DO UPDATE SET
+          ipfs_hash = EXCLUDED.ipfs_hash,
+          updated_at = CURRENT_TIMESTAMP
+        `,
+        [
+          commentId,
+          chapterId.toString(),
+          commenter.toLowerCase(),
+          ipfsHash || "", // 使用获取到的ipfsHash，如果获取失败则为空
+          timestamp,
+          blockNumber,
+          transactionHash,
+        ],
+      );
+
+      console.log(`✅ 成功插入评论: ${commentId} for token ${chapterId}, ipfsHash: ${ipfsHash || '(empty)'}`);
+      
+      // 如果ipfsHash为空，记录需要后续处理的评论
+      if (!ipfsHash) {
+        console.log(`⚠️  评论 ${commentId} 的 ipfsHash 为空，需要后续更新`);
+      }
+    } catch (error) {
+      console.error(`❌ 插入评论失败: ${commentId}`, error);
+      throw error;
+    }
+  }
+
   // 直接在数据库计算分析数据，避免加载全量数据
   async calculateAnalyticsDirect(): Promise<any> {
     const client = await db.connect();
@@ -605,6 +774,7 @@ export class PostgreSQLStore {
           SELECT 
             (SELECT COUNT(*) FROM stories) as total_stories,
             (SELECT COUNT(*) FROM chapters) as total_chapters,
+            (SELECT COUNT(*) FROM comments) as total_comments,
             (SELECT COUNT(DISTINCT author) FROM (
               SELECT author FROM stories UNION SELECT author FROM chapters
             ) combined) as total_authors,
@@ -682,6 +852,7 @@ export class PostgreSQLStore {
       return {
         totalStories: Number(stats.total_stories),
         totalChapters: Number(stats.total_chapters),
+        totalComments: Number(stats.total_comments),
         totalAuthors: Number(stats.total_authors),
         totalLikes: Number(stats.total_likes),
         totalTips: stats.total_tips.toString(),
@@ -714,5 +885,106 @@ export class PostgreSQLStore {
     `,
       [lastUpdateBlock, lastUpdateTime],
     );
+  }
+
+  // 更新缺少ipfsHash的评论
+  async updateMissingCommentHashes(): Promise<void> {
+    const client = await db.connect();
+
+    try {
+      // 查找所有ipfsHash为空的评论
+      const result = await client.query(`
+        SELECT id, token_id, commenter, created_time, transaction_hash
+        FROM comments 
+        WHERE ipfs_hash = '' OR ipfs_hash IS NULL
+        ORDER BY created_time DESC
+        LIMIT 50
+      `);
+
+      if (result.rows.length === 0) {
+        console.log("没有找到需要更新的评论");
+        return;
+      }
+
+      console.log(`找到 ${result.rows.length} 个需要更新ipfsHash的评论`);
+
+      // 创建合约客户端
+      const { createPublicClient, http } = await import("viem");
+      const { foundry } = await import("viem/chains");
+      const deployedContracts = await import("../../contracts/deployedContracts");
+      
+      const contractClient = createPublicClient({
+        chain: foundry,
+        transport: http(),
+      });
+
+      const contract = deployedContracts.default[31337]?.StoryChain;
+      if (!contract) {
+        console.error("无法找到合约配置");
+        return;
+      }
+
+      let updatedCount = 0;
+
+      for (const comment of result.rows) {
+        try {
+          const { id, token_id: tokenId, commenter, created_time: createdTime } = comment;
+          
+          console.log(`尝试更新评论 ${id} 的 ipfsHash...`);
+
+          // 遍历查找匹配的评论
+          let ipfsHash = "";
+          for (let index = 0; index < 20; index++) {
+            try {
+              const commentResult = await contractClient.readContract({
+                address: contract.address as `0x${string}`,
+                abi: contract.abi,
+                functionName: 'comments',
+                args: [BigInt(tokenId), BigInt(index)]
+              });
+
+              if (commentResult && Array.isArray(commentResult)) {
+                const [, commentCommenter, commentIpfsHash, commentTimestamp] = commentResult;
+                
+                // 匹配commenter和时间戳
+                if (commentCommenter && 
+                    commentCommenter.toLowerCase() === commenter.toLowerCase()) {
+                  const timeDiff = Math.abs(Number(commentTimestamp) * 1000 - createdTime);
+                  if (timeDiff < 300000) { // 5分钟的差异
+                    ipfsHash = commentIpfsHash as string;
+                    console.log(`✅ 找到匹配的评论，索引: ${index}, ipfsHash: ${ipfsHash}`);
+                    break;
+                  }
+                }
+              }
+            } catch (indexError) {
+              // 继续下一个索引
+              continue;
+            }
+          }
+
+          if (ipfsHash) {
+            // 更新数据库中的ipfsHash
+            await client.query(
+              'UPDATE comments SET ipfs_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+              [ipfsHash, id]
+            );
+            updatedCount++;
+            console.log(`✅ 成功更新评论 ${id} 的 ipfsHash: ${ipfsHash}`);
+          } else {
+            console.log(`⚠️  未找到评论 ${id} 在合约中的对应数据`);
+          }
+        } catch (error) {
+          console.error(`更新评论 ${comment.id} 失败:`, error);
+        }
+      }
+
+      console.log(`✅ 成功更新了 ${updatedCount}/${result.rows.length} 个评论的 ipfsHash`);
+    } catch (error) {
+      console.error("更新评论ipfsHash失败:", error);
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }

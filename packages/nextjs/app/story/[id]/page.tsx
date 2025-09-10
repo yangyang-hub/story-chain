@@ -348,7 +348,7 @@ const StoryDetailPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [storyId]);
 
   // 为每个章节添加 metadata 字段以支持类型检查
   const chaptersWithMetadata: ChapterWithMetadata[] = (chapters || []).map(chapter => ({

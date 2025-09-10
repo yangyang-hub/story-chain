@@ -12,15 +12,9 @@ export async function initializeMonitoring() {
   try {
     globalMonitor = new ChainMonitor();
 
-    // 根据环境变量决定是否自动启动监控
-    const autoStart = process.env.AUTO_START_MONITOR === "true";
-
-    if (autoStart) {
-      await globalMonitor.startMonitoring();
-      console.log("自动启动链上数据监控");
-    } else {
-      console.log("自动监控未开启，请手动启动");
-    }
+    // 强制启动监控，不依赖环境变量
+    await globalMonitor.startMonitoring();
+    console.log("✅ 强制启动链上数据监控");
 
     return globalMonitor;
   } catch (error) {
