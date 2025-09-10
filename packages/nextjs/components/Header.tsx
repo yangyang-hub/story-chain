@@ -37,24 +37,24 @@ const menuLinksConfig: HeaderMenuLink[] = [
     href: "/explore",
     icon: <BookOpenIcon className="h-4 w-4" />,
   },
-  {
-    label: "Chain Data",
-    labelKey: "nav.chaindata",
-    href: "/chain-data",
-    icon: <ChartBarIcon className="h-4 w-4" />,
-  },
+  // {
+  //   label: "Chain Data",
+  //   labelKey: "nav.chaindata",
+  //   href: "/chain-data",
+  //   icon: <ChartBarIcon className="h-4 w-4" />,
+  // },
   {
     label: "Profile",
     labelKey: "nav.profile",
     href: "/profile",
     icon: <UserIcon className="h-4 w-4" />,
   },
-  {
-    label: "Debug Contracts",
-    labelKey: "nav.debug",
-    href: "/debug",
-    icon: <BugAntIcon className="h-4 w-4" />,
-  },
+  // {
+  //   label: "Debug Contracts",
+  //   labelKey: "nav.debug",
+  //   href: "/debug",
+  //   icon: <BugAntIcon className="h-4 w-4" />,
+  // },
 ];
 
 export const HeaderMenuLinks = () => {

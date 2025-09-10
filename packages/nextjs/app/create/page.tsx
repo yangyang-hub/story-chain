@@ -18,7 +18,6 @@ const CreateStoryPage = () => {
 
   const [formData, setFormData] = useState({
     title: "",
-    content: "",
     forkFee: "0",
     tags: "",
     description: "",
@@ -60,10 +59,6 @@ const CreateStoryPage = () => {
       notification.error(t("form.title.required"));
       return false;
     }
-    if (!formData.content.trim()) {
-      notification.error(t("form.content.required"));
-      return false;
-    }
     if (parseFloat(formData.forkFee) < 0) {
       notification.error(t("form.fee.invalid"));
       return false;
@@ -87,7 +82,6 @@ const CreateStoryPage = () => {
       // 创建故事元数据
       const metadata: StoryMetadata = {
         title: formData.title,
-        content: formData.content,
         author: address,
         timestamp: Date.now(),
         tags: formData.tags
@@ -95,7 +89,7 @@ const CreateStoryPage = () => {
           .map(tag => tag.trim())
           .filter(Boolean),
         image: imageCid,
-        description: formData.description || formData.content.slice(0, 200) + "...",
+        description: formData.description || formData.title,
       };
 
       // 上传到IPFS
@@ -188,23 +182,6 @@ const CreateStoryPage = () => {
               />
             </div>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">{t("story.content")} *</span>
-              </label>
-              <textarea
-                name="content"
-                value={formData.content}
-                onChange={handleInputChange}
-                className="textarea textarea-bordered w-full h-64"
-                placeholder="开始你的故事..."
-                disabled={isCreating}
-                required
-              />
-              <label className="label">
-                <span className="label-text-alt">{formData.content.length} 字符</span>
-              </label>
-            </div>
 
             <div className="form-control">
               <label className="label">
