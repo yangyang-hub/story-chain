@@ -182,7 +182,6 @@ const CreateStoryPage = () => {
               />
             </div>
 
-
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">标签</span>

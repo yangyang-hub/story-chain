@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import {
   ArrowDownTrayIcon,
@@ -21,6 +22,9 @@ import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
 import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
+
+// Global flag to prevent infinite API calls
+let GLOBAL_LOADING_LOCK = false;
 
 interface UserStory {
   id: string;
@@ -68,38 +72,64 @@ const ProfilePage = () => {
     totalTips: "0",
     totalForks: 0,
   });
+  const [revenueStats, setRevenueStats] = useState({
+    tipRevenue: "0",
+    forkRevenue: "0",
+    totalRevenue: "0",
+    withdrawnAmount: "0",
+  });
   const [loading, setLoading] = useState(true);
+  
+  // Aggressive protection against infinite calls
+  const isLoadingRef = useRef(false);
 
-  // 获取用户收到的打赏事件（用于计算奖励，保留但暂未使用）
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data: tipEvents } = useScaffoldEventHistory({
+  // Temporarily disable event history hooks to prevent infinite loops
+  // TODO: Re-enable these when implementing advanced revenue calculations
+  /*
+  const { data: storyRewardEvents } = useScaffoldEventHistory({
     contractName: "StoryChain",
-    eventName: "tipSent",
+    eventName: "StoryRewardsDistributed",
     fromBlock: 0n,
   });
 
-  const loadUserData = useCallback(async () => {
-    if (!address) {
-      setLoading(false);
+  const { data: chapterRewardEvents } = useScaffoldEventHistory({
+    contractName: "StoryChain",
+    eventName: "ChapterRewardsDistributed",
+    fromBlock: 0n,
+  });
+
+  const { data: withdrawEvents } = useScaffoldEventHistory({
+    contractName: "StoryChain",
+    eventName: "RewardsWithdrawn",
+    fromBlock: 0n,
+  });
+  */
+
+  const loadUserData = async (targetAddress: string) => {
+    if (!targetAddress || loading || isLoadingRef.current || GLOBAL_LOADING_LOCK) {
+      console.log("🚫 BLOCKED API CALL - loadUserData blocked by locks");
       return;
     }
 
     try {
+      console.log("🔓 STARTING API CALL - setting all locks");
+      isLoadingRef.current = true;
+      GLOBAL_LOADING_LOCK = true;
       setLoading(true);
 
       // Initialize arrays
       const stories: UserStory[] = [];
       const chapters: UserChapter[] = [];
 
-      // 使用 API 获取用户故事数据（与 explore 页面一致）
+      // Load stories
       try {
-        const storiesRes = await fetch(`/api/data/stories?author=${address}`);
+        console.log("📡 Fetching stories for", targetAddress);
+        const storiesRes = await fetch(`/api/data/stories?author=${targetAddress}`);
         if (storiesRes.ok) {
           const storiesData = await storiesRes.json();
           if (storiesData.stories) {
             for (const storyData of storiesData.stories) {
               try {
-                // 加载 IPFS 元数据以获取标题等信息
                 let metadata = null;
                 let title = `故事 #${storyData.id}`;
 
@@ -116,7 +146,7 @@ const ProfilePage = () => {
                   id: storyData.id,
                   title: title,
                   ipfsHash: storyData.ipfsHash,
-                  createdTime: storyData.createdTime * 1000, // 转换为毫秒
+                  createdTime: storyData.createdTime * 1000,
                   likes: Number(storyData.likes) || 0,
                   forkCount: Number(storyData.forkCount) || 0,
                   totalTips: storyData.totalTips || "0",
@@ -132,15 +162,15 @@ const ProfilePage = () => {
         console.error("获取用户故事失败:", error);
       }
 
-      // 使用 API 获取用户章节数据（与其他页面一致）
+      // Load chapters
       try {
-        const chaptersRes = await fetch(`/api/data/chapters?author=${address}`);
+        console.log("📡 Fetching chapters for", targetAddress);
+        const chaptersRes = await fetch(`/api/data/chapters?author=${targetAddress}`);
         if (chaptersRes.ok) {
           const chaptersData = await chaptersRes.json();
           if (chaptersData.chapters) {
             for (const chapterData of chaptersData.chapters) {
               try {
-                // 加载 IPFS 元数据以获取标题等信息
                 let metadata = null;
                 let title = `章节 #${chapterData.id}`;
                 let chapterNumber = 1;
@@ -160,7 +190,7 @@ const ProfilePage = () => {
                   storyId: chapterData.storyId,
                   title: title,
                   ipfsHash: chapterData.ipfsHash,
-                  createdTime: chapterData.createdTime * 1000, // 转换为毫秒
+                  createdTime: chapterData.createdTime * 1000,
                   likes: Number(chapterData.likes) || 0,
                   forkCount: Number(chapterData.forkCount) || 0,
                   totalTips: chapterData.totalTips || "0",
@@ -177,11 +207,11 @@ const ProfilePage = () => {
         console.error("获取用户章节失败:", error);
       }
 
-      // 更新状态
+      // Update state
       setUserStories(stories);
       setUserChapters(chapters);
 
-      // 计算统计信息（使用真实数据）
+      // Calculate stats
       const totalStories = stories.length;
       const totalChapters = chapters.length;
       const totalLikes =
@@ -204,21 +234,75 @@ const ProfilePage = () => {
         totalForks,
       };
       setUserStats(stats);
+
+      console.log("✅ API CALL COMPLETED - releasing locks");
+
     } catch (error) {
       console.error("加载用户数据失败:", error);
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
+      // Clear global lock after a delay to prevent rapid successive calls
+      setTimeout(() => {
+        GLOBAL_LOADING_LOCK = false;
+        console.log("🔓 GLOBAL LOCK RELEASED");
+      }, 1000);
+    }
+  };
+
+  // Use memoization for revenue calculations to prevent unnecessary recalculations
+  const calculatedRevenueStats = useMemo(() => {
+    if (!address) {
+      return {
+        tipRevenue: "0",
+        forkRevenue: "0",
+        totalRevenue: "0",
+        withdrawnAmount: "0",
+      };
+    }
+
+    // Only calculate tip revenue (from API data)
+    const tipRevenue =
+      userStories.reduce((sum: number, story: UserStory) => sum + parseFloat(story.totalTips || "0"), 0) +
+      userChapters.reduce((sum: number, chapter: UserChapter) => sum + parseFloat(chapter.totalTips || "0"), 0);
+
+    return {
+      tipRevenue: tipRevenue.toString(),
+      forkRevenue: "0", // Temporarily disabled
+      totalRevenue: tipRevenue.toString(),
+      withdrawnAmount: "0", // Temporarily disabled
+    };
+  }, [address, userStories, userChapters]);
+
+  // Update revenue stats when calculated values change
+  useEffect(() => {
+    setRevenueStats(calculatedRevenueStats);
+  }, [calculatedRevenueStats]);
+
+  // Load data when address changes or on mount
+  useEffect(() => {
+    console.log("🚨 PROFILE useEffect triggered - TEMPORARILY DISABLED");
+    return; // EMERGENCY FIX: Completely disable data loading to stop infinite calls
+    
+    if (address) {
+      loadUserData(address);
+    } else {
+      setLoading(false);
     }
   }, [address]);
 
-  useEffect(() => {
-    loadUserData();
-  }, [loadUserData]);
-
-  // 点赞成功后的回调函数，重新加载数据以确保一致性
-  const handleLikeSuccess = () => {
-    loadUserData();
-  };
+  // 点赞成功后的回调函数，使用防抖来避免频繁调用
+  const handleLikeSuccess = useCallback(() => {
+    console.log("🚨 LIKE SUCCESS callback triggered - TEMPORARILY DISABLED");
+    return; // EMERGENCY FIX: Disable like success reload to prevent API calls
+    
+    // Use setTimeout to debounce rapid successive calls
+    setTimeout(() => {
+      if (address && !loading && !isLoadingRef.current) {
+        loadUserData(address);
+      }
+    }, 300); // 300ms delay to debounce rapid calls
+  }, [address, loading]);
 
   const handleWithdrawRewards = async () => {
     try {
@@ -552,19 +636,25 @@ const ProfilePage = () => {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="stat">
                           <div className="stat-title">打赏收益</div>
-                          <div className="stat-value text-sm">{userStats.totalTips} ETH</div>
+                          <div className="stat-value text-sm">{parseFloat(revenueStats.tipRevenue).toFixed(6)} ETH</div>
                         </div>
                         <div className="stat">
                           <div className="stat-title">分叉收益</div>
-                          <div className="stat-value text-sm">0.000 ETH</div>
+                          <div className="stat-value text-sm">
+                            {parseFloat(revenueStats.forkRevenue).toFixed(6)} ETH
+                          </div>
                         </div>
                         <div className="stat">
                           <div className="stat-title">总收益</div>
-                          <div className="stat-value text-sm">{pendingRewards} ETH</div>
+                          <div className="stat-value text-sm">
+                            {parseFloat(revenueStats.totalRevenue).toFixed(6)} ETH
+                          </div>
                         </div>
                         <div className="stat">
                           <div className="stat-title">已提取</div>
-                          <div className="stat-value text-sm">0.000 ETH</div>
+                          <div className="stat-value text-sm">
+                            {parseFloat(revenueStats.withdrawnAmount).toFixed(6)} ETH
+                          </div>
                         </div>
                       </div>
                     </div>

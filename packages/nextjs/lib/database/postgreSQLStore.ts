@@ -579,10 +579,9 @@ export class PostgreSQLStore {
     let chapterNumber = 1;
     if (parentId.toString() !== "0") {
       // 如果有父章节，查询父章节的编号并加1
-      const parentResult = await client.query(
-        "SELECT chapter_number FROM chapters WHERE id = $1",
-        [parentId.toString()]
-      );
+      const parentResult = await client.query("SELECT chapter_number FROM chapters WHERE id = $1", [
+        parentId.toString(),
+      ]);
       if (parentResult.rows.length > 0) {
         chapterNumber = parentResult.rows[0].chapter_number + 1;
       }
@@ -1009,7 +1008,7 @@ export class PostgreSQLStore {
   // 同步章节的fork费用和其他详细信息
   async syncChapterDetails(): Promise<void> {
     const client = await db.connect();
-    
+
     try {
       // 获取所有需要同步fork费用的章节
       const result = await client.query(`
@@ -1031,12 +1030,15 @@ export class PostgreSQLStore {
       for (const chapter of result.rows) {
         // 模拟从合约获取的数据 - 在实际实现中，这里应该调用合约的getChapter函数
         const forkFee = "1000000000000000000"; // 1 ETH in wei，实际应该从合约获取
-        
-        await client.query(`
+
+        await client.query(
+          `
           UPDATE chapters 
           SET fork_fee = $1 
           WHERE id = $2
-        `, [forkFee, chapter.id]);
+        `,
+          [forkFee, chapter.id],
+        );
       }
 
       console.log(`✅ 成功同步了 ${result.rows.length} 个章节的详细信息`);
@@ -1050,7 +1052,7 @@ export class PostgreSQLStore {
   // 修复章节编号
   async fixChapterNumbers(): Promise<void> {
     const client = await db.connect();
-    
+
     try {
       await client.query("BEGIN");
 
@@ -1076,7 +1078,7 @@ export class PostgreSQLStore {
 
       for (const [storyId, chapters] of storiesMap) {
         console.log(`📖 处理故事 ${storyId} 的 ${chapters.length} 个章节...`);
-        
+
         // 构建章节层次结构
         const chapterMap = new Map();
         chapters.forEach(chapter => {
@@ -1104,12 +1106,9 @@ export class PostgreSQLStore {
         // 更新每个章节的编号
         for (const chapter of chapters) {
           const correctNumber = calculateChapterNumber(chapter.id);
-          
+
           if (chapter.chapter_number !== correctNumber) {
-            await client.query(
-              "UPDATE chapters SET chapter_number = $1 WHERE id = $2",
-              [correctNumber, chapter.id]
-            );
+            await client.query("UPDATE chapters SET chapter_number = $1 WHERE id = $2", [correctNumber, chapter.id]);
             updatedCount++;
             console.log(`✅ 更新章节 ${chapter.id}: ${chapter.chapter_number} -> ${correctNumber}`);
           }
