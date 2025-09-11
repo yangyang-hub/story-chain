@@ -171,7 +171,10 @@ const ChapterCard: React.FC<{
   onContinue: (chapterId: string) => void;
   forks?: ChapterWithMetadata[];
   onSelectFork?: (forkId: string) => void;
-}> = ({ chapter, onFork, onTip, onContinue, forks = [], onSelectFork }) => {
+  allChapters: ChapterWithMetadata[];
+  canUserContinueChapter: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => boolean;
+  getContinueButtonTooltip: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => string;
+}> = ({ chapter, onFork, onTip, onContinue, forks = [], onSelectFork, allChapters, canUserContinueChapter, getContinueButtonTooltip }) => {
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -326,8 +329,8 @@ const ChapterCard: React.FC<{
             <button
               onClick={() => onContinue(chapter.id)}
               className="btn btn-secondary btn-sm gap-2"
-              disabled={!address}
-              title={!address ? "请先连接钱包" : "续写此章节"}
+              disabled={!address || !canUserContinueChapter(chapter, allChapters)}
+              title={getContinueButtonTooltip(chapter, allChapters)}
             >
               <PlusIcon className="w-4 h-4" />
               续写
@@ -371,7 +374,9 @@ const ChapterTreeNode: React.FC<{
   storyId: string;
   isLast: boolean;
   allChapters: ChapterWithMetadata[];
-}> = ({ chapter, childChapters, level, onFork, onTip, onContinue, storyId, isLast, allChapters }) => {
+  canUserContinueChapter: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => boolean;
+  getContinueButtonTooltip: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => string;
+}> = ({ chapter, childChapters, level, onFork, onTip, onContinue, storyId, isLast, allChapters, canUserContinueChapter, getContinueButtonTooltip }) => {
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<ChapterMetadata | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(false);
@@ -475,8 +480,8 @@ const ChapterTreeNode: React.FC<{
                 <button
                   onClick={() => onContinue(chapter.id)}
                   className="btn btn-xs btn-outline gap-1"
-                  disabled={!address}
-                  title={!address ? "请先连接钱包" : "续写此章节"}
+                  disabled={!address || !canUserContinueChapter(chapter, allChapters)}
+                  title={getContinueButtonTooltip(chapter, allChapters)}
                 >
                   <PlusIcon className="w-3 h-3" />
                   续写
@@ -529,6 +534,8 @@ const ChapterTreeNode: React.FC<{
                 storyId={storyId}
                 isLast={index === childChapters.length - 1}
                 allChapters={allChapters}
+                canUserContinueChapter={canUserContinueChapter}
+                getContinueButtonTooltip={getContinueButtonTooltip}
               />
             );
           })}
@@ -545,7 +552,9 @@ const ChapterTreeView: React.FC<{
   onTip: (storyId: string, chapterId: string) => void;
   onContinue: (chapterId: string) => void;
   storyId: string;
-}> = ({ chapters, onFork, onTip, onContinue, storyId }) => {
+  canUserContinueChapter: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => boolean;
+  getContinueButtonTooltip: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => string;
+}> = ({ chapters, onFork, onTip, onContinue, storyId, canUserContinueChapter, getContinueButtonTooltip }) => {
   // 构建树形结构
   const buildTree = () => {
     const rootChapters = chapters.filter(chapter => chapter.parentId === "0");
@@ -589,6 +598,8 @@ const ChapterTreeView: React.FC<{
               storyId={storyId}
               isLast={index === rootChapters.length - 1}
               allChapters={chapters}
+              canUserContinueChapter={canUserContinueChapter}
+              getContinueButtonTooltip={getContinueButtonTooltip}
             />
           );
         })}
@@ -808,15 +819,6 @@ const ContinueChapterModal: React.FC<{
       return;
     }
 
-    // 检查续写费用
-    const requiredFee = parseFloat(forkFeeRequired);
-    if (requiredFee > 0) {
-      const confirm = window.confirm(`续写此章节需要支付 ${forkFeeRequired} ETH 给原作者。确定要继续吗？`);
-      if (!confirm) {
-        return;
-      }
-    }
-
     try {
       setIsCreating(true);
 
@@ -835,13 +837,10 @@ const ContinueChapterModal: React.FC<{
       // 上传到IPFS
       const ipfsHash = await uploadChapterMetadata(metadata);
 
-      // 调用合约创建章节，如果有fork费用需要支付
-      const valueToSend = requiredFee > 0 ? parseEther(forkFeeRequired) : undefined;
-
+      // 调用合约创建章节，作者续写自己的章节不需要支付费用
       await createChapter({
         functionName: "createChapter",
         args: [BigInt(storyId), BigInt(parentChapter.id), ipfsHash, parseEther(formData.forkFee)],
-        value: valueToSend,
       });
 
       notification.success("章节续写成功！");
@@ -876,17 +875,6 @@ const ContinueChapterModal: React.FC<{
               <Address address={parentChapter.author} size="sm" />
             </div>
           </div>
-
-          {/* 如果需要支付fork费用，显示提醒 */}
-          {forkFeeRequired !== "0" && (
-            <div className="alert alert-warning mb-4">
-              <InformationCircleIcon className="w-5 h-5" />
-              <div>
-                <div className="font-semibold">需要支付续写费用</div>
-                <div className="text-sm">续写此章节需要支付 {forkFeeRequired} ETH</div>
-              </div>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="form-control">
@@ -963,7 +951,7 @@ const ContinueChapterModal: React.FC<{
                 ) : (
                   <>
                     <PlusIcon className="w-4 h-4" />
-                    {forkFeeRequired !== "0" ? `支付 ${forkFeeRequired} ETH 并续写` : "续写章节"}
+                    续写章节
                   </>
                 )}
               </button>
@@ -993,7 +981,7 @@ const ForkModal: React.FC<{
   const [isForking, setIsForking] = useState(false);
   const [forkFeeRequired, setForkFeeRequired] = useState<string>("0");
 
-  const { writeContractAsync: createChapter } = useScaffoldWriteContract("StoryChain");
+  const { writeContractAsync: forkStory } = useScaffoldWriteContract("StoryChain");
 
   // 初始化时获取父章节的fork费用
   useEffect(() => {
@@ -1050,8 +1038,8 @@ const ForkModal: React.FC<{
       // 调用合约创建分叉章节，需要支付fork费用
       const valueToSend = requiredFee > 0 ? parseEther(forkFeeRequired) : undefined;
 
-      await createChapter({
-        functionName: "createChapter",
+      await forkStory({
+        functionName: "forkStory",
         args: [BigInt(storyId), BigInt(parentChapter.id), ipfsHash, parseEther(formData.forkFee)],
         value: valueToSend,
       });
@@ -1208,6 +1196,29 @@ const StoryDetailPage = () => {
 
   const storyId = id as string;
 
+  // 检查用户是否可以续写指定章节
+  const canUserContinueChapter = useCallback((chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => {
+    if (!address) return false;
+    
+    // 只有章节作者才能续写自己的章节
+    if (chapter.author.toLowerCase() !== address.toLowerCase()) return false;
+    
+    // 只有最新章节才能续写（即没有子章节的章节）
+    const hasChildren = allChapters.some(c => c.parentId === chapter.id);
+    return !hasChildren;
+  }, [address]);
+
+  // 获取续写按钮的提示文本
+  const getContinueButtonTooltip = useCallback((chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => {
+    if (!address) return "请先连接钱包";
+    if (chapter.author.toLowerCase() !== address.toLowerCase()) return "只有章节作者可以续写自己的章节";
+    
+    const hasChildren = allChapters.some(c => c.parentId === chapter.id);
+    if (hasChildren) return "只有最新章节才能续写";
+    
+    return "续写此章节";
+  }, [address]);
+
   // 直接使用fetch获取数据，避开hook问题
   const fetchData = useCallback(async () => {
     if (!storyId) return;
@@ -1318,6 +1329,12 @@ const StoryDetailPage = () => {
     const chapter = chaptersWithMetadata.find(ch => ch.id === chapterId);
     if (!chapter) {
       notification.error("章节不存在");
+      return;
+    }
+
+    // 检查续写权限：只有章节作者可以续写自己的章节
+    if (chapter.author.toLowerCase() !== address.toLowerCase()) {
+      notification.error("只有章节作者可以续写自己的章节");
       return;
     }
 
@@ -1472,7 +1489,7 @@ const StoryDetailPage = () => {
               </button>
             )}
 
-            {/* 续写故事按钮 - 任何连接钱包的用户都可以续写 */}
+            {/* 续写故事按钮 - 只有最新章节的作者可以续写 */}
             {address && chaptersWithMetadata.length > 0 && (
               <div className="flex gap-2">
                 <button
@@ -1482,7 +1499,8 @@ const StoryDetailPage = () => {
                     handleContinueChapter(lastChapter.id);
                   }}
                   className="btn btn-secondary gap-2"
-                  title="续写故事的最新章节"
+                  disabled={!canUserContinueChapter(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
+                  title={getContinueButtonTooltip(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
                 >
                   <PlusIcon className="w-4 h-4" />
                   续写故事
@@ -1535,7 +1553,8 @@ const StoryDetailPage = () => {
                   handleContinueChapter(lastChapter.id);
                 }}
                 className="btn btn-secondary gap-2"
-                title="续写最新章节"
+                disabled={!canUserContinueChapter(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
+                title={getContinueButtonTooltip(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
               >
                 <PlusIcon className="w-5 h-5" />
                 续写最新章节
@@ -1563,6 +1582,8 @@ const StoryDetailPage = () => {
               onTip={handleTip}
               onContinue={handleContinueChapter}
               storyId={storyId}
+              canUserContinueChapter={canUserContinueChapter}
+              getContinueButtonTooltip={getContinueButtonTooltip}
             />
           </div>
         ) : (
@@ -1648,7 +1669,8 @@ const StoryDetailPage = () => {
                 handleContinueChapter(lastChapter.id);
               }}
               className="btn btn-secondary btn-circle shadow-lg hover:shadow-xl transition-all"
-              title="续写最新章节"
+              disabled={!canUserContinueChapter(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
+              title={getContinueButtonTooltip(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
             >
               <PlusIcon className="w-5 h-5" />
             </button>

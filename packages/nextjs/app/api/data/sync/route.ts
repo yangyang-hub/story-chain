@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGlobalMonitor } from "../../../../lib/monitoring";
+import { PostgreSQLStore } from "../../../../lib/database/postgreSQLStore";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,8 +18,20 @@ export async function POST(request: NextRequest) {
     // 获取请求参数
     const { searchParams } = new URL(request.url);
     const fromBlock = searchParams.get("fromBlock");
+    const syncType = searchParams.get("type"); // 新增：同步类型参数
 
-    // 手动触发数据同步
+    // 如果指定了同步章节详情
+    if (syncType === "chapter-details") {
+      const store = new PostgreSQLStore();
+      await store.syncChapterDetails();
+      
+      return NextResponse.json({
+        success: true,
+        message: "Chapter details sync completed successfully",
+      });
+    }
+
+    // 默认的历史数据同步
     const lastUpdate = await monitor.getStatus();
     const startBlock = fromBlock
       ? BigInt(fromBlock)

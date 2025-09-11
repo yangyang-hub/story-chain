@@ -587,6 +587,47 @@ export class PostgreSQLStore {
       }
     }
 
+    // 从智能合约获取完整的章节数据，包括fork_fee
+    let forkFee = "0";
+    let totalTips = "0";
+    let forkCount = 0;
+
+    try {
+      // 创建合约客户端来读取章节数据
+      const { createPublicClient, http } = await import("viem");
+      const { foundry } = await import("viem/chains");
+      const deployedContracts = await import("../../contracts/deployedContracts");
+
+      const contractClient = createPublicClient({
+        chain: foundry,
+        transport: http(),
+      });
+
+      const contract = deployedContracts.default[31337]?.StoryChain;
+      if (contract) {
+        // 读取章节的完整信息
+        const chapterData = await contractClient.readContract({
+          address: contract.address as `0x${string}`,
+          abi: contract.abi,
+          functionName: "getChapter",
+          args: [BigInt(chapterId.toString())],
+        });
+
+        if (chapterData && typeof chapterData === "object") {
+          // 从合约数据中提取fork_fee和其他信息
+          const chapter = chapterData as any;
+          forkFee = chapter.forkFee?.toString() || "0";
+          totalTips = chapter.totalTips?.toString() || "0";
+          forkCount = Number(chapter.forkCount) || 0;
+
+          console.log(`✅ 从合约获取章节 ${chapterId} 的fork费用: ${forkFee} wei`);
+        }
+      }
+    } catch (contractError) {
+      console.warn(`无法从合约获取章节 ${chapterId} 的详细信息:`, contractError);
+      // 继续使用默认值
+    }
+
     await client.query(
       `
       INSERT INTO chapters (
@@ -594,8 +635,12 @@ export class PostgreSQLStore {
         likes, fork_count, chapter_number, fork_fee, total_tips, total_tip_count, 
         block_number, transaction_hash
       )
-      VALUES ($1, $2, $3, $4, $5, $6, 0, 0, $7, 0, 0, 0, $8, $9)
-      ON CONFLICT (id) DO NOTHING
+      VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $8, $9, $10, 0, $11, $12)
+      ON CONFLICT (id) DO UPDATE SET
+        fork_fee = EXCLUDED.fork_fee,
+        total_tips = EXCLUDED.total_tips,
+        fork_count = EXCLUDED.fork_count,
+        updated_at = CURRENT_TIMESTAMP
     `,
       [
         chapterId.toString(),
@@ -604,11 +649,16 @@ export class PostgreSQLStore {
         author.toLowerCase(),
         ipfsHash,
         timestamp,
+        forkCount,
         chapterNumber,
+        forkFee,
+        totalTips,
         blockNumber,
         transactionHash,
       ],
     );
+
+    console.log(`📝 成功创建章节 ${chapterId}，fork费用: ${forkFee} wei`);
   }
 
   private async handleStoryLikedDirect(eventData: any, client: any): Promise<void> {
@@ -1025,23 +1075,58 @@ export class PostgreSQLStore {
 
       console.log(`📊 开始同步 ${result.rows.length} 个章节的详细信息...`);
 
-      // 这里需要调用合约的getChapter函数
-      // 为了演示，我们先使用模拟数据
-      for (const chapter of result.rows) {
-        // 模拟从合约获取的数据 - 在实际实现中，这里应该调用合约的getChapter函数
-        const forkFee = "1000000000000000000"; // 1 ETH in wei，实际应该从合约获取
+      // 创建合约客户端
+      const { createPublicClient, http } = await import("viem");
+      const { foundry } = await import("viem/chains");
+      const deployedContracts = await import("../../contracts/deployedContracts");
 
-        await client.query(
-          `
-          UPDATE chapters 
-          SET fork_fee = $1 
-          WHERE id = $2
-        `,
-          [forkFee, chapter.id],
-        );
+      const contractClient = createPublicClient({
+        chain: foundry,
+        transport: http(),
+      });
+
+      const contract = deployedContracts.default[31337]?.StoryChain;
+      if (!contract) {
+        console.error("无法找到合约配置");
+        return;
       }
 
-      console.log(`✅ 成功同步了 ${result.rows.length} 个章节的详细信息`);
+      let updatedCount = 0;
+
+      for (const chapter of result.rows) {
+        try {
+          // 从智能合约获取章节的完整数据
+          const chapterData = await contractClient.readContract({
+            address: contract.address as `0x${string}`,
+            abi: contract.abi,
+            functionName: "getChapter",
+            args: [BigInt(chapter.id)],
+          });
+
+          if (chapterData && typeof chapterData === "object") {
+            const chapterInfo = chapterData as any;
+            const forkFee = chapterInfo.forkFee?.toString() || "0";
+            const totalTips = chapterInfo.totalTips?.toString() || "0";
+            const forkCount = Number(chapterInfo.forkCount) || 0;
+
+            await client.query(
+              `
+              UPDATE chapters 
+              SET fork_fee = $1, total_tips = $2, fork_count = $3, updated_at = CURRENT_TIMESTAMP
+              WHERE id = $4
+            `,
+              [forkFee, totalTips, forkCount, chapter.id],
+            );
+
+            updatedCount++;
+            console.log(`✅ 同步章节 ${chapter.id} - fork费用: ${forkFee} wei`);
+          }
+        } catch (error) {
+          console.warn(`获取章节 ${chapter.id} 的合约数据失败:`, error);
+        }
+      }
+
+      console.log(`✅ 成功同步了 ${updatedCount}/${result.rows.length} 个章节的详细信息`);
     } catch (error) {
       console.error("同步章节详细信息失败:", error);
     } finally {
