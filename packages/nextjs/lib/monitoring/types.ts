@@ -30,6 +30,7 @@ export interface ChapterData {
   likes: number;
   forkCount: number;
   chapterNumber: number;
+  forkFee: string;
   totalTips: string;
   totalTipCount: number;
   blockNumber: number;

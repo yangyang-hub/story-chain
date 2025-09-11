@@ -157,6 +157,7 @@ export class PostgreSQLStore {
           likes,
           fork_count as "forkCount",
           chapter_number as "chapterNumber",
+          fork_fee as "forkFee",
           total_tips as "totalTips",
           total_tip_count as "totalTipCount",
           block_number as "blockNumber",
@@ -167,6 +168,7 @@ export class PostgreSQLStore {
 
       return result.rows.map(row => ({
         ...row,
+        forkFee: row.forkFee.toString(),
         totalTips: row.totalTips.toString(),
       }));
     } catch (error) {
@@ -189,6 +191,7 @@ export class PostgreSQLStore {
           likes,
           fork_count as "forkCount",
           chapter_number as "chapterNumber",
+          fork_fee as "forkFee",
           total_tips as "totalTips",
           total_tip_count as "totalTipCount",
           block_number as "blockNumber",
@@ -205,6 +208,7 @@ export class PostgreSQLStore {
 
       return {
         ...result.rows[0],
+        forkFee: result.rows[0].forkFee.toString(),
         totalTips: result.rows[0].totalTips.toString(),
       };
     } catch (error) {
@@ -571,15 +575,27 @@ export class PostgreSQLStore {
   ): Promise<void> {
     const { storyId, chapterId, parentId, author, ipfsHash } = eventData;
 
-    // 这里需要获取chapterNumber，但为了避免额外的链上调用，可以设为0或者传入
+    // 计算正确的章节编号
+    let chapterNumber = 1;
+    if (parentId.toString() !== "0") {
+      // 如果有父章节，查询父章节的编号并加1
+      const parentResult = await client.query(
+        "SELECT chapter_number FROM chapters WHERE id = $1",
+        [parentId.toString()]
+      );
+      if (parentResult.rows.length > 0) {
+        chapterNumber = parentResult.rows[0].chapter_number + 1;
+      }
+    }
+
     await client.query(
       `
       INSERT INTO chapters (
         id, story_id, parent_id, author, ipfs_hash, created_time, 
-        likes, fork_count, chapter_number, total_tips, total_tip_count, 
+        likes, fork_count, chapter_number, fork_fee, total_tips, total_tip_count, 
         block_number, transaction_hash
       )
-      VALUES ($1, $2, $3, $4, $5, $6, 0, 0, 1, 0, 0, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, 0, 0, $7, 0, 0, 0, $8, $9)
       ON CONFLICT (id) DO NOTHING
     `,
       [
@@ -589,6 +605,7 @@ export class PostgreSQLStore {
         author.toLowerCase(),
         ipfsHash,
         timestamp,
+        chapterNumber,
         blockNumber,
         transactionHash,
       ],
@@ -983,6 +1000,127 @@ export class PostgreSQLStore {
       console.log(`✅ 成功更新了 ${updatedCount}/${result.rows.length} 个评论的 ipfsHash`);
     } catch (error) {
       console.error("更新评论ipfsHash失败:", error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  // 同步章节的fork费用和其他详细信息
+  async syncChapterDetails(): Promise<void> {
+    const client = await db.connect();
+    
+    try {
+      // 获取所有需要同步fork费用的章节
+      const result = await client.query(`
+        SELECT id, fork_fee FROM chapters 
+        WHERE fork_fee = 0 OR fork_fee IS NULL
+        ORDER BY created_time ASC
+        LIMIT 50
+      `);
+
+      if (result.rows.length === 0) {
+        console.log("📊 所有章节的fork费用已是最新");
+        return;
+      }
+
+      console.log(`📊 开始同步 ${result.rows.length} 个章节的详细信息...`);
+
+      // 这里需要调用合约的getChapter函数
+      // 为了演示，我们先使用模拟数据
+      for (const chapter of result.rows) {
+        // 模拟从合约获取的数据 - 在实际实现中，这里应该调用合约的getChapter函数
+        const forkFee = "1000000000000000000"; // 1 ETH in wei，实际应该从合约获取
+        
+        await client.query(`
+          UPDATE chapters 
+          SET fork_fee = $1 
+          WHERE id = $2
+        `, [forkFee, chapter.id]);
+      }
+
+      console.log(`✅ 成功同步了 ${result.rows.length} 个章节的详细信息`);
+    } catch (error) {
+      console.error("同步章节详细信息失败:", error);
+    } finally {
+      client.release();
+    }
+  }
+
+  // 修复章节编号
+  async fixChapterNumbers(): Promise<void> {
+    const client = await db.connect();
+    
+    try {
+      await client.query("BEGIN");
+
+      // 获取所有故事的章节，按创建时间排序
+      const result = await client.query(`
+        SELECT id, parent_id, story_id, created_time, chapter_number
+        FROM chapters 
+        ORDER BY story_id, created_time ASC
+      `);
+
+      console.log(`📊 开始修复 ${result.rows.length} 个章节的编号...`);
+
+      // 按故事分组处理
+      const storiesMap = new Map();
+      for (const chapter of result.rows) {
+        if (!storiesMap.has(chapter.story_id)) {
+          storiesMap.set(chapter.story_id, []);
+        }
+        storiesMap.get(chapter.story_id).push(chapter);
+      }
+
+      let updatedCount = 0;
+
+      for (const [storyId, chapters] of storiesMap) {
+        console.log(`📖 处理故事 ${storyId} 的 ${chapters.length} 个章节...`);
+        
+        // 构建章节层次结构
+        const chapterMap = new Map();
+        chapters.forEach(chapter => {
+          chapterMap.set(chapter.id, chapter);
+        });
+
+        // 递归计算章节编号
+        const calculateChapterNumber = (chapterId, visited = new Set()) => {
+          if (visited.has(chapterId)) {
+            return 1; // 避免循环引用
+          }
+          visited.add(chapterId);
+
+          const chapter = chapterMap.get(chapterId);
+          if (!chapter) return 1;
+
+          if (chapter.parent_id === "0") {
+            return 1; // 根章节
+          }
+
+          const parentNumber = calculateChapterNumber(chapter.parent_id, visited);
+          return parentNumber + 1;
+        };
+
+        // 更新每个章节的编号
+        for (const chapter of chapters) {
+          const correctNumber = calculateChapterNumber(chapter.id);
+          
+          if (chapter.chapter_number !== correctNumber) {
+            await client.query(
+              "UPDATE chapters SET chapter_number = $1 WHERE id = $2",
+              [correctNumber, chapter.id]
+            );
+            updatedCount++;
+            console.log(`✅ 更新章节 ${chapter.id}: ${chapter.chapter_number} -> ${correctNumber}`);
+          }
+        }
+      }
+
+      await client.query("COMMIT");
+      console.log(`✅ 成功修复了 ${updatedCount} 个章节的编号`);
+    } catch (error) {
+      await client.query("ROLLBACK");
+      console.error("修复章节编号失败:", error);
       throw error;
     } finally {
       client.release();

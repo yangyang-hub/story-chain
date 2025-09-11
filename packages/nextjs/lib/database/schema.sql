@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS chapters (
     likes INTEGER DEFAULT 0,
     fork_count INTEGER DEFAULT 0,
     chapter_number INTEGER NOT NULL,
+    fork_fee NUMERIC(78,0) DEFAULT 0, -- Fork fee required for creating fork chapters
     total_tips NUMERIC(78,0) DEFAULT 0, -- Using NUMERIC to handle BigInt values
     total_tip_count INTEGER DEFAULT 0,
     block_number BIGINT NOT NULL,
@@ -106,6 +107,7 @@ CREATE INDEX IF NOT EXISTS idx_chapters_author ON chapters(author);
 CREATE INDEX IF NOT EXISTS idx_chapters_parent_id ON chapters(parent_id);
 CREATE INDEX IF NOT EXISTS idx_chapters_created_time ON chapters(created_time);
 CREATE INDEX IF NOT EXISTS idx_chapters_likes ON chapters(likes);
+CREATE INDEX IF NOT EXISTS idx_chapters_fork_fee ON chapters(fork_fee);
 CREATE INDEX IF NOT EXISTS idx_chapters_block_number ON chapters(block_number);
 
 CREATE INDEX IF NOT EXISTS idx_comments_token_id ON comments(token_id);

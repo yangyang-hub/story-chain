@@ -17,7 +17,6 @@ import {
 import { CommentSection } from "~~/components/interactions/CommentSection";
 import { LikeButton } from "~~/components/interactions/LikeButton";
 import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
-import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
@@ -104,12 +103,75 @@ interface ChapterWithMetadata extends ChapterData {
   metadata?: any;
 }
 
+// 分叉选择器组件
+const ForkSelector: React.FC<{
+  parentChapter: ChapterWithMetadata;
+  forks: ChapterWithMetadata[];
+  onSelectFork: (forkId: string) => void;
+}> = ({ parentChapter, forks, onSelectFork }) => {
+  if (forks.length <= 1) return null;
+
+  return (
+    <div className="mt-6 p-6 bg-gradient-to-r from-warning/10 to-info/10 border border-warning/30 rounded-xl">
+      <div className="flex items-center gap-3 mb-4">
+        <ShareIcon className="w-6 h-6 text-warning" />
+        <h4 className="text-lg font-bold text-warning">故事在此分叉</h4>
+        <div className="badge badge-warning">{forks.length} 个分支</div>
+      </div>
+      <p className="text-base-content/80 mb-6 text-sm leading-relaxed">
+        第 {parentChapter.chapterNumber} 章之后有 {forks.length}{" "}
+        个不同的发展方向，每个分支都带来不同的故事体验。选择你感兴趣的分支继续阅读：
+      </p>
+      <div className="grid gap-4 md:grid-cols-2">
+        {forks.map((fork, index) => (
+          <button
+            key={fork.id}
+            onClick={() => onSelectFork(fork.id)}
+            className="text-left p-4 border-2 border-base-300 rounded-xl hover:border-primary hover:bg-primary/5 transition-all group"
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-primary text-primary-content rounded-full flex items-center justify-center font-bold text-sm">
+                  {String.fromCharCode(65 + index)}
+                </div>
+                <h5 className="font-bold text-primary group-hover:text-primary-focus">第 {fork.chapterNumber} 章</h5>
+              </div>
+              <div className="text-xs text-base-content/60 flex items-center gap-1">
+                <UserIcon className="w-3 h-3" />
+                <Address address={fork.author} size="sm" />
+              </div>
+            </div>
+            <div className="mb-3">
+              <div className="text-xs text-base-content/50">点击阅读详细内容</div>
+            </div>
+            <div className="flex justify-between items-center text-xs text-base-content/60">
+              <span>{new Date(fork.createdTime * 1000).toLocaleDateString()}</span>
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1">
+                  <span>👍</span>
+                  <span className="font-medium">{fork.likes}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <CurrencyDollarIcon className="w-3 h-3" />
+                  <span className="font-medium">{formatEther(BigInt(fork.totalTips))} ETH</span>
+                </span>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const ChapterCard: React.FC<{
   chapter: ChapterWithMetadata;
   onFork: (chapterId: string) => void;
   onTip: (storyId: string, chapterId: string) => void;
   onContinue: (chapterId: string) => void;
-}> = ({ chapter, onFork, onTip, onContinue }) => {
+  forks?: ChapterWithMetadata[];
+  onSelectFork?: (forkId: string) => void;
+}> = ({ chapter, onFork, onTip, onContinue, forks = [], onSelectFork }) => {
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -146,80 +208,390 @@ const ChapterCard: React.FC<{
   }
 
   return (
-    <div className="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow border-l-4 border-primary">
-      <div className="card-body">
+    <div className="card bg-base-100 shadow-lg hover:shadow-xl transition-all border-l-4 border-primary rounded-lg overflow-hidden">
+      <div className="card-body p-6">
         {/* 章节标题和编号 */}
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="card-title text-lg">
-            第 {chapter.chapterNumber} 章{metadata?.title && `: ${metadata.title}`}
-          </h3>
-          <div className="badge badge-primary badge-sm">#{chapter.id}</div>
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1">
+            <h3 className="card-title text-xl font-bold text-primary mb-2">第 {chapter.chapterNumber} 章</h3>
+            {metadata?.title && <h4 className="text-lg font-semibold text-base-content/90 mb-2">{metadata.title}</h4>}
+          </div>
+          <div className="badge badge-primary badge-lg">#{chapter.id}</div>
         </div>
 
         {/* 作者和时间 */}
-        <div className="flex items-center gap-4 text-sm text-base-content/70 mb-3">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-6 text-sm text-base-content/70 mb-4 p-3 bg-base-200/50 rounded-lg">
+          <div className="flex items-center gap-2">
             <UserIcon className="w-4 h-4" />
+            <span className="font-medium">作者:</span>
             <Address address={chapter.author} size="sm" />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <ClockIcon className="w-4 h-4" />
             <span>{new Date(chapter.createdTime * 1000).toLocaleDateString()}</span>
           </div>
+          {/* 显示fork费用 */}
+          {chapter.forkFee && chapter.forkFee !== "0" && (
+            <div className="flex items-center gap-2 text-orange-600 font-medium">
+              <ShareIcon className="w-4 h-4" />
+              <span>分叉费用: {formatEther(BigInt(chapter.forkFee))} ETH</span>
+            </div>
+          )}
         </div>
 
-        {/* 章节内容预览 */}
-        <div className="prose prose-sm max-w-none mb-4">
-          <IPFSContentViewer cid={chapter.ipfsHash} contentType="json" className="border-none bg-transparent p-0" />
-        </div>
+        {/* 章节摘要 */}
+        {metadata?.title && (
+          <div className="mb-4 p-3 bg-base-100 border border-base-300 rounded-lg">
+            <h5 className="font-medium text-base-content mb-1">{metadata.title}</h5>
+            {metadata?.description && (
+              <p className="text-base-content/70 text-sm leading-relaxed line-clamp-2">{metadata.description}</p>
+            )}
+          </div>
+        )}
 
         {/* 统计信息和交互 */}
-        <div className="flex justify-between items-center text-sm mb-4">
-          <div className="flex items-center gap-4">
-            <LikeButton tokenId={BigInt(chapter.id)} isStory={false} currentLikes={chapter.likes} showCount={true} />
+        <div className="flex flex-wrap items-center gap-4 text-sm mb-6 p-3 bg-base-200/30 rounded-lg">
+          <LikeButton tokenId={BigInt(chapter.id)} isStory={false} currentLikes={chapter.likes} showCount={true} />
 
-            <div className="flex items-center gap-1 text-base-content/70">
-              <ShareIcon className="w-4 h-4" />
-              <span>{chapter.forkCount}</span>
-            </div>
-
-            <div className="flex items-center gap-1 text-base-content/70">
-              <CurrencyDollarIcon className="w-4 h-4" />
-              <span>{formatEther(BigInt(chapter.totalTips))} ETH</span>
-            </div>
+          <div className="flex items-center gap-2 text-base-content/70">
+            <ShareIcon className="w-4 h-4" />
+            <span className="font-medium">{chapter.forkCount}</span>
+            <span>个分叉</span>
           </div>
+
+          <div className="flex items-center gap-2 text-base-content/70">
+            <CurrencyDollarIcon className="w-4 h-4" />
+            <span className="font-medium">{formatEther(BigInt(chapter.totalTips))} ETH</span>
+            <span>打赏</span>
+          </div>
+
+          {/* 分叉信息 */}
+          {forks.length > 1 && (
+            <div className="flex items-center gap-2 text-warning">
+              <ShareIcon className="w-4 h-4" />
+              <span className="font-medium">{forks.length}</span>
+              <span>个分支</span>
+            </div>
+          )}
         </div>
 
         {/* 操作按钮 */}
-        <div className="card-actions justify-end">
-          <button
-            onClick={() => onTip(chapter.storyId, chapter.id)}
-            className="btn btn-outline btn-sm gap-1"
-            disabled={!address}
-            title={!address ? "请先连接钱包" : "给章节作者打赏"}
-          >
-            <CurrencyDollarIcon className="w-4 h-4" />
-            打赏
-          </button>
-          <button
-            onClick={() => onContinue(chapter.id)}
-            className="btn btn-secondary btn-sm gap-1"
-            disabled={!address}
-            title={!address ? "请先连接钱包" : "续写此章节"}
-          >
-            <PlusIcon className="w-4 h-4" />
-            续写
-          </button>
-          <button
-            onClick={() => onFork(chapter.id)}
-            className="btn btn-primary btn-sm gap-1"
-            disabled={!address}
-            title={!address ? "请先连接钱包" : "基于此章节创建分叉故事"}
-          >
-            <ShareIcon className="w-4 h-4" />
-            分叉
-          </button>
+        <div className="flex flex-wrap gap-3 justify-between">
+          <div className="flex gap-3">
+            <a href={`/story/${chapter.storyId}/chapter/${chapter.id}`} className="btn btn-primary gap-2">
+              <BookOpenIcon className="w-4 h-4" />
+              阅读章节
+            </a>
+
+            {forks.length > 1 && onSelectFork && (
+              <div className="dropdown">
+                <button className="btn btn-secondary gap-2" role="button" tabIndex={0}>
+                  <ShareIcon className="w-4 h-4" />
+                  选择分支 ({forks.length})
+                </button>
+                <ul className="dropdown-content menu bg-base-100 rounded-box z-[1] w-80 p-2 shadow-xl border border-base-300 mt-1">
+                  {forks.map((fork, index) => (
+                    <li key={fork.id}>
+                      <a
+                        href={`/story/${fork.storyId}/chapter/${fork.id}`}
+                        className="flex justify-between items-center p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-primary text-primary-content rounded-full flex items-center justify-center text-xs font-bold">
+                            {String.fromCharCode(65 + index)}
+                          </div>
+                          <span className="font-medium">分支 {String.fromCharCode(65 + index)}</span>
+                        </div>
+                        <div className="text-xs text-base-content/60">
+                          <Address address={fork.author} size="sm" />
+                        </div>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => onTip(chapter.storyId, chapter.id)}
+              className="btn btn-outline btn-sm gap-2"
+              disabled={!address}
+              title={!address ? "请先连接钱包" : "给章节作者打赏"}
+            >
+              <CurrencyDollarIcon className="w-4 h-4" />
+              打赏
+            </button>
+            <button
+              onClick={() => onContinue(chapter.id)}
+              className="btn btn-secondary btn-sm gap-2"
+              disabled={!address}
+              title={!address ? "请先连接钱包" : "续写此章节"}
+            >
+              <PlusIcon className="w-4 h-4" />
+              续写
+            </button>
+            <button
+              onClick={() => onFork(chapter.id)}
+              className="btn btn-primary btn-sm gap-2"
+              disabled={!address}
+              title={
+                !address
+                  ? "请先连接钱包"
+                  : `基于此章节创建分叉${chapter.forkFee && chapter.forkFee !== "0" ? ` (需支付 ${formatEther(BigInt(chapter.forkFee))} ETH)` : ""}`
+              }
+            >
+              <ShareIcon className="w-4 h-4" />
+              分叉
+              {chapter.forkFee && chapter.forkFee !== "0" && (
+                <span className="badge badge-warning badge-xs ml-1">{formatEther(BigInt(chapter.forkFee))} ETH</span>
+              )}
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* 如果有分叉，显示分叉选择器 */}
+      {forks.length > 1 && onSelectFork && (
+        <ForkSelector parentChapter={chapter} forks={forks} onSelectFork={onSelectFork} />
+      )}
+    </div>
+  );
+};
+
+// 树形节点组件
+const ChapterTreeNode: React.FC<{
+  chapter: ChapterWithMetadata;
+  childChapters: ChapterWithMetadata[];
+  level: number;
+  onFork: (chapterId: string) => void;
+  onTip: (storyId: string, chapterId: string) => void;
+  onContinue: (chapterId: string) => void;
+  storyId: string;
+  isLast: boolean;
+  allChapters: ChapterWithMetadata[];
+}> = ({ chapter, childChapters, level, onFork, onTip, onContinue, storyId, isLast, allChapters }) => {
+  const { address } = useAccount();
+  const [metadata, setMetadata] = useState<ChapterMetadata | null>(null);
+  const [metadataLoading, setMetadataLoading] = useState(false);
+
+  // 加载章节元数据
+  useEffect(() => {
+    const loadMetadata = async () => {
+      if (!chapter.ipfsHash) return;
+
+      setMetadataLoading(true);
+      try {
+        const data = await getJSONFromIPFS(chapter.ipfsHash);
+        setMetadata(data);
+      } catch (err) {
+        console.error("加载元数据失败:", err);
+      } finally {
+        setMetadataLoading(false);
+      }
+    };
+
+    loadMetadata();
+  }, [chapter.ipfsHash]);
+
+  return (
+    <div className="relative">
+      {/* 树形连接线 */}
+      {level > 0 && (
+        <>
+          <div className="absolute left-4 top-0 w-px h-6 bg-base-300"></div>
+          <div className="absolute left-4 top-6 w-4 h-px bg-base-300"></div>
+          {!isLast && <div className="absolute left-4 top-6 w-px h-full bg-base-300"></div>}
+        </>
+      )}
+
+      <div className={`flex items-start gap-4 ${level > 0 ? "ml-8" : ""}`}>
+        {/* 章节节点 */}
+        <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-content text-sm font-bold">
+          {chapter.chapterNumber}
+        </div>
+
+        {/* 章节信息卡片 */}
+        <div className="flex-1 card bg-base-50 border border-base-300 hover:border-primary/50 transition-colors">
+          <div className="card-body p-4">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1">
+                <h4 className="font-semibold text-base-content flex items-center gap-2">
+                  第 {chapter.chapterNumber} 章
+                  {metadataLoading && <span className="loading loading-spinner loading-xs"></span>}
+                </h4>
+
+                {metadata?.title && <p className="text-sm text-base-content/70 mt-1">{metadata.title}</p>}
+
+                <div className="flex items-center gap-4 text-xs text-base-content/60 mt-2">
+                  <div className="flex items-center gap-1">
+                    <UserIcon className="w-3 h-3" />
+                    <Address address={chapter.author} size="sm" />
+                  </div>
+                  <span>{new Date(chapter.createdTime * 1000).toLocaleDateString()}</span>
+                </div>
+              </div>
+
+              {/* 统计信息 */}
+              <div className="flex items-center gap-3 text-xs text-base-content/60">
+                <div className="flex items-center gap-1">
+                  <span>❤️</span>
+                  <span>{chapter.likes}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span>💰</span>
+                  <span>{formatEther(BigInt(chapter.totalTips))} ETH</span>
+                </div>
+                {chapter.forkFee && chapter.forkFee !== "0" && (
+                  <div className="flex items-center gap-1">
+                    <span>🔀</span>
+                    <span>{formatEther(BigInt(chapter.forkFee))} ETH</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 操作按钮 */}
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <a href={`/story/${storyId}/chapter/${chapter.id}`} className="btn btn-xs btn-primary gap-1">
+                  <BookOpenIcon className="w-3 h-3" />
+                  阅读
+                </a>
+
+                <button
+                  onClick={() => onTip(storyId, chapter.id)}
+                  className="btn btn-xs btn-secondary gap-1"
+                  disabled={!address}
+                  title={!address ? "请先连接钱包" : "给章节作者打赏"}
+                >
+                  <CurrencyDollarIcon className="w-3 h-3" />
+                  打赏
+                </button>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onContinue(chapter.id)}
+                  className="btn btn-xs btn-outline gap-1"
+                  disabled={!address}
+                  title={!address ? "请先连接钱包" : "续写此章节"}
+                >
+                  <PlusIcon className="w-3 h-3" />
+                  续写
+                </button>
+
+                <button
+                  onClick={() => onFork(chapter.id)}
+                  className="btn btn-xs btn-accent gap-1"
+                  disabled={!address}
+                  title={
+                    !address
+                      ? "请先连接钱包"
+                      : `基于此章节创建分叉${chapter.forkFee && chapter.forkFee !== "0" ? ` (需支付 ${formatEther(BigInt(chapter.forkFee))} ETH)` : ""}`
+                  }
+                >
+                  <ShareIcon className="w-3 h-3" />
+                  分叉
+                  {chapter.forkFee && chapter.forkFee !== "0" && (
+                    <span className="badge badge-warning badge-xs">{formatEther(BigInt(chapter.forkFee))} ETH</span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* 分叉提示 */}
+            {childChapters.length > 1 && (
+              <div className="mt-2 text-xs text-warning flex items-center gap-1">
+                <ShareIcon className="w-3 h-3" />
+                <span>此章节有 {childChapters.length} 个分叉</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 渲染子章节 */}
+      {childChapters.length > 0 && (
+        <div className="mt-4 space-y-4">
+          {childChapters.map((child, index) => {
+            const grandChildren = allChapters.filter(c => c.parentId === child.id);
+            return (
+              <ChapterTreeNode
+                key={child.id}
+                chapter={child}
+                childChapters={grandChildren}
+                level={level + 1}
+                onFork={onFork}
+                onTip={onTip}
+                onContinue={onContinue}
+                storyId={storyId}
+                isLast={index === childChapters.length - 1}
+                allChapters={allChapters}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 章节树形视图组件
+const ChapterTreeView: React.FC<{
+  chapters: ChapterWithMetadata[];
+  onFork: (chapterId: string) => void;
+  onTip: (storyId: string, chapterId: string) => void;
+  onContinue: (chapterId: string) => void;
+  storyId: string;
+}> = ({ chapters, onFork, onTip, onContinue, storyId }) => {
+  // 构建树形结构
+  const buildTree = () => {
+    const rootChapters = chapters.filter(chapter => chapter.parentId === "0");
+    return rootChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+  };
+
+  const getChildren = (parentId: string) => {
+    return chapters.filter(chapter => chapter.parentId === parentId).sort((a, b) => a.chapterNumber - b.chapterNumber);
+  };
+
+  const rootChapters = buildTree();
+
+  if (rootChapters.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 树形统计信息 */}
+      <div className="flex items-center justify-between text-sm text-base-content/70 pb-4 border-b border-base-300">
+        <div className="flex items-center gap-4">
+          <span>总章节: {chapters.length}</span>
+          <span>分叉点: {chapters.filter(c => getChildren(c.id).length > 1).length}</span>
+        </div>
+        <div className="text-xs text-base-content/50">点击节点可查看详细信息，使用操作按钮进行互动</div>
+      </div>
+
+      {/* 树形结构 */}
+      <div className="space-y-6">
+        {rootChapters.map((rootChapter, index) => {
+          const children = getChildren(rootChapter.id);
+          return (
+            <ChapterTreeNode
+              key={rootChapter.id}
+              chapter={rootChapter}
+              childChapters={children}
+              level={0}
+              onFork={onFork}
+              onTip={onTip}
+              onContinue={onContinue}
+              storyId={storyId}
+              isLast={index === rootChapters.length - 1}
+              allChapters={chapters}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -413,8 +785,13 @@ const ContinueChapterModal: React.FC<{
 
   // 初始化时获取父章节的fork费用
   useEffect(() => {
-    if (parentChapter && parentChapter.forkFee) {
-      setForkFeeRequired(formatEther(BigInt(parentChapter.forkFee)));
+    if (parentChapter && parentChapter.forkFee !== undefined) {
+      const forkFeeStr = parentChapter.forkFee.toString();
+      if (forkFeeStr !== "0") {
+        setForkFeeRequired(formatEther(BigInt(forkFeeStr)));
+      } else {
+        setForkFeeRequired("0");
+      }
     }
   }, [parentChapter]);
 
@@ -429,6 +806,15 @@ const ContinueChapterModal: React.FC<{
     if (!formData.title.trim() || !formData.content.trim()) {
       notification.error("标题和内容不能为空");
       return;
+    }
+
+    // 检查续写费用
+    const requiredFee = parseFloat(forkFeeRequired);
+    if (requiredFee > 0) {
+      const confirm = window.confirm(`续写此章节需要支付 ${forkFeeRequired} ETH 给原作者。确定要继续吗？`);
+      if (!confirm) {
+        return;
+      }
     }
 
     try {
@@ -450,12 +836,12 @@ const ContinueChapterModal: React.FC<{
       const ipfsHash = await uploadChapterMetadata(metadata);
 
       // 调用合约创建章节，如果有fork费用需要支付
-      const value = forkFeeRequired !== "0" ? parseEther(forkFeeRequired) : BigInt(0);
+      const valueToSend = requiredFee > 0 ? parseEther(forkFeeRequired) : undefined;
 
       await createChapter({
         functionName: "createChapter",
         args: [BigInt(storyId), BigInt(parentChapter.id), ipfsHash, parseEther(formData.forkFee)],
-        value: value,
+        value: valueToSend,
       });
 
       notification.success("章节续写成功！");
@@ -607,12 +993,17 @@ const ForkModal: React.FC<{
   const [isForking, setIsForking] = useState(false);
   const [forkFeeRequired, setForkFeeRequired] = useState<string>("0");
 
-  const { writeContractAsync: forkStory } = useScaffoldWriteContract("StoryChain");
+  const { writeContractAsync: createChapter } = useScaffoldWriteContract("StoryChain");
 
   // 初始化时获取父章节的fork费用
   useEffect(() => {
-    if (parentChapter && parentChapter.forkFee) {
-      setForkFeeRequired(formatEther(BigInt(parentChapter.forkFee)));
+    if (parentChapter && parentChapter.forkFee !== undefined) {
+      const forkFeeStr = parentChapter.forkFee.toString();
+      if (forkFeeStr !== "0") {
+        setForkFeeRequired(formatEther(BigInt(forkFeeStr)));
+      } else {
+        setForkFeeRequired("0");
+      }
     }
   }, [parentChapter]);
 
@@ -629,34 +1020,43 @@ const ForkModal: React.FC<{
       return;
     }
 
+    // 检查fork费用
+    const requiredFee = parseFloat(forkFeeRequired);
+    if (requiredFee > 0) {
+      const confirm = window.confirm(`分叉此章节需要支付 ${forkFeeRequired} ETH 给原作者。确定要继续吗？`);
+      if (!confirm) {
+        return;
+      }
+    }
+
     try {
       setIsForking(true);
 
-      // 创建故事元数据（fork是创建新故事）
-      const metadata = {
+      // 创建分叉章节元数据（注意：这是章节，不是新故事）
+      const metadata: ChapterMetadata = {
         title: formData.title,
         content: formData.content,
-        description: `基于第${parentChapter.chapterNumber}章的分叉故事`,
         author: address,
         timestamp: Date.now(),
-        originalStoryId: storyId,
-        originalChapterId: parentChapter.id.toString(),
+        storyId: storyId, // 保持在同一个故事中
+        parentChapterId: parentChapter.id.toString(),
+        chapterNumber: parentChapter.chapterNumber + 1, // 下一章编号
         image: imageCid,
       };
 
       // 上传到IPFS
       const ipfsHash = await uploadChapterMetadata(metadata);
 
-      // 调用合约fork故事，需要支付fork费用
-      const value = forkFeeRequired !== "0" ? parseEther(forkFeeRequired) : BigInt(0);
+      // 调用合约创建分叉章节，需要支付fork费用
+      const valueToSend = requiredFee > 0 ? parseEther(forkFeeRequired) : undefined;
 
-      await forkStory({
-        functionName: "forkStory",
+      await createChapter({
+        functionName: "createChapter",
         args: [BigInt(storyId), BigInt(parentChapter.id), ipfsHash, parseEther(formData.forkFee)],
-        value: value,
+        value: valueToSend,
       });
 
-      notification.success("故事分叉成功！");
+      notification.success("章节分叉成功！");
       setFormData({ title: "", content: "", forkFee: "0" });
       setImageUrl("");
       setImageCid("");
@@ -677,7 +1077,7 @@ const ForkModal: React.FC<{
       <div className="fixed inset-0 bg-black/50" onClick={onClose}></div>
       <div className="relative bg-base-100 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-xl font-bold mb-4">分叉故事</h2>
+          <h2 className="text-xl font-bold mb-4">创建章节分叉</h2>
 
           {/* 显示原章节信息 */}
           <div className="bg-base-200 rounded-lg p-4 mb-4">
@@ -687,7 +1087,7 @@ const ForkModal: React.FC<{
               <UserIcon className="w-3 h-3" />
               <Address address={parentChapter.author} size="sm" />
             </div>
-            <div className="text-xs text-base-content/50 mt-2">分叉将创建一个新的独立故事分支</div>
+            <div className="text-xs text-base-content/50 mt-2">将创建一个新的章节分支，仍属于当前故事</div>
           </div>
 
           {/* 如果需要支付fork费用，显示提醒 */}
@@ -704,14 +1104,14 @@ const ForkModal: React.FC<{
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">新故事标题 *</span>
+                <span className="label-text font-medium">分叉章节标题 *</span>
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className="input input-bordered w-full"
-                placeholder="输入新故事的标题..."
+                placeholder="输入分叉章节的标题..."
                 disabled={isForking}
                 required
               />
@@ -725,7 +1125,7 @@ const ForkModal: React.FC<{
                 value={formData.content}
                 onChange={e => setFormData(prev => ({ ...prev, content: e.target.value }))}
                 className="textarea textarea-bordered w-full h-48"
-                placeholder="从这里开始你的新故事分支..."
+                placeholder="从这里开始你的分叉章节..."
                 disabled={isForking}
                 required
               />
@@ -734,7 +1134,7 @@ const ForkModal: React.FC<{
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">设置续写费用</span>
-                <span className="label-text-alt">ETH (其他用户续写此故事时需支付)</span>
+                <span className="label-text-alt">ETH (其他用户续写此分叉章节时需支付)</span>
               </label>
               <input
                 type="number"
@@ -750,7 +1150,7 @@ const ForkModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">故事封面</span>
+                <span className="label-text font-medium">章节插图</span>
               </label>
               <ImageUploader
                 onImageUpload={(cid, url) => {
@@ -776,7 +1176,7 @@ const ForkModal: React.FC<{
                 ) : (
                   <>
                     <ShareIcon className="w-4 h-4" />
-                    {forkFeeRequired !== "0" ? `支付 ${forkFeeRequired} ETH 并分叉` : "创建分叉"}
+                    {forkFeeRequired !== "0" ? `支付 ${forkFeeRequired} ETH 并创建分叉` : "创建章节分叉"}
                   </>
                 )}
               </button>
@@ -1119,22 +1519,25 @@ const StoryDetailPage = () => {
         </div>
       </div>
 
-      {/* 章节列表 */}
-      <div className="space-y-6">
+      {/* 章节树形结构 */}
+      <div className="space-y-8">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">章节列表</h2>
-          {/* 快速续写按钮 */}
+          <h2 className="text-3xl font-bold flex items-center gap-3">
+            <BookOpenIcon className="w-8 h-8 text-primary" />
+            故事结构
+          </h2>
+          {/* 快速操作按钮 */}
           {address && chaptersWithMetadata.length > 0 && (
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 onClick={() => {
                   const lastChapter = chaptersWithMetadata[chaptersWithMetadata.length - 1];
                   handleContinueChapter(lastChapter.id);
                 }}
-                className="btn btn-secondary gap-1"
+                className="btn btn-secondary gap-2"
                 title="续写最新章节"
               >
-                <PlusIcon className="w-4 h-4" />
+                <PlusIcon className="w-5 h-5" />
                 续写最新章节
               </button>
               <button
@@ -1142,10 +1545,10 @@ const StoryDetailPage = () => {
                   const lastChapter = chaptersWithMetadata[chaptersWithMetadata.length - 1];
                   handleFork(lastChapter.id);
                 }}
-                className="btn btn-outline btn-sm gap-1"
+                className="btn btn-outline gap-2"
                 title="分叉最新章节"
               >
-                <ShareIcon className="w-4 h-4" />
+                <ShareIcon className="w-5 h-5" />
                 分叉最新章节
               </button>
             </div>
@@ -1153,16 +1556,14 @@ const StoryDetailPage = () => {
         </div>
 
         {chaptersWithMetadata.length > 0 ? (
-          <div className="space-y-4">
-            {chaptersWithMetadata.map(chapter => (
-              <ChapterCard
-                key={chapter.id}
-                chapter={chapter}
-                onFork={handleFork}
-                onTip={handleTip}
-                onContinue={handleContinueChapter}
-              />
-            ))}
+          <div className="bg-base-100 rounded-lg border border-base-300 p-6">
+            <ChapterTreeView
+              chapters={chaptersWithMetadata}
+              onFork={handleFork}
+              onTip={handleTip}
+              onContinue={handleContinueChapter}
+              storyId={storyId}
+            />
           </div>
         ) : (
           <div className="text-center py-8">
