@@ -235,7 +235,7 @@ const ChapterReadingPage = () => {
   const { prevChapter, nextChapters, forks } = getNavigationInfo();
 
   // 处理打赏
-  const { writeContractAsync: tipChapter } = useScaffoldWriteContract("StoryChain");
+  const { writeContractAsync: tip } = useScaffoldWriteContract("StoryChain");
 
   const handleTip = async () => {
     if (!address || !chapter) {
@@ -247,8 +247,8 @@ const ChapterReadingPage = () => {
     if (!amount || parseFloat(amount) <= 0) return;
 
     try {
-      await tipChapter({
-        functionName: "tipChapter",
+      await tip({
+        functionName: "tip",
         args: [BigInt(storyId as string), BigInt(chapter.id)],
         value: parseEther(amount),
       });
