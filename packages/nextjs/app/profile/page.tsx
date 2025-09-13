@@ -19,7 +19,6 @@ import {
   UserIcon,
 } from "@heroicons/react/24/outline";
 import { LikeButton } from "~~/components/interactions/LikeButton";
-import { IPFSPreview } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
@@ -623,10 +622,6 @@ const ProfilePage = () => {
                         <div className="card-body">
                           <h3 className="card-title text-lg line-clamp-2">{story.title}</h3>
 
-                          <div className="flex-1">
-                            <IPFSPreview cid={story.ipfsHash} maxLines={3} />
-                          </div>
-
                           <div className="flex items-center gap-2 text-sm text-base-content/70">
                             <ClockIcon className="w-4 h-4" />
                             <span>{new Date(story.createdTime).toLocaleDateString()}</span>
@@ -688,10 +683,6 @@ const ProfilePage = () => {
                           <div className="flex justify-between items-start mb-2">
                             <h3 className="card-title text-lg line-clamp-2">{chapter.title}</h3>
                             <div className="badge badge-primary badge-sm">第{chapter.chapterNumber}章</div>
-                          </div>
-
-                          <div className="flex-1">
-                            <IPFSPreview cid={chapter.ipfsHash} maxLines={3} />
                           </div>
 
                           <div className="flex items-center gap-2 text-sm text-base-content/70">
