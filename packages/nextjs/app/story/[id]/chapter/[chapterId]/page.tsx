@@ -137,7 +137,7 @@ const ForkSelector: React.FC<{
                   <span>{new Date(fork.createdTime * 1000).toLocaleDateString()}</span>
                   <div className="flex items-center gap-4">
                     <span>❤️ {fork.likes}</span>
-                    <span>💰 {formatEther(BigInt(fork.totalTips))} ETH</span>
+                    <span>💰 {formatEther(BigInt(fork.totalTips))} STT</span>
                   </div>
                 </div>
               </div>
@@ -243,7 +243,7 @@ const ChapterReadingPage = () => {
       return;
     }
 
-    const amount = window.prompt("输入打赏金额 (ETH):", "0.01");
+    const amount = window.prompt("输入打赏金额 (STT):", "0.01");
     if (!amount || parseFloat(amount) <= 0) return;
 
     try {
@@ -325,9 +325,9 @@ const ChapterReadingPage = () => {
 
               <div className="flex items-center gap-4 text-sm text-base-content/60">
                 <span>{new Date(chapter.createdTime * 1000).toLocaleString()}</span>
-                <span>💰 {formatEther(BigInt(chapter.totalTips))} ETH 打赏</span>
+                <span>💰 {formatEther(BigInt(chapter.totalTips))} STT 打赏</span>
                 {chapter.forkFee && chapter.forkFee !== "0" && (
-                  <span>🔀 分叉费用: {formatEther(BigInt(chapter.forkFee))} ETH</span>
+                  <span>🔀 分叉费用: {formatEther(BigInt(chapter.forkFee))} STT</span>
                 )}
               </div>
             </div>

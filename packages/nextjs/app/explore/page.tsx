@@ -341,7 +341,7 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
 
             <div className="flex items-center gap-1 text-base-content/70">
               <CurrencyDollarIcon className="w-4 h-4" />
-              <span>{(Number(story.totalTips) / 1e18).toFixed(3)} ETH</span>
+              <span>{(Number(story.totalTips) / 1e18).toFixed(3)} STT</span>
             </div>
           </div>
         </div>

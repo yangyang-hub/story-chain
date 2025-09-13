@@ -13,9 +13,25 @@ export type ScaffoldConfig = BaseConfig;
 
 export const DEFAULT_ALCHEMY_API_KEY = "oKxs-03sij-U_N0iOlrSsZFr29-IqbuF";
 
+// Create networks array based on environment variables
+const createTargetNetworks = () => {
+  // Always include Somnia testnet as base network
+  const baseNetworks = [chains.somniaTestnet] as const;
+
+  // Enable foundry network for local development or when explicitly enabled
+  // In production (Vercel), set NEXT_PUBLIC_ENABLE_FOUNDRY=false to disable foundry
+  const enableFoundry = process.env.NEXT_PUBLIC_ENABLE_FOUNDRY !== "false";
+
+  if (enableFoundry) {
+    return [chains.foundry, ...baseNetworks] as const;
+  }
+
+  return baseNetworks;
+};
+
 const scaffoldConfig = {
   // The networks on which your DApp is live
-  targetNetworks: [chains.foundry],
+  targetNetworks: createTargetNetworks(),
   // The interval at which your front-end polls the RPC servers for new data (it has no effect if you only target the local network (default is 4000))
   pollingInterval: 30000,
   // This is ours Alchemy's default API key.

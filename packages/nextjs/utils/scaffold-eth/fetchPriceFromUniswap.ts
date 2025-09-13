@@ -21,6 +21,7 @@ export const fetchPriceFromUniswap = async (targetNetwork: ChainWithAttributes):
   if (
     targetNetwork.nativeCurrency.symbol !== "ETH" &&
     targetNetwork.nativeCurrency.symbol !== "SEP" &&
+    targetNetwork.nativeCurrency.symbol !== "STT" &&
     !targetNetwork.nativeCurrencyTokenAddress
   ) {
     return 0;

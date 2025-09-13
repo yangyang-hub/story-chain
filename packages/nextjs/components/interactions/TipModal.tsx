@@ -113,7 +113,7 @@ export const TipModal: React.FC<TipModalProps> = ({
             <div>
               <label className="label">
                 <span className="label-text font-medium">选择打赏金额</span>
-                <span className="label-text-alt">ETH</span>
+                <span className="label-text-alt">STT</span>
               </label>
 
               {/* 预设金额 */}
@@ -129,7 +129,7 @@ export const TipModal: React.FC<TipModalProps> = ({
                     className={`btn btn-sm ${!useCustom && tipAmount === amount ? "btn-primary" : "btn-outline"}`}
                     disabled={isLoading}
                   >
-                    {amount} ETH
+                    {amount} STT
                   </button>
                 ))}
               </div>
@@ -169,10 +169,10 @@ export const TipModal: React.FC<TipModalProps> = ({
                   <div className="font-medium">费用分配:</div>
                   <div>
                     • {recipientType === "story" ? "故事" : "章节"}作者: {(parseFloat(finalAmount) * 0.85).toFixed(4)}{" "}
-                    ETH
+                    STT
                   </div>
-                  <div>• 故事作者: {(parseFloat(finalAmount) * 0.1).toFixed(4)} ETH</div>
-                  <div>• 平台手续费: {(parseFloat(finalAmount) * 0.05).toFixed(4)} ETH</div>
+                  <div>• 故事作者: {(parseFloat(finalAmount) * 0.1).toFixed(4)} STT</div>
+                  <div>• 平台手续费: {(parseFloat(finalAmount) * 0.05).toFixed(4)} STT</div>
                 </div>
               </div>
             )}
@@ -198,7 +198,7 @@ export const TipModal: React.FC<TipModalProps> = ({
               ) : (
                 <>
                   <CurrencyDollarIcon className="w-4 h-4" />
-                  打赏 {finalAmount} ETH
+                  打赏 {finalAmount} STT
                 </>
               )}
             </button>

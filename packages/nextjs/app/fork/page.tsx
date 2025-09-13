@@ -231,7 +231,7 @@ const ForkStoryPage = () => {
           <div>
             <div className="font-semibold">需要支付分叉费用</div>
             <div className="text-sm">
-              分叉此{isChapterFork ? "章节" : "故事"}需要支付 {forkFeeEth} ETH 给原作者
+              分叉此{isChapterFork ? "章节" : "故事"}需要支付 {forkFeeEth} STT 给原作者
             </div>
           </div>
         </div>
@@ -264,7 +264,7 @@ const ForkStoryPage = () => {
                   </div>
                 </div>
 
-                <div className="text-xs text-base-content/60">分叉费: {forkFeeEth} ETH</div>
+                <div className="text-xs text-base-content/60">分叉费: {forkFeeEth} STT</div>
               </div>
             </div>
           </div>
@@ -336,7 +336,7 @@ const ForkStoryPage = () => {
                 <div className="form-control">
                   <label className="label">
                     <span className="label-text font-medium">我的分叉费用</span>
-                    <span className="label-text-alt">ETH</span>
+                    <span className="label-text-alt">STT</span>
                   </label>
                   <input
                     type="number"
@@ -359,10 +359,10 @@ const ForkStoryPage = () => {
                     <InformationCircleIcon className="w-5 h-5" />
                     <div className="text-sm">
                       <div className="font-medium">费用分配:</div>
-                      <div>• 你需要支付: {forkFeeEth} ETH</div>
-                      <div>• 原故事作者将获得: {(parseFloat(forkFeeEth) * 0.1).toFixed(4)} ETH</div>
-                      <div>• 原章节作者将获得: {(parseFloat(forkFeeEth) * 0.85).toFixed(4)} ETH</div>
-                      <div>• 平台手续费: {(parseFloat(forkFeeEth) * 0.05).toFixed(4)} ETH</div>
+                      <div>• 你需要支付: {forkFeeEth} STT</div>
+                      <div>• 原故事作者将获得: {(parseFloat(forkFeeEth) * 0.1).toFixed(4)} STT</div>
+                      <div>• 原章节作者将获得: {(parseFloat(forkFeeEth) * 0.85).toFixed(4)} STT</div>
+                      <div>• 平台手续费: {(parseFloat(forkFeeEth) * 0.05).toFixed(4)} STT</div>
                     </div>
                   </div>
                 )}
@@ -389,7 +389,7 @@ const ForkStoryPage = () => {
                   <>
                     <ShareIcon className="w-4 h-4" />
                     创建分叉
-                    {parseFloat(forkFeeEth) > 0 && <span className="text-xs">({forkFeeEth} ETH)</span>}
+                    {parseFloat(forkFeeEth) > 0 && <span className="text-xs">({forkFeeEth} STT)</span>}
                   </>
                 )}
               </button>

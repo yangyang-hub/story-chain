@@ -22,11 +22,11 @@ export const useInitializeNativeCurrencyPrice = () => {
     setIsNativeCurrencyFetching(false);
   }, [setIsNativeCurrencyFetching, setNativeCurrencyPrice, targetNetwork]);
 
-  // Get the price of ETH from Uniswap on mount
+  // Get the price of STT from Uniswap on mount
   useEffect(() => {
     fetchPrice();
   }, [fetchPrice]);
 
-  // Get the price of ETH from Uniswap at a given interval
+  // Get the price of STT from Uniswap at a given interval
   useInterval(fetchPrice, enablePolling ? scaffoldConfig.pollingInterval : null);
 };

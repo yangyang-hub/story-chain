@@ -3,7 +3,7 @@
  */
 
 /**
- * 将 Wei 转换为 ETH
+ * 将 Wei 转换为 STT
  */
 export function formatEther(wei: string | bigint): string {
   try {

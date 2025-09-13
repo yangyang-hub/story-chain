@@ -216,7 +216,7 @@ export default function ChainDataBrowser() {
                   <div className="flex justify-between">
                     <span>❤️ {story.likes}</span>
                     <span>🍴 {story.forkCount}</span>
-                    <span>💰 {formatEther(story.totalTips)} ETH</span>
+                    <span>💰 {formatEther(story.totalTips)} STT</span>
                   </div>
                   <div>
                     <strong>区块:</strong> #{story.blockNumber}
@@ -302,7 +302,7 @@ export default function ChainDataBrowser() {
                   <div className="flex justify-between">
                     <span>❤️ {chapter.likes}</span>
                     <span>🍴 {chapter.forkCount}</span>
-                    <span>💰 {formatEther(chapter.totalTips)} ETH</span>
+                    <span>💰 {formatEther(chapter.totalTips)} STT</span>
                   </div>
                   <div>
                     <strong>区块:</strong> #{chapter.blockNumber}
@@ -351,7 +351,7 @@ export default function ChainDataBrowser() {
 
           <div className="stat bg-success text-success-content rounded-lg md:col-span-2">
             <div className="stat-title text-success-content/70">总打赏金额</div>
-            <div className="stat-value">{formatEther(analytics.totalTips)} ETH</div>
+            <div className="stat-value">{formatEther(analytics.totalTips)} STT</div>
           </div>
 
           {/* 顶级作者 */}
@@ -373,7 +373,7 @@ export default function ChainDataBrowser() {
                       <td className="font-mono text-xs">{author.address.slice(0, 8)}...</td>
                       <td>{author.storyCount}</td>
                       <td>{author.chapterCount}</td>
-                      <td>{formatEther(author.totalEarnings)} ETH</td>
+                      <td>{formatEther(author.totalEarnings)} STT</td>
                     </tr>
                   ))}
                 </tbody>

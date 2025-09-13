@@ -5,7 +5,7 @@ type ChainAttributes = {
   // color | [lightThemeColor, darkThemeColor]
   color: string | [string, string];
   // Used to fetch price by providing mainnet token address
-  // for networks having native currency other than ETH
+  // for networks having native currency other than ETH (such as STT)
   nativeCurrencyTokenAddress?: string;
 };
 

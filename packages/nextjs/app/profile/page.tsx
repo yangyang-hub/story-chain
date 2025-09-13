@@ -262,17 +262,17 @@ const ProfilePage = () => {
       };
     }
 
-    // Calculate tip revenue (from API data) - convert from wei to ETH
+    // Calculate tip revenue (from API data) - convert from wei to STT
     const tipRevenueWei =
       userStories.reduce((sum: bigint, story: UserStory) => sum + BigInt(story.totalTips || "0"), 0n) +
       userChapters.reduce((sum: bigint, chapter: UserChapter) => sum + BigInt(chapter.totalTips || "0"), 0n);
 
-    const tipRevenueETH = formatEther(tipRevenueWei);
+    const tipRevenueSTT = formatEther(tipRevenueWei);
 
     return {
-      tipRevenue: tipRevenueETH,
+      tipRevenue: tipRevenueSTT,
       forkRevenue: "0", // Temporarily disabled
-      totalRevenue: tipRevenueETH,
+      totalRevenue: tipRevenueSTT,
       withdrawnAmount: "0", // Temporarily disabled
     };
   }, [address, userStories, userChapters]);
@@ -346,7 +346,7 @@ const ProfilePage = () => {
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <div className="text-sm text-base-content/70">待提取奖励</div>
-                  <div className="text-xl font-bold text-success">{parseFloat(pendingRewards).toFixed(4)} ETH</div>
+                  <div className="text-xl font-bold text-success">{parseFloat(pendingRewards).toFixed(4)} STT</div>
                 </div>
                 <button onClick={handleWithdrawRewards} className="btn btn-success gap-2" disabled={isLoading}>
                   {isLoading ? (
@@ -483,7 +483,7 @@ const ProfilePage = () => {
                               </span>
                               <span className="flex items-center gap-1">
                                 <CurrencyDollarIcon className="w-4 h-4" />
-                                {parseFloat(formatEther(BigInt(story.totalTips || "0"))).toFixed(4)} ETH
+                                {parseFloat(formatEther(BigInt(story.totalTips || "0"))).toFixed(4)} STT
                               </span>
                             </div>
 
@@ -550,7 +550,7 @@ const ProfilePage = () => {
                               </span>
                               <span className="flex items-center gap-1">
                                 <CurrencyDollarIcon className="w-4 h-4" />
-                                {parseFloat(formatEther(BigInt(chapter.totalTips || "0"))).toFixed(4)} ETH
+                                {parseFloat(formatEther(BigInt(chapter.totalTips || "0"))).toFixed(4)} STT
                               </span>
                             </div>
 
@@ -624,7 +624,7 @@ const ProfilePage = () => {
                         </div>
                         <div className="flex justify-between">
                           <span>待提取奖励</span>
-                          <span className="font-bold text-success">{pendingRewards} ETH</span>
+                          <span className="font-bold text-success">{pendingRewards} STT</span>
                         </div>
                       </div>
                     </div>
@@ -637,24 +637,24 @@ const ProfilePage = () => {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="stat">
                           <div className="stat-title">打赏收益</div>
-                          <div className="stat-value text-sm">{parseFloat(revenueStats.tipRevenue).toFixed(6)} ETH</div>
+                          <div className="stat-value text-sm">{parseFloat(revenueStats.tipRevenue).toFixed(6)} STT</div>
                         </div>
                         <div className="stat">
                           <div className="stat-title">分叉收益</div>
                           <div className="stat-value text-sm">
-                            {parseFloat(revenueStats.forkRevenue).toFixed(6)} ETH
+                            {parseFloat(revenueStats.forkRevenue).toFixed(6)} STT
                           </div>
                         </div>
                         <div className="stat">
                           <div className="stat-title">总收益</div>
                           <div className="stat-value text-sm">
-                            {parseFloat(revenueStats.totalRevenue).toFixed(6)} ETH
+                            {parseFloat(revenueStats.totalRevenue).toFixed(6)} STT
                           </div>
                         </div>
                         <div className="stat">
                           <div className="stat-title">已提取</div>
                           <div className="stat-value text-sm">
-                            {parseFloat(revenueStats.withdrawnAmount).toFixed(6)} ETH
+                            {parseFloat(revenueStats.withdrawnAmount).toFixed(6)} STT
                           </div>
                         </div>
                       </div>

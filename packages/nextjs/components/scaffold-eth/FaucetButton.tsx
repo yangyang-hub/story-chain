@@ -8,8 +8,8 @@ import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { useTransactor } from "~~/hooks/scaffold-eth";
 import { useWatchBalance } from "~~/hooks/scaffold-eth/useWatchBalance";
 
-// Number of ETH faucet sends to an address
-const NUM_OF_ETH = "1";
+// Number of STT faucet sends to an address
+const NUM_OF_STT = "1";
 const FAUCET_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 
 const localWalletClient = createWalletClient({
@@ -18,7 +18,7 @@ const localWalletClient = createWalletClient({
 });
 
 /**
- * FaucetButton button which lets you grab eth.
+ * FaucetButton button which lets you grab STT.
  */
 export const FaucetButton = () => {
   const { address, chain: ConnectedChain } = useAccount();
@@ -29,18 +29,18 @@ export const FaucetButton = () => {
 
   const faucetTxn = useTransactor(localWalletClient);
 
-  const sendETH = async () => {
+  const sendSTT = async () => {
     if (!address) return;
     try {
       setLoading(true);
       await faucetTxn({
         account: FAUCET_ADDRESS,
         to: address,
-        value: parseEther(NUM_OF_ETH),
+        value: parseEther(NUM_OF_STT),
       });
       setLoading(false);
     } catch (error) {
-      console.error("⚡️ ~ file: FaucetButton.tsx:sendETH ~ error", error);
+      console.error("⚡️ ~ file: FaucetButton.tsx:sendSTT ~ error", error);
       setLoading(false);
     }
   };
@@ -61,7 +61,7 @@ export const FaucetButton = () => {
       }
       data-tip="Grab funds from faucet"
     >
-      <button className="btn btn-secondary btn-sm px-2 rounded-full" onClick={sendETH} disabled={loading}>
+      <button className="btn btn-secondary btn-sm px-2 rounded-full" onClick={sendSTT} disabled={loading}>
         {!loading ? (
           <BanknotesIcon className="h-4 w-4" />
         ) : (

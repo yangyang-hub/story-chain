@@ -18,7 +18,7 @@ const localWalletClient = createWalletClient({
 });
 
 /**
- * Faucet modal which lets you send ETH to any address.
+ * Faucet modal which lets you send STT to any address.
  */
 export const Faucet = () => {
   const [loading, setLoading] = useState(false);
@@ -54,7 +54,7 @@ export const Faucet = () => {
     getFaucetAddress();
   }, []);
 
-  const sendETH = async () => {
+  const sendSTT = async () => {
     if (!faucetAddress || !inputAddress) {
       return;
     }
@@ -69,7 +69,7 @@ export const Faucet = () => {
       setInputAddress(undefined);
       setSendValue("");
     } catch (error) {
-      console.error("⚡️ ~ file: Faucet.tsx:sendETH ~ error", error);
+      console.error("⚡️ ~ file: Faucet.tsx:sendSTT ~ error", error);
       setLoading(false);
     }
   };
@@ -112,7 +112,7 @@ export const Faucet = () => {
                 onChange={value => setInputAddress(value as AddressType)}
               />
               <EtherInput placeholder="Amount to send" value={sendValue} onChange={value => setSendValue(value)} />
-              <button className="h-10 btn btn-primary btn-sm px-2 rounded-full" onClick={sendETH} disabled={loading}>
+              <button className="h-10 btn btn-primary btn-sm px-2 rounded-full" onClick={sendSTT} disabled={loading}>
                 {!loading ? (
                   <BanknotesIcon className="h-6 w-6" />
                 ) : (

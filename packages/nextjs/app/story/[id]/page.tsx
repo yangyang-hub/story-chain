@@ -153,7 +153,7 @@ const ForkSelector: React.FC<{
                 </span>
                 <span className="flex items-center gap-1">
                   <CurrencyDollarIcon className="w-3 h-3" />
-                  <span className="font-medium">{formatEther(BigInt(fork.totalTips))} ETH</span>
+                  <span className="font-medium">{formatEther(BigInt(fork.totalTips))} STT</span>
                 </span>
               </div>
             </div>
@@ -286,7 +286,7 @@ const ChapterCard: React.FC<{
           {chapter.forkFee && chapter.forkFee !== "0" && (
             <div className="flex items-center gap-2 text-orange-600 font-medium">
               <ShareIcon className="w-4 h-4" />
-              <span>分叉费用: {formatEther(BigInt(chapter.forkFee))} ETH</span>
+              <span>分叉费用: {formatEther(BigInt(chapter.forkFee))} STT</span>
             </div>
           )}
         </div>
@@ -313,7 +313,7 @@ const ChapterCard: React.FC<{
 
           <div className="flex items-center gap-2 text-base-content/70">
             <CurrencyDollarIcon className="w-4 h-4" />
-            <span className="font-medium">{formatEther(BigInt(chapter.totalTips))} ETH</span>
+            <span className="font-medium">{formatEther(BigInt(chapter.totalTips))} STT</span>
             <span>打赏</span>
           </div>
 
@@ -391,13 +391,13 @@ const ChapterCard: React.FC<{
               title={
                 !address
                   ? "请先连接钱包"
-                  : `基于此章节创建分叉${chapter.forkFee && chapter.forkFee !== "0" ? ` (需支付 ${formatEther(BigInt(chapter.forkFee))} ETH)` : ""}`
+                  : `基于此章节创建分叉${chapter.forkFee && chapter.forkFee !== "0" ? ` (需支付 ${formatEther(BigInt(chapter.forkFee))} STT)` : ""}`
               }
             >
               <ShareIcon className="w-4 h-4" />
               分叉
               {chapter.forkFee && chapter.forkFee !== "0" && (
-                <span className="badge badge-warning badge-xs ml-1">{formatEther(BigInt(chapter.forkFee))} ETH</span>
+                <span className="badge badge-warning badge-xs ml-1">{formatEther(BigInt(chapter.forkFee))} STT</span>
               )}
             </button>
           </div>
@@ -529,12 +529,12 @@ const ChapterTreeNode: React.FC<{
                 </div>
                 <div className="flex items-center gap-1">
                   <span>💰</span>
-                  <span>{formatEther(BigInt(chapter.totalTips))} ETH</span>
+                  <span>{formatEther(BigInt(chapter.totalTips))} STT</span>
                 </div>
                 {chapter.forkFee && chapter.forkFee !== "0" && (
                   <div className="flex items-center gap-1">
                     <span>🔀</span>
-                    <span>{formatEther(BigInt(chapter.forkFee))} ETH</span>
+                    <span>{formatEther(BigInt(chapter.forkFee))} STT</span>
                   </div>
                 )}
               </div>
@@ -577,13 +577,13 @@ const ChapterTreeNode: React.FC<{
                   title={
                     !address
                       ? "请先连接钱包"
-                      : `基于此章节创建分叉${chapter.forkFee && chapter.forkFee !== "0" ? ` (需支付 ${formatEther(BigInt(chapter.forkFee))} ETH)` : ""}`
+                      : `基于此章节创建分叉${chapter.forkFee && chapter.forkFee !== "0" ? ` (需支付 ${formatEther(BigInt(chapter.forkFee))} STT)` : ""}`
                   }
                 >
                   <ShareIcon className="w-3 h-3" />
                   分叉
                   {chapter.forkFee && chapter.forkFee !== "0" && (
-                    <span className="badge badge-warning badge-xs">{formatEther(BigInt(chapter.forkFee))} ETH</span>
+                    <span className="badge badge-warning badge-xs">{formatEther(BigInt(chapter.forkFee))} STT</span>
                   )}
                 </button>
               </div>
@@ -808,7 +808,7 @@ const AddChapterModal: React.FC<{
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">分叉费用</span>
-                <span className="label-text-alt">ETH</span>
+                <span className="label-text-alt">STT</span>
               </label>
               <input
                 type="number"
@@ -1002,7 +1002,7 @@ const ContinueChapterModal: React.FC<{
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">设置续写费用</span>
-                <span className="label-text-alt">ETH (其他用户续写此章节时需支付)</span>
+                <span className="label-text-alt">STT (其他用户续写此章节时需支付)</span>
               </label>
               <input
                 type="number"
@@ -1104,7 +1104,7 @@ const ForkModal: React.FC<{
     // 检查fork费用
     const requiredFee = parseFloat(forkFeeRequired);
     if (requiredFee > 0) {
-      const confirm = window.confirm(`分叉此章节需要支付 ${forkFeeRequired} ETH 给原作者。确定要继续吗？`);
+      const confirm = window.confirm(`分叉此章节需要支付 ${forkFeeRequired} STT 给原作者。确定要继续吗？`);
       if (!confirm) {
         return;
       }
@@ -1182,7 +1182,7 @@ const ForkModal: React.FC<{
               <InformationCircleIcon className="w-5 h-5" />
               <div>
                 <div className="font-semibold">需要支付分叉费用</div>
-                <div className="text-sm">分叉此章节需要支付 {forkFeeRequired} ETH</div>
+                <div className="text-sm">分叉此章节需要支付 {forkFeeRequired} STT</div>
               </div>
             </div>
           )}
@@ -1220,7 +1220,7 @@ const ForkModal: React.FC<{
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">设置续写费用</span>
-                <span className="label-text-alt">ETH (其他用户续写此分叉章节时需支付)</span>
+                <span className="label-text-alt">STT (其他用户续写此分叉章节时需支付)</span>
               </label>
               <input
                 type="number"
@@ -1262,7 +1262,7 @@ const ForkModal: React.FC<{
                 ) : (
                   <>
                     <ShareIcon className="w-4 h-4" />
-                    {forkFeeRequired !== "0" ? `支付 ${forkFeeRequired} ETH 并创建分叉` : "创建章节分叉"}
+                    {forkFeeRequired !== "0" ? `支付 ${forkFeeRequired} STT 并创建分叉` : "创建章节分叉"}
                   </>
                 )}
               </button>
@@ -1411,7 +1411,7 @@ const StoryDetailPage = () => {
       return;
     }
 
-    const tipAmount = prompt("请输入打赏金额 (ETH):", "0.01");
+    const tipAmount = prompt("请输入打赏金额 (STT):", "0.01");
     if (!tipAmount || parseFloat(tipAmount) <= 0) return;
 
     try {
@@ -1595,7 +1595,7 @@ const StoryDetailPage = () => {
 
               <div className="flex items-center gap-1 text-sm text-base-content/70">
                 <CurrencyDollarIcon className="w-4 h-4" />
-                <span>{formatEther(BigInt(story.totalTips))} ETH 打赏</span>
+                <span>{formatEther(BigInt(story.totalTips))} STT 打赏</span>
               </div>
             </div>
 

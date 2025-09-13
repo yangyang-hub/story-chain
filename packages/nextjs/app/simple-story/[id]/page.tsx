@@ -129,7 +129,7 @@ export default function SimpleStoryPage() {
               <strong>分叉数:</strong> {story.forkCount}
             </div>
             <div>
-              <strong>总打赏:</strong> {story.totalTips} ETH
+              <strong>总打赏:</strong> {story.totalTips} STT
             </div>
             <div>
               <strong>打赏次数:</strong> {story.totalTipCount}

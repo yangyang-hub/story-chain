@@ -328,7 +328,7 @@ export const useStoryChain = () => {
         args: undefined,
       });
 
-      notification.success(`成功提取 ${formatEther(pendingRewards)} ETH`);
+      notification.success(`成功提取 ${formatEther(pendingRewards)} STT`);
     } catch (error) {
       console.error("提取奖励失败:", error);
       notification.error(error instanceof Error ? error.message : "提取奖励失败");

@@ -96,7 +96,8 @@ const CreateStoryPage = () => {
       const ipfsHash = await uploadStoryMetadata(metadata);
 
       // 确定是否需要质押
-      const needsDeposit = storyCount && storyCount >= 100n;
+      // const needsDeposit = storyCount && storyCount >= 100n;
+      const needsDeposit = false;
       const depositAmount = needsDeposit && storyDeposit ? storyDeposit : 0n;
 
       // 调用合约创建故事
@@ -116,7 +117,8 @@ const CreateStoryPage = () => {
     }
   };
 
-  const needsDeposit = storyCount && storyCount >= 100n;
+  // const needsDeposit = storyCount && storyCount >= 100n;
+  const needsDeposit = false;
   const depositAmount = needsDeposit && storyDeposit ? Number(storyDeposit) / 1e18 : 0;
 
   return (
@@ -140,7 +142,7 @@ const CreateStoryPage = () => {
           <InformationCircleIcon className="w-6 h-6" />
           <div>
             <div className="font-semibold">需要质押</div>
-            <div className="text-sm">前100个故事免费创建，之后需要质押 {depositAmount} ETH（完成100章后返还）</div>
+            <div className="text-sm">前100个故事免费创建，之后需要质押 {depositAmount} STT（完成100章后返还）</div>
           </div>
         </div>
       )}
@@ -237,7 +239,7 @@ const CreateStoryPage = () => {
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">{t("story.fork_fee")}</span>
-                <span className="label-text-alt">ETH</span>
+                <span className="label-text-alt">STT</span>
               </label>
               <input
                 type="number"
@@ -260,7 +262,7 @@ const CreateStoryPage = () => {
                 <InformationCircleIcon className="w-5 h-5" />
                 <div className="text-sm">
                   <div className="font-medium">质押说明:</div>
-                  <div>• 需要质押 {depositAmount} ETH</div>
+                  <div>• 需要质押 {depositAmount} STT</div>
                   <div>• 完成100个章节后自动返还</div>
                   <div>• 质押金用于激励持续创作</div>
                 </div>

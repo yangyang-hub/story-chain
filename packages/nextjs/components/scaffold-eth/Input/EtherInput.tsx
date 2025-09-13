@@ -31,7 +31,7 @@ function displayValueToEtherValue(usdMode: boolean, displayValue: string, native
       // Invalid number.
       return displayValue;
     } else {
-      // Compute the ETH value if a valid number.
+      // Compute the STT value if a valid number.
       return (parsedDisplayValue / nativeCurrencyPrice).toString();
     }
   } else {
@@ -40,9 +40,9 @@ function displayValueToEtherValue(usdMode: boolean, displayValue: string, native
 }
 
 /**
- * Input for ETH amount with USD conversion.
+ * Input for STT amount with USD conversion.
  *
- * onChange will always be called with the value in ETH
+ * onChange will always be called with the value in STT
  */
 export const EtherInput = ({
   value,
