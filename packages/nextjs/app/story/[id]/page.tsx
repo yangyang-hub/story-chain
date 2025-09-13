@@ -178,25 +178,43 @@ const ChapterCard: React.FC<{
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     const loadMetadata = async () => {
+      if (!chapter.ipfsHash) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const data = await getJSONFromIPFS(chapter.ipfsHash);
+        setError(null);
+        const data = await getJSONFromIPFS(chapter.ipfsHash, 4); // Increase retry attempts for new chapters
         setMetadata(data);
       } catch (error) {
-        console.error("加载章节元数据失败:", error);
+        console.error(`❌ Failed to load metadata for chapter ${chapter.id}:`, error);
+        setError(error instanceof Error ? error.message : "加载章节元数据失败");
+
+        // Auto-retry for new chapters (likely IPFS sync issue)
+        const isRecentChapter = Date.now() - (chapter.createdTime * 1000) < 300000; // 5 minutes
+        if (isRecentChapter && !retrying) {
+          console.log(`⏳ Auto-retrying metadata load for recent chapter ${chapter.id} in 5 seconds...`);
+          setRetrying(true);
+          setTimeout(() => {
+            setRetrying(false);
+            loadMetadata(); // Retry once more
+          }, 5000);
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    if (chapter.ipfsHash) {
-      loadMetadata();
-    }
-  }, [chapter.ipfsHash]);
+    loadMetadata();
+  }, [chapter.ipfsHash, chapter.id, chapter.createdTime, retrying]);
 
-  if (loading) {
+  if (loading || retrying) {
     return (
       <div className="card bg-base-100 shadow-lg animate-pulse">
         <div className="card-body">
@@ -205,6 +223,12 @@ const ChapterCard: React.FC<{
             <div className="h-4 bg-base-300 rounded w-full"></div>
             <div className="h-4 bg-base-300 rounded w-2/3"></div>
           </div>
+          {retrying && (
+            <div className="text-center mt-4">
+              <div className="loading loading-spinner loading-sm"></div>
+              <div className="text-sm text-base-content/70 mt-2">正在重新加载章节信息...</div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -217,7 +241,32 @@ const ChapterCard: React.FC<{
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <h3 className="card-title text-xl font-bold text-primary mb-2">第 {chapter.chapterNumber} 章</h3>
-            {metadata?.title && <h4 className="text-lg font-semibold text-base-content/90 mb-2">{metadata.title}</h4>}
+            {metadata?.title ? (
+              <h4 className="text-lg font-semibold text-base-content/90 mb-2">{metadata.title}</h4>
+            ) : error ? (
+              <div className="text-sm text-warning mb-2">
+                <div className="flex items-center gap-2">
+                  <span>⚠️ 章节标题加载中...</span>
+                  <button
+                    onClick={() => {
+                      setRetrying(true);
+                      setLoading(true);
+                    }}
+                    className="btn btn-xs btn-ghost"
+                    title="重新加载章节信息"
+                  >
+                    🔄
+                  </button>
+                </div>
+                {error.includes("temporarily unavailable") && (
+                  <div className="text-xs text-base-content/60 mt-1">
+                    新章节可能需要几分钟时间同步，请稍后再试
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-base-content/60 mb-2">正在加载章节标题...</div>
+            )}
           </div>
           <div className="badge badge-primary badge-lg">#{chapter.id}</div>
         </div>
@@ -380,6 +429,8 @@ const ChapterTreeNode: React.FC<{
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<ChapterMetadata | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(false);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   // 加载章节元数据
   useEffect(() => {
@@ -387,18 +438,32 @@ const ChapterTreeNode: React.FC<{
       if (!chapter.ipfsHash) return;
 
       setMetadataLoading(true);
+      setMetadataError(null);
       try {
-        const data = await getJSONFromIPFS(chapter.ipfsHash);
+        const data = await getJSONFromIPFS(chapter.ipfsHash, 4); // Increase retry attempts
         setMetadata(data);
       } catch (err) {
-        console.error("加载元数据失败:", err);
+        console.error(`❌ Failed to load tree node metadata for chapter ${chapter.id}:`, err);
+        const errorMsg = err instanceof Error ? err.message : "加载元数据失败";
+        setMetadataError(errorMsg);
+
+        // Auto-retry for recent chapters
+        const isRecentChapter = Date.now() - (chapter.createdTime * 1000) < 300000; // 5 minutes
+        if (isRecentChapter && !retrying) {
+          console.log(`⏳ Auto-retrying tree node metadata for recent chapter ${chapter.id} in 3 seconds...`);
+          setRetrying(true);
+          setTimeout(() => {
+            setRetrying(false);
+            loadMetadata();
+          }, 3000);
+        }
       } finally {
         setMetadataLoading(false);
       }
     };
 
     loadMetadata();
-  }, [chapter.ipfsHash]);
+  }, [chapter.ipfsHash, chapter.id, chapter.createdTime, retrying]);
 
   return (
     <div className="relative">
@@ -424,10 +489,28 @@ const ChapterTreeNode: React.FC<{
               <div className="flex-1">
                 <h4 className="font-semibold text-base-content flex items-center gap-2">
                   第 {chapter.chapterNumber} 章
-                  {metadataLoading && <span className="loading loading-spinner loading-xs"></span>}
+                  {(metadataLoading || retrying) && <span className="loading loading-spinner loading-xs"></span>}
+                  {metadataError && (
+                    <button
+                      onClick={() => {
+                        setRetrying(true);
+                        setMetadataLoading(true);
+                      }}
+                      className="btn btn-xs btn-ghost"
+                      title="重新加载章节信息"
+                    >
+                      🔄
+                    </button>
+                  )}
                 </h4>
 
-                {metadata?.title && <p className="text-sm text-base-content/70 mt-1">{metadata.title}</p>}
+                {metadata?.title ? (
+                  <p className="text-sm text-base-content/70 mt-1">{metadata.title}</p>
+                ) : metadataError ? (
+                  <p className="text-xs text-warning mt-1">📖 章节信息加载中...</p>
+                ) : metadataLoading ? (
+                  <p className="text-xs text-base-content/50 mt-1">正在加载章节标题...</p>
+                ) : null}
 
                 <div className="flex items-center gap-4 text-xs text-base-content/60 mt-2">
                   <div className="flex items-center gap-1">
@@ -668,7 +751,12 @@ const AddChapterModal: React.FC<{
       setFormData({ title: "", content: "", forkFee: "0" });
       setImageUrl("");
       setImageCid("");
-      onChapterAdded();
+
+      // 延迟重新加载数据以确保区块链状态更新
+      setTimeout(() => {
+        onChapterAdded();
+      }, 3000); // Increase delay to 3 seconds for better IPFS sync
+      
       onClose();
     } catch (error) {
       console.error("创建章节失败:", error);
@@ -847,7 +935,12 @@ const ContinueChapterModal: React.FC<{
       setFormData({ title: "", content: "", forkFee: "0" });
       setImageUrl("");
       setImageCid("");
-      onChapterAdded();
+
+      // 延迟重新加载数据以确保区块链状态更新
+      setTimeout(() => {
+        onChapterAdded();
+      }, 3000); // Increase delay to 3 seconds
+      
       onClose();
     } catch (error) {
       console.error("续写章节失败:", error);
@@ -1048,7 +1141,12 @@ const ForkModal: React.FC<{
       setFormData({ title: "", content: "", forkFee: "0" });
       setImageUrl("");
       setImageCid("");
-      onForkSuccess();
+
+      // 延迟重新加载数据以确保区块链状态更新
+      setTimeout(() => {
+        onForkSuccess();
+      }, 3000); // Increase delay to 3 seconds
+      
       onClose();
     } catch (error) {
       console.error("分叉失败:", error);
@@ -1190,6 +1288,7 @@ const StoryDetailPage = () => {
   const [story, setStory] = useState<any>(null);
   const [chapters, setChapters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [storyMetadata, setStoryMetadata] = useState<StoryMetadata | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(false);
@@ -1220,15 +1319,22 @@ const StoryDetailPage = () => {
   }, [address]);
 
   // 直接使用fetch获取数据，避开hook问题
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isRefresh = false) => {
     if (!storyId) return;
 
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
 
+      // 添加时间戳参数避免缓存问题
+      const timestamp = Date.now();
+
       // 获取故事数据
-      const storyRes = await fetch(`/api/data/stories/${storyId}`);
+      const storyRes = await fetch(`/api/data/stories/${storyId}?t=${timestamp}`);
       if (storyRes.ok) {
         const storyData = await storyRes.json();
         const storyInfo = storyData.story;
@@ -1243,7 +1349,7 @@ const StoryDetailPage = () => {
       }
 
       // 获取章节数据
-      const chaptersRes = await fetch(`/api/data/chapters?storyId=${storyId}`);
+      const chaptersRes = await fetch(`/api/data/chapters?storyId=${storyId}&t=${timestamp}`);
       if (chaptersRes.ok) {
         const chaptersData = await chaptersRes.json();
         setChapters(chaptersData.chapters || []);
@@ -1253,6 +1359,7 @@ const StoryDetailPage = () => {
       setError(err instanceof Error ? err.message : "获取数据失败");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [storyId]);
 
@@ -1292,8 +1399,10 @@ const StoryDetailPage = () => {
   const { writeContractAsync: tip } = useScaffoldWriteContract("StoryChain");
 
   const handleLikeSuccess = () => {
-    // 点赞成功后重新获取数据
-    fetchData();
+    // 点赞成功后延迟重新获取数据
+    setTimeout(() => {
+      fetchData(true);
+    }, 2000); // Increase delay for better data consistency
   };
 
   const handleTip = async (storyId: string, chapterId: string) => {
@@ -1312,7 +1421,11 @@ const StoryDetailPage = () => {
         value: parseEther(tipAmount),
       });
       notification.success(t("success.tipped"));
-      fetchData(); // 重新获取数据
+
+      // 延迟重新加载数据以确保区块链状态更新
+      setTimeout(() => {
+        fetchData(true);
+      }, 3000); // Increase delay to 3 seconds
     } catch (error) {
       console.error("打赏失败:", error);
       notification.error("打赏失败");
@@ -1401,6 +1514,14 @@ const StoryDetailPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
+      {/* 刷新指示器 */}
+      {refreshing && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-primary text-primary-content px-4 py-2 rounded-lg shadow-lg">
+          <span className="loading loading-spinner loading-sm"></span>
+          <span>正在更新数据...</span>
+        </div>
+      )}
+
       {/* 返回按钮 */}
       <button onClick={() => router.back()} className="btn btn-ghost gap-2 mb-6">
         <ArrowLeftIcon className="w-4 h-4" />
@@ -1618,7 +1739,7 @@ const StoryDetailPage = () => {
         parentId="0"
         onChapterAdded={() => {
           // 重新加载章节列表
-          fetchData();
+          fetchData(true);
           console.log("Chapter added, reloaded data");
         }}
       />
@@ -1635,7 +1756,7 @@ const StoryDetailPage = () => {
           parentChapter={selectedChapter}
           onChapterAdded={() => {
             // 重新加载章节列表
-            fetchData();
+            fetchData(true);
             console.log("Chapter continued, reloaded data");
           }}
         />
@@ -1653,7 +1774,7 @@ const StoryDetailPage = () => {
           parentChapter={forkingChapter}
           onForkSuccess={() => {
             // 重新加载数据
-            fetchData();
+            fetchData(true);
             console.log("Story forked, reloaded data");
           }}
         />

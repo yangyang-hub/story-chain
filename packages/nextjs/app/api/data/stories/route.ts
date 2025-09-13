@@ -5,12 +5,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const author = searchParams.get("author");
-    
-    // Temporary fix: Rate limiting for the problematic address
-    if (author === "0x4dE9173119c5e690Af336e40C65A9400681574c8") {
-      console.log("⛔ BLOCKING INFINITE API CALLS for", author);
-      await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay
-    }
 
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");

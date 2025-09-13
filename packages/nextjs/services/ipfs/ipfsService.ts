@@ -119,35 +119,63 @@ export const getIPFSUrl = (cid: string, gateway?: string): string => {
 };
 
 /**
- * Fetches content from IPFS using a gateway.
+ * Fetches content from IPFS using a gateway with retry mechanism.
  * @param cid The IPFS content identifier.
+ * @param maxRetries Maximum number of retry attempts per gateway.
  * @returns The content of the file as a string.
  */
-export const getFromIPFS = async (cid: string): Promise<string> => {
+export const getFromIPFS = async (cid: string, maxRetries: number = 3): Promise<string> => {
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   for (const gateway of IPFS_GATEWAYS) {
-    try {
-      const response = await fetch(`${gateway}${cid}`, { signal: AbortSignal.timeout(5000) });
-      if (response.ok) {
-        return await response.text();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const timeoutMs = 5000 + (attempt - 1) * 2000; // Increase timeout for each attempt
+        const response = await fetch(`${gateway}${cid}`, {
+          signal: AbortSignal.timeout(timeoutMs),
+          cache: 'no-cache' // Disable cache to ensure fresh content
+        });
+
+        if (response.ok) {
+          const text = await response.text();
+          console.log(`✅ Successfully fetched IPFS content from ${gateway} on attempt ${attempt}`);
+          return text;
+        }
+
+        if (response.status === 404 && attempt < maxRetries) {
+          console.warn(`⏳ IPFS content not yet available on ${gateway}, attempt ${attempt}/${maxRetries}`);
+          await delay(1000 * attempt); // Exponential backoff: 1s, 2s, 3s
+          continue;
+        }
+
+        console.warn(`❌ Gateway ${gateway} returned ${response.status} on attempt ${attempt}`);
+      } catch (error) {
+        console.warn(`❌ Gateway ${gateway} failed on attempt ${attempt}:`, error);
+        if (attempt < maxRetries) {
+          await delay(1000 * attempt); // Exponential backoff
+        }
       }
-    } catch (error) {
-      console.warn(`Gateway ${gateway} failed:`, error);
-      continue;
     }
   }
-  throw new Error("All IPFS gateways failed to fetch the content.");
+
+  throw new Error(`All IPFS gateways failed to fetch content after ${maxRetries} attempts each.`);
 };
 
 /**
- * Fetches and parses JSON content from IPFS.
+ * Fetches and parses JSON content from IPFS with retry mechanism.
  * @param cid The IPFS content identifier.
+ * @param maxRetries Maximum number of retry attempts per gateway.
  * @returns The parsed JSON object.
  */
-export const getJSONFromIPFS = async (cid: string): Promise<any> => {
-  const text = await getFromIPFS(cid);
+export const getJSONFromIPFS = async (cid: string, maxRetries: number = 3): Promise<any> => {
   try {
+    const text = await getFromIPFS(cid, maxRetries);
     return JSON.parse(text);
   } catch (error) {
+    if (error instanceof Error && error.message.includes("failed to fetch content")) {
+      console.error(`❌ Failed to fetch IPFS content for CID ${cid}:`, error.message);
+      throw new Error(`IPFS content temporarily unavailable. Please try again in a few moments.`);
+    }
     console.error("Failed to parse JSON from IPFS:", error);
     throw new Error("Content from IPFS is not valid JSON.");
   }

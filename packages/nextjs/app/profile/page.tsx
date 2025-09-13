@@ -23,7 +23,7 @@ import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
 import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
 
-// Global flag to prevent infinite API calls
+// Global flag to prevent infinite API calls - removed address-specific blocking
 let GLOBAL_LOADING_LOCK = false;
 
 interface UserStory {
@@ -124,7 +124,7 @@ const ProfilePage = () => {
       // Load stories
       try {
         console.log("📡 Fetching stories for", targetAddress);
-        const storiesRes = await fetch(`/api/data/stories?author=${targetAddress}`);
+        const storiesRes = await fetch(`/api/data/stories?author=${targetAddress}&limit=100`);
         if (storiesRes.ok) {
           const storiesData = await storiesRes.json();
           if (storiesData.stories) {
@@ -165,7 +165,7 @@ const ProfilePage = () => {
       // Load chapters
       try {
         console.log("📡 Fetching chapters for", targetAddress);
-        const chaptersRes = await fetch(`/api/data/chapters?author=${targetAddress}`);
+        const chaptersRes = await fetch(`/api/data/chapters?author=${targetAddress}&limit=100`);
         if (chaptersRes.ok) {
           const chaptersData = await chaptersRes.json();
           if (chaptersData.chapters) {
@@ -218,9 +218,10 @@ const ProfilePage = () => {
         stories.reduce((sum: number, story: UserStory) => sum + story.likes, 0) +
         chapters.reduce((sum: number, chapter: UserChapter) => sum + chapter.likes, 0);
 
-      const totalTipsValue =
-        stories.reduce((sum: number, story: UserStory) => sum + parseFloat(story.totalTips), 0) +
-        chapters.reduce((sum: number, chapter: UserChapter) => sum + parseFloat(chapter.totalTips), 0);
+      const totalTipsWei =
+        stories.reduce((sum: bigint, story: UserStory) => sum + BigInt(story.totalTips || "0"), 0n) +
+        chapters.reduce((sum: bigint, chapter: UserChapter) => sum + BigInt(chapter.totalTips || "0"), 0n);
+      const totalTipsValue = parseFloat(formatEther(totalTipsWei));
 
       const totalForks =
         stories.reduce((sum: number, story: UserStory) => sum + story.forkCount, 0) +
@@ -246,7 +247,7 @@ const ProfilePage = () => {
       setTimeout(() => {
         GLOBAL_LOADING_LOCK = false;
         console.log("🔓 GLOBAL LOCK RELEASED");
-      }, 1000);
+      }, 2000); // Increase delay to 2 seconds for better protection
     }
   };
 
@@ -261,15 +262,17 @@ const ProfilePage = () => {
       };
     }
 
-    // Only calculate tip revenue (from API data)
-    const tipRevenue =
-      userStories.reduce((sum: number, story: UserStory) => sum + parseFloat(story.totalTips || "0"), 0) +
-      userChapters.reduce((sum: number, chapter: UserChapter) => sum + parseFloat(chapter.totalTips || "0"), 0);
+    // Calculate tip revenue (from API data) - convert from wei to ETH
+    const tipRevenueWei =
+      userStories.reduce((sum: bigint, story: UserStory) => sum + BigInt(story.totalTips || "0"), 0n) +
+      userChapters.reduce((sum: bigint, chapter: UserChapter) => sum + BigInt(chapter.totalTips || "0"), 0n);
+
+    const tipRevenueETH = formatEther(tipRevenueWei);
 
     return {
-      tipRevenue: tipRevenue.toString(),
+      tipRevenue: tipRevenueETH,
       forkRevenue: "0", // Temporarily disabled
-      totalRevenue: tipRevenue.toString(),
+      totalRevenue: tipRevenueETH,
       withdrawnAmount: "0", // Temporarily disabled
     };
   }, [address, userStories, userChapters]);
@@ -281,28 +284,22 @@ const ProfilePage = () => {
 
   // Load data when address changes or on mount
   useEffect(() => {
-    console.log("🚨 PROFILE useEffect triggered - TEMPORARILY DISABLED");
-    return; // EMERGENCY FIX: Completely disable data loading to stop infinite calls
-    
     if (address) {
       loadUserData(address);
     } else {
       setLoading(false);
     }
-  }, [address]);
+  }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 点赞成功后的回调函数，使用防抖来避免频繁调用
   const handleLikeSuccess = useCallback(() => {
-    console.log("🚨 LIKE SUCCESS callback triggered - TEMPORARILY DISABLED");
-    return; // EMERGENCY FIX: Disable like success reload to prevent API calls
-    
     // Use setTimeout to debounce rapid successive calls
     setTimeout(() => {
       if (address && !loading && !isLoadingRef.current) {
         loadUserData(address);
       }
     }, 300); // 300ms delay to debounce rapid calls
-  }, [address, loading]);
+  }, [address, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleWithdrawRewards = async () => {
     try {
@@ -486,7 +483,7 @@ const ProfilePage = () => {
                               </span>
                               <span className="flex items-center gap-1">
                                 <CurrencyDollarIcon className="w-4 h-4" />
-                                {parseFloat(story.totalTips).toFixed(3)}
+                                {parseFloat(formatEther(BigInt(story.totalTips || "0"))).toFixed(4)} ETH
                               </span>
                             </div>
 
@@ -550,6 +547,10 @@ const ProfilePage = () => {
                               <span className="flex items-center gap-1">
                                 <ShareIcon className="w-4 h-4" />
                                 {chapter.forkCount}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <CurrencyDollarIcon className="w-4 h-4" />
+                                {parseFloat(formatEther(BigInt(chapter.totalTips || "0"))).toFixed(4)} ETH
                               </span>
                             </div>
 
