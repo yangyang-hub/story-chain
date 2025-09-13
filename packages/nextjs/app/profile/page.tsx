@@ -77,12 +77,6 @@ const ProfilePage = () => {
     totalTips: "0",
     totalForks: 0,
   });
-  const [revenueStats, setRevenueStats] = useState({
-    tipRevenue: "0",
-    forkRevenue: "0",
-    totalRevenue: "0",
-    withdrawnAmount: "0",
-  });
 
   // 简化状态管理
   const [loadingState, setLoadingState] = useState<LoadingState>({
@@ -95,217 +89,225 @@ const ProfilePage = () => {
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Temporarily disable event history hooks to prevent infinite loops
-  // TODO: Re-enable these when implementing advanced revenue calculations
-  /*
+  // Event history hooks for accurate revenue calculations
   const { data: storyRewardEvents } = useScaffoldEventHistory({
     contractName: "StoryChain",
     eventName: "StoryRewardsDistributed",
     fromBlock: 0n,
+    filters: address ? { storyAuthor: address } : undefined,
   });
 
   const { data: chapterRewardEvents } = useScaffoldEventHistory({
     contractName: "StoryChain",
     eventName: "ChapterRewardsDistributed",
     fromBlock: 0n,
+    filters: address ? { chapterAuthor: address } : undefined,
   });
 
   const { data: withdrawEvents } = useScaffoldEventHistory({
     contractName: "StoryChain",
     eventName: "RewardsWithdrawn",
     fromBlock: 0n,
+    filters: address ? { user: address } : undefined,
   });
-  */
 
-  const loadUserData = useCallback(async (targetAddress: string, forceRefresh = false) => {
-    // 检查是否需要加载（缓存机制）
-    const now = Date.now();
-    if (!forceRefresh &&
+  const { data: forkEvents } = useScaffoldEventHistory({
+    contractName: "StoryChain",
+    eventName: "ChapterForked",
+    fromBlock: 0n,
+  });
+
+  const loadUserData = useCallback(
+    async (targetAddress: string, forceRefresh = false) => {
+      // 检查是否需要加载（缓存机制）
+      const now = Date.now();
+      if (
+        !forceRefresh &&
         loadingState.lastLoadTime > 0 &&
-        (now - loadingState.lastLoadTime) < CACHE_DURATION &&
-        !loadingState.error) {
-      console.log("📦 Using cached data, skipping API call");
-      return;
-    }
-
-    // 防止重复加载
-    if (loadingState.isLoading) {
-      console.log("🔄 Already loading, skipping duplicate call");
-      return;
-    }
-
-    // 取消之前的请求
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
-    setLoadingState({
-      isLoading: true,
-      error: null,
-      lastLoadTime: 0,
-    });
-
-    try {
-      console.log("🚀 Starting data load for", targetAddress);
-
-      const stories: UserStory[] = [];
-      const chapters: UserChapter[] = [];
-
-      // 并行加载故事和章节数据
-      const [storiesRes, chaptersRes] = await Promise.all([
-        fetch(`/api/data/stories?author=${targetAddress}&limit=100`, {
-          signal: abortControllerRef.current.signal,
-        }),
-        fetch(`/api/data/chapters?author=${targetAddress}&limit=100`, {
-          signal: abortControllerRef.current.signal,
-        }),
-      ]);
-
-      // 处理故事数据
-      if (storiesRes.ok) {
-        const storiesData = await storiesRes.json();
-        if (storiesData.stories) {
-          const storyPromises = storiesData.stories.map(async (storyData: any) => {
-            try {
-              let metadata = null;
-              let title = `故事 #${storyData.id}`;
-
-              if (storyData.ipfsHash) {
-                try {
-                  metadata = await getJSONFromIPFS(storyData.ipfsHash);
-                  title = metadata?.title || metadata?.name || title;
-                } catch (error) {
-                  console.warn("加载故事元数据失败:", error);
-                }
-              }
-
-              return {
-                id: storyData.id,
-                title: title,
-                ipfsHash: storyData.ipfsHash,
-                createdTime: storyData.createdTime * 1000,
-                likes: Number(storyData.likes) || 0,
-                forkCount: Number(storyData.forkCount) || 0,
-                totalTips: storyData.totalTips || "0",
-                metadata,
-              };
-            } catch (error) {
-              console.warn("处理故事数据失败:", error);
-              return null;
-            }
-          });
-
-          const resolvedStories = await Promise.all(storyPromises);
-          stories.push(...resolvedStories.filter(story => story !== null));
-        }
-      } else if (!storiesRes.ok) {
-        console.warn("获取故事数据失败:", storiesRes.status, storiesRes.statusText);
-      }
-
-      // 处理章节数据
-      if (chaptersRes.ok) {
-        const chaptersData = await chaptersRes.json();
-        if (chaptersData.chapters) {
-          const chapterPromises = chaptersData.chapters.map(async (chapterData: any) => {
-            try {
-              let metadata = null;
-              let title = `章节 #${chapterData.id}`;
-              let chapterNumber = 1;
-
-              if (chapterData.ipfsHash) {
-                try {
-                  metadata = await getJSONFromIPFS(chapterData.ipfsHash);
-                  title = metadata?.title || metadata?.name || title;
-                  chapterNumber = metadata?.chapterNumber || 1;
-                } catch (error) {
-                  console.warn("加载章节元数据失败:", error);
-                }
-              }
-
-              return {
-                id: chapterData.id,
-                storyId: chapterData.storyId,
-                title: title,
-                ipfsHash: chapterData.ipfsHash,
-                createdTime: chapterData.createdTime * 1000,
-                likes: Number(chapterData.likes) || 0,
-                forkCount: Number(chapterData.forkCount) || 0,
-                totalTips: chapterData.totalTips || "0",
-                chapterNumber: chapterNumber,
-                metadata,
-              };
-            } catch (error) {
-              console.warn("处理章节数据失败:", error);
-              return null;
-            }
-          });
-
-          const resolvedChapters = await Promise.all(chapterPromises);
-          chapters.push(...resolvedChapters.filter(chapter => chapter !== null));
-        }
-      } else if (!chaptersRes.ok) {
-        console.warn("获取章节数据失败:", chaptersRes.status, chaptersRes.statusText);
-      }
-
-      // 更新状态
-      setUserStories(stories);
-      setUserChapters(chapters);
-
-      // 计算统计信息
-      const totalStories = stories.length;
-      const totalChapters = chapters.length;
-      const totalLikes =
-        stories.reduce((sum: number, story: UserStory) => sum + story.likes, 0) +
-        chapters.reduce((sum: number, chapter: UserChapter) => sum + chapter.likes, 0);
-
-      const totalTipsWei =
-        stories.reduce((sum: bigint, story: UserStory) => sum + BigInt(story.totalTips || "0"), 0n) +
-        chapters.reduce((sum: bigint, chapter: UserChapter) => sum + BigInt(chapter.totalTips || "0"), 0n);
-      const totalTipsValue = parseFloat(formatEther(totalTipsWei));
-
-      const totalForks =
-        stories.reduce((sum: number, story: UserStory) => sum + story.forkCount, 0) +
-        chapters.reduce((sum: number, chapter: UserChapter) => sum + chapter.forkCount, 0);
-
-      setUserStats({
-        totalStories,
-        totalChapters,
-        totalLikes,
-        totalTips: totalTipsValue.toString(),
-        totalForks,
-      });
-
-      setLoadingState({
-        isLoading: false,
-        error: null,
-        lastLoadTime: now,
-      });
-
-      console.log("✅ Data load completed successfully");
-
-    } catch (error: any) {
-      // 如果是取消的请求，不处理错误
-      if (error.name === "AbortError") {
-        console.log("📡 Request was cancelled");
+        now - loadingState.lastLoadTime < CACHE_DURATION &&
+        !loadingState.error
+      ) {
+        console.log("📦 Using cached data, skipping API call");
         return;
       }
 
-      console.error("❌ 加载用户数据失败:", error);
+      // 防止重复加载
+      if (loadingState.isLoading) {
+        console.log("🔄 Already loading, skipping duplicate call");
+        return;
+      }
 
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "加载数据时发生未知错误，请稍后重试";
+      // 取消之前的请求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
 
       setLoadingState({
-        isLoading: false,
-        error: errorMessage,
+        isLoading: true,
+        error: null,
         lastLoadTime: 0,
       });
-    }
-  }, [loadingState.isLoading, loadingState.lastLoadTime, loadingState.error, CACHE_DURATION]);
 
-  // Use memoization for revenue calculations to prevent unnecessary recalculations
+      try {
+        console.log("🚀 Starting data load for", targetAddress);
+
+        const stories: UserStory[] = [];
+        const chapters: UserChapter[] = [];
+
+        // 并行加载故事和章节数据
+        const [storiesRes, chaptersRes] = await Promise.all([
+          fetch(`/api/data/stories?author=${targetAddress}&limit=100`, {
+            signal: abortControllerRef.current.signal,
+          }),
+          fetch(`/api/data/chapters?author=${targetAddress}&limit=100`, {
+            signal: abortControllerRef.current.signal,
+          }),
+        ]);
+
+        // 处理故事数据
+        if (storiesRes.ok) {
+          const storiesData = await storiesRes.json();
+          if (storiesData.stories) {
+            const storyPromises = storiesData.stories.map(async (storyData: any) => {
+              try {
+                let metadata = null;
+                let title = `故事 #${storyData.id}`;
+
+                if (storyData.ipfsHash) {
+                  try {
+                    metadata = await getJSONFromIPFS(storyData.ipfsHash);
+                    title = metadata?.title || metadata?.name || title;
+                  } catch (error) {
+                    console.warn("加载故事元数据失败:", error);
+                  }
+                }
+
+                return {
+                  id: storyData.id,
+                  title: title,
+                  ipfsHash: storyData.ipfsHash,
+                  createdTime: storyData.createdTime * 1000,
+                  likes: Number(storyData.likes) || 0,
+                  forkCount: Number(storyData.forkCount) || 0,
+                  totalTips: storyData.totalTips || "0",
+                  metadata,
+                };
+              } catch (error) {
+                console.warn("处理故事数据失败:", error);
+                return null;
+              }
+            });
+
+            const resolvedStories = await Promise.all(storyPromises);
+            stories.push(...resolvedStories.filter(story => story !== null));
+          }
+        } else if (!storiesRes.ok) {
+          console.warn("获取故事数据失败:", storiesRes.status, storiesRes.statusText);
+        }
+
+        // 处理章节数据
+        if (chaptersRes.ok) {
+          const chaptersData = await chaptersRes.json();
+          if (chaptersData.chapters) {
+            const chapterPromises = chaptersData.chapters.map(async (chapterData: any) => {
+              try {
+                let metadata = null;
+                let title = `章节 #${chapterData.id}`;
+                let chapterNumber = 1;
+
+                if (chapterData.ipfsHash) {
+                  try {
+                    metadata = await getJSONFromIPFS(chapterData.ipfsHash);
+                    title = metadata?.title || metadata?.name || title;
+                    chapterNumber = metadata?.chapterNumber || 1;
+                  } catch (error) {
+                    console.warn("加载章节元数据失败:", error);
+                  }
+                }
+
+                return {
+                  id: chapterData.id,
+                  storyId: chapterData.storyId,
+                  title: title,
+                  ipfsHash: chapterData.ipfsHash,
+                  createdTime: chapterData.createdTime * 1000,
+                  likes: Number(chapterData.likes) || 0,
+                  forkCount: Number(chapterData.forkCount) || 0,
+                  totalTips: chapterData.totalTips || "0",
+                  chapterNumber: chapterNumber,
+                  metadata,
+                };
+              } catch (error) {
+                console.warn("处理章节数据失败:", error);
+                return null;
+              }
+            });
+
+            const resolvedChapters = await Promise.all(chapterPromises);
+            chapters.push(...resolvedChapters.filter(chapter => chapter !== null));
+          }
+        } else if (!chaptersRes.ok) {
+          console.warn("获取章节数据失败:", chaptersRes.status, chaptersRes.statusText);
+        }
+
+        // 更新状态
+        setUserStories(stories);
+        setUserChapters(chapters);
+
+        // 计算统计信息
+        const totalStories = stories.length;
+        const totalChapters = chapters.length;
+        const totalLikes =
+          stories.reduce((sum: number, story: UserStory) => sum + story.likes, 0) +
+          chapters.reduce((sum: number, chapter: UserChapter) => sum + chapter.likes, 0);
+
+        const totalTipsWei =
+          stories.reduce((sum: bigint, story: UserStory) => sum + BigInt(story.totalTips || "0"), 0n) +
+          chapters.reduce((sum: bigint, chapter: UserChapter) => sum + BigInt(chapter.totalTips || "0"), 0n);
+        const totalTipsValue = parseFloat(formatEther(totalTipsWei));
+
+        const totalForks =
+          stories.reduce((sum: number, story: UserStory) => sum + story.forkCount, 0) +
+          chapters.reduce((sum: number, chapter: UserChapter) => sum + chapter.forkCount, 0);
+
+        setUserStats({
+          totalStories,
+          totalChapters,
+          totalLikes,
+          totalTips: totalTipsValue.toString(),
+          totalForks,
+        });
+
+        setLoadingState({
+          isLoading: false,
+          error: null,
+          lastLoadTime: now,
+        });
+
+        console.log("✅ Data load completed successfully");
+      } catch (error: any) {
+        // 如果是取消的请求，不处理错误
+        if (error.name === "AbortError") {
+          console.log("📡 Request was cancelled");
+          return;
+        }
+
+        console.error("❌ 加载用户数据失败:", error);
+
+        const errorMessage = error instanceof Error ? error.message : "加载数据时发生未知错误，请稍后重试";
+
+        setLoadingState({
+          isLoading: false,
+          error: errorMessage,
+          lastLoadTime: 0,
+        });
+      }
+    },
+    [loadingState.isLoading, loadingState.lastLoadTime, loadingState.error, CACHE_DURATION],
+  );
+
+  // Use memoization for revenue calculations with accurate event-based data
   const calculatedRevenueStats = useMemo(() => {
     if (!address) {
       return {
@@ -316,25 +318,77 @@ const ProfilePage = () => {
       };
     }
 
-    // Calculate tip revenue (from API data) - convert from wei to STT
-    const tipRevenueWei =
-      userStories.reduce((sum: bigint, story: UserStory) => sum + BigInt(story.totalTips || "0"), 0n) +
-      userChapters.reduce((sum: bigint, chapter: UserChapter) => sum + BigInt(chapter.totalTips || "0"), 0n);
+    // Get transaction hashes of all fork events to distinguish fork rewards from tip rewards
+    const forkTxHashes = new Set(forkEvents?.map(event => event.transactionHash?.toLowerCase()).filter(Boolean) || []);
 
-    const tipRevenueSTT = formatEther(tipRevenueWei);
+    // Calculate fork revenue: rewards from transactions that contain fork events
+    let totalForkRevenue = 0n;
+
+    // Story rewards from fork events
+    if (storyRewardEvents) {
+      storyRewardEvents.forEach(event => {
+        const txHash = event.transactionHash?.toLowerCase();
+        if (txHash && forkTxHashes.has(txHash) && event.args?.storyAuthor?.toLowerCase() === address.toLowerCase()) {
+          totalForkRevenue += BigInt(event.args.amount || 0);
+        }
+      });
+    }
+
+    // Chapter rewards from fork events
+    if (chapterRewardEvents) {
+      chapterRewardEvents.forEach(event => {
+        const txHash = event.transactionHash?.toLowerCase();
+        if (txHash && forkTxHashes.has(txHash) && event.args?.chapterAuthor?.toLowerCase() === address.toLowerCase()) {
+          totalForkRevenue += BigInt(event.args.amount || 0);
+        }
+      });
+    }
+
+    // Calculate tip revenue: rewards from transactions that do NOT contain fork events
+    let totalTipRevenue = 0n;
+
+    // Story rewards from tip events (non-fork transactions)
+    if (storyRewardEvents) {
+      storyRewardEvents.forEach(event => {
+        const txHash = event.transactionHash?.toLowerCase();
+        if (txHash && !forkTxHashes.has(txHash) && event.args?.storyAuthor?.toLowerCase() === address.toLowerCase()) {
+          totalTipRevenue += BigInt(event.args.amount || 0);
+        }
+      });
+    }
+
+    // Chapter rewards from tip events (non-fork transactions)
+    if (chapterRewardEvents) {
+      chapterRewardEvents.forEach(event => {
+        const txHash = event.transactionHash?.toLowerCase();
+        if (txHash && !forkTxHashes.has(txHash) && event.args?.chapterAuthor?.toLowerCase() === address.toLowerCase()) {
+          totalTipRevenue += BigInt(event.args.amount || 0);
+        }
+      });
+    }
+
+    // Calculate total withdrawn amount from RewardsWithdrawn events
+    let totalWithdrawn = 0n;
+    if (withdrawEvents) {
+      withdrawEvents.forEach(event => {
+        if (event.args?.user?.toLowerCase() === address.toLowerCase()) {
+          totalWithdrawn += BigInt(event.args.amount || 0);
+        }
+      });
+    }
+
+    const tipRevenueSTT = formatEther(totalTipRevenue);
+    const forkRevenueSTT = formatEther(totalForkRevenue);
+    const totalRevenueSTT = formatEther(totalTipRevenue + totalForkRevenue);
+    const withdrawnAmountSTT = formatEther(totalWithdrawn);
 
     return {
       tipRevenue: tipRevenueSTT,
-      forkRevenue: "0", // Temporarily disabled
-      totalRevenue: tipRevenueSTT,
-      withdrawnAmount: "0", // Temporarily disabled
+      forkRevenue: forkRevenueSTT,
+      totalRevenue: totalRevenueSTT,
+      withdrawnAmount: withdrawnAmountSTT,
     };
-  }, [address, userStories, userChapters]);
-
-  // Update revenue stats when calculated values change
-  useEffect(() => {
-    setRevenueStats(calculatedRevenueStats);
-  }, [calculatedRevenueStats]);
+  }, [address, storyRewardEvents, chapterRewardEvents, withdrawEvents, forkEvents]);
 
   // 加载数据当地址变化时
   useEffect(() => {
@@ -513,7 +567,7 @@ const ProfilePage = () => {
           className="btn btn-outline btn-sm gap-2"
           title="刷新数据"
         >
-          <ArrowPathIcon className={`w-4 h-4 ${loadingState.isLoading ? 'animate-spin' : ''}`} />
+          <ArrowPathIcon className={`w-4 h-4 ${loadingState.isLoading ? "animate-spin" : ""}`} />
           刷新
         </button>
       </div>
@@ -747,24 +801,26 @@ const ProfilePage = () => {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="stat">
                           <div className="stat-title">打赏收益</div>
-                          <div className="stat-value text-sm">{parseFloat(revenueStats.tipRevenue).toFixed(6)} STT</div>
+                          <div className="stat-value text-sm">
+                            {parseFloat(calculatedRevenueStats.tipRevenue).toFixed(6)} STT
+                          </div>
                         </div>
                         <div className="stat">
                           <div className="stat-title">分叉收益</div>
                           <div className="stat-value text-sm">
-                            {parseFloat(revenueStats.forkRevenue).toFixed(6)} STT
+                            {parseFloat(calculatedRevenueStats.forkRevenue).toFixed(6)} STT
                           </div>
                         </div>
                         <div className="stat">
                           <div className="stat-title">总收益</div>
                           <div className="stat-value text-sm">
-                            {parseFloat(revenueStats.totalRevenue).toFixed(6)} STT
+                            {parseFloat(calculatedRevenueStats.totalRevenue).toFixed(6)} STT
                           </div>
                         </div>
                         <div className="stat">
                           <div className="stat-title">已提取</div>
                           <div className="stat-value text-sm">
-                            {parseFloat(revenueStats.withdrawnAmount).toFixed(6)} STT
+                            {parseFloat(calculatedRevenueStats.withdrawnAmount).toFixed(6)} STT
                           </div>
                         </div>
                       </div>

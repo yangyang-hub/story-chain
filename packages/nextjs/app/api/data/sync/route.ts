@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGlobalMonitor } from "../../../../lib/monitoring";
 import { PostgreSQLStore } from "../../../../lib/database/postgreSQLStore";
+import { getGlobalMonitor } from "../../../../lib/monitoring";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     if (syncType === "chapter-details") {
       const store = new PostgreSQLStore();
       await store.syncChapterDetails();
-      
+
       return NextResponse.json({
         success: true,
         message: "Chapter details sync completed successfully",

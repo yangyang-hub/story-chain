@@ -479,11 +479,7 @@ const ExplorePage = () => {
                   </>
                 )}
               </div>
-              <button
-                className="btn btn-ghost btn-sm gap-1"
-                onClick={clearSearch}
-                title="清空搜索"
-              >
+              <button className="btn btn-ghost btn-sm gap-1" onClick={clearSearch} title="清空搜索">
                 <XMarkIcon className="w-4 h-4" />
                 清空
               </button>
@@ -650,10 +646,7 @@ const ExplorePage = () => {
               <h3 className="text-xl font-semibold mb-2">没有找到匹配的故事</h3>
               <p className="text-base-content/70 mb-6">
                 尝试使用不同的关键词，或者
-                <button
-                  className="link link-primary ml-1"
-                  onClick={clearSearch}
-                >
+                <button className="link link-primary ml-1" onClick={clearSearch}>
                   清空搜索条件
                 </button>
               </p>

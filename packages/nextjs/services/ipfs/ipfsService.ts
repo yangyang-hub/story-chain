@@ -133,7 +133,7 @@ export const getFromIPFS = async (cid: string, maxRetries: number = 3): Promise<
         const timeoutMs = 5000 + (attempt - 1) * 2000; // Increase timeout for each attempt
         const response = await fetch(`${gateway}${cid}`, {
           signal: AbortSignal.timeout(timeoutMs),
-          cache: 'no-cache' // Disable cache to ensure fresh content
+          cache: "no-cache", // Disable cache to ensure fresh content
         });
 
         if (response.ok) {

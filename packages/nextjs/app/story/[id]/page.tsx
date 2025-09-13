@@ -174,7 +174,17 @@ const ChapterCard: React.FC<{
   allChapters: ChapterWithMetadata[];
   canUserContinueChapter: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => boolean;
   getContinueButtonTooltip: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => string;
-}> = ({ chapter, onFork, onTip, onContinue, forks = [], onSelectFork, allChapters, canUserContinueChapter, getContinueButtonTooltip }) => {
+}> = ({
+  chapter,
+  onFork,
+  onTip,
+  onContinue,
+  forks = [],
+  onSelectFork,
+  allChapters,
+  canUserContinueChapter,
+  getContinueButtonTooltip,
+}) => {
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -197,7 +207,7 @@ const ChapterCard: React.FC<{
         setError(error instanceof Error ? error.message : "加载章节元数据失败");
 
         // Auto-retry for new chapters (likely IPFS sync issue)
-        const isRecentChapter = Date.now() - (chapter.createdTime * 1000) < 300000; // 5 minutes
+        const isRecentChapter = Date.now() - chapter.createdTime * 1000 < 300000; // 5 minutes
         if (isRecentChapter && !retrying) {
           console.log(`⏳ Auto-retrying metadata load for recent chapter ${chapter.id} in 5 seconds...`);
           setRetrying(true);
@@ -259,9 +269,7 @@ const ChapterCard: React.FC<{
                   </button>
                 </div>
                 {error.includes("temporarily unavailable") && (
-                  <div className="text-xs text-base-content/60 mt-1">
-                    新章节可能需要几分钟时间同步，请稍后再试
-                  </div>
+                  <div className="text-xs text-base-content/60 mt-1">新章节可能需要几分钟时间同步，请稍后再试</div>
                 )}
               </div>
             ) : (
@@ -425,7 +433,19 @@ const ChapterTreeNode: React.FC<{
   allChapters: ChapterWithMetadata[];
   canUserContinueChapter: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => boolean;
   getContinueButtonTooltip: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => string;
-}> = ({ chapter, childChapters, level, onFork, onTip, onContinue, storyId, isLast, allChapters, canUserContinueChapter, getContinueButtonTooltip }) => {
+}> = ({
+  chapter,
+  childChapters,
+  level,
+  onFork,
+  onTip,
+  onContinue,
+  storyId,
+  isLast,
+  allChapters,
+  canUserContinueChapter,
+  getContinueButtonTooltip,
+}) => {
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<ChapterMetadata | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(false);
@@ -448,7 +468,7 @@ const ChapterTreeNode: React.FC<{
         setMetadataError(errorMsg);
 
         // Auto-retry for recent chapters
-        const isRecentChapter = Date.now() - (chapter.createdTime * 1000) < 300000; // 5 minutes
+        const isRecentChapter = Date.now() - chapter.createdTime * 1000 < 300000; // 5 minutes
         if (isRecentChapter && !retrying) {
           console.log(`⏳ Auto-retrying tree node metadata for recent chapter ${chapter.id} in 3 seconds...`);
           setRetrying(true);
@@ -756,7 +776,7 @@ const AddChapterModal: React.FC<{
       setTimeout(() => {
         onChapterAdded();
       }, 3000); // Increase delay to 3 seconds for better IPFS sync
-      
+
       onClose();
     } catch (error) {
       console.error("创建章节失败:", error);
@@ -940,7 +960,7 @@ const ContinueChapterModal: React.FC<{
       setTimeout(() => {
         onChapterAdded();
       }, 3000); // Increase delay to 3 seconds
-      
+
       onClose();
     } catch (error) {
       console.error("续写章节失败:", error);
@@ -1146,7 +1166,7 @@ const ForkModal: React.FC<{
       setTimeout(() => {
         onForkSuccess();
       }, 3000); // Increase delay to 3 seconds
-      
+
       onClose();
     } catch (error) {
       console.error("分叉失败:", error);
@@ -1296,72 +1316,81 @@ const StoryDetailPage = () => {
   const storyId = id as string;
 
   // 检查用户是否可以续写指定章节
-  const canUserContinueChapter = useCallback((chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => {
-    if (!address) return false;
-    
-    // 只有章节作者才能续写自己的章节
-    if (chapter.author.toLowerCase() !== address.toLowerCase()) return false;
-    
-    // 只有最新章节才能续写（即没有子章节的章节）
-    const hasChildren = allChapters.some(c => c.parentId === chapter.id);
-    return !hasChildren;
-  }, [address]);
+  const canUserContinueChapter = useCallback(
+    (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => {
+      if (!address) return false;
+
+      // 只有章节作者才能续写自己的章节
+      if (chapter.author.toLowerCase() !== address.toLowerCase()) return false;
+
+      // 只有最新章节才能续写（即没有子章节的章节）
+      const hasChildren = allChapters.some(c => c.parentId === chapter.id);
+      return !hasChildren;
+    },
+    [address],
+  );
 
   // 获取续写按钮的提示文本
-  const getContinueButtonTooltip = useCallback((chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => {
-    if (!address) return "请先连接钱包";
-    if (chapter.author.toLowerCase() !== address.toLowerCase()) return "只有章节作者可以续写自己的章节";
-    
-    const hasChildren = allChapters.some(c => c.parentId === chapter.id);
-    if (hasChildren) return "只有最新章节才能续写";
-    
-    return "续写此章节";
-  }, [address]);
+  const getContinueButtonTooltip = useCallback(
+    (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => {
+      if (!address) return "请先连接钱包";
+      if (chapter.author.toLowerCase() !== address.toLowerCase()) return "只有章节作者可以续写自己的章节";
+
+      const hasChildren = allChapters.some(c => c.parentId === chapter.id);
+      if (hasChildren) return "只有最新章节才能续写";
+
+      return "续写此章节";
+    },
+    [address],
+  );
 
   // 直接使用fetch获取数据，避开hook问题
-  const fetchData = useCallback(async (isRefresh = false) => {
-    if (!storyId) return;
+  const fetchData = useCallback(
+    async (isRefresh = false) => {
+      if (!storyId) return;
 
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      setError(null);
-
-      // 添加时间戳参数避免缓存问题
-      const timestamp = Date.now();
-
-      // 获取故事数据
-      const storyRes = await fetch(`/api/data/stories/${storyId}?t=${timestamp}`);
-      if (storyRes.ok) {
-        const storyData = await storyRes.json();
-        const storyInfo = storyData.story;
-        setStory(storyInfo);
-
-        // 异步加载故事元数据
-        if (storyInfo?.ipfsHash) {
-          loadStoryMetadata(storyInfo.ipfsHash);
+      try {
+        if (isRefresh) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
         }
-      } else {
-        throw new Error(`故事数据获取失败: ${storyRes.status}`);
-      }
+        setError(null);
 
-      // 获取章节数据
-      const chaptersRes = await fetch(`/api/data/chapters?storyId=${storyId}&t=${timestamp}`);
-      if (chaptersRes.ok) {
-        const chaptersData = await chaptersRes.json();
-        setChapters(chaptersData.chapters || []);
+        // 添加时间戳参数避免缓存问题
+        const timestamp = Date.now();
+
+        // 获取故事数据
+        const storyRes = await fetch(`/api/data/stories/${storyId}?t=${timestamp}`);
+        if (storyRes.ok) {
+          const storyData = await storyRes.json();
+          const storyInfo = storyData.story;
+          setStory(storyInfo);
+
+          // 异步加载故事元数据
+          if (storyInfo?.ipfsHash) {
+            loadStoryMetadata(storyInfo.ipfsHash);
+          }
+        } else {
+          throw new Error(`故事数据获取失败: ${storyRes.status}`);
+        }
+
+        // 获取章节数据
+        const chaptersRes = await fetch(`/api/data/chapters?storyId=${storyId}&t=${timestamp}`);
+        if (chaptersRes.ok) {
+          const chaptersData = await chaptersRes.json();
+          setChapters(chaptersData.chapters || []);
+        }
+      } catch (err) {
+        console.error("获取数据失败:", err);
+        setError(err instanceof Error ? err.message : "获取数据失败");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-    } catch (err) {
-      console.error("获取数据失败:", err);
-      setError(err instanceof Error ? err.message : "获取数据失败");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [storyId]);
+    },
+    [storyId],
+  );
 
   // 加载故事元数据
   const loadStoryMetadata = useCallback(async (ipfsHash: string) => {
@@ -1620,8 +1649,13 @@ const StoryDetailPage = () => {
                     handleContinueChapter(lastChapter.id);
                   }}
                   className="btn btn-secondary gap-2"
-                  disabled={!canUserContinueChapter(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
-                  title={getContinueButtonTooltip(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
+                  disabled={
+                    !canUserContinueChapter(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)
+                  }
+                  title={getContinueButtonTooltip(
+                    chaptersWithMetadata[chaptersWithMetadata.length - 1],
+                    chaptersWithMetadata,
+                  )}
                 >
                   <PlusIcon className="w-4 h-4" />
                   续写故事
@@ -1674,8 +1708,13 @@ const StoryDetailPage = () => {
                   handleContinueChapter(lastChapter.id);
                 }}
                 className="btn btn-secondary gap-2"
-                disabled={!canUserContinueChapter(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
-                title={getContinueButtonTooltip(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
+                disabled={
+                  !canUserContinueChapter(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)
+                }
+                title={getContinueButtonTooltip(
+                  chaptersWithMetadata[chaptersWithMetadata.length - 1],
+                  chaptersWithMetadata,
+                )}
               >
                 <PlusIcon className="w-5 h-5" />
                 续写最新章节
@@ -1790,8 +1829,13 @@ const StoryDetailPage = () => {
                 handleContinueChapter(lastChapter.id);
               }}
               className="btn btn-secondary btn-circle shadow-lg hover:shadow-xl transition-all"
-              disabled={!canUserContinueChapter(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
-              title={getContinueButtonTooltip(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)}
+              disabled={
+                !canUserContinueChapter(chaptersWithMetadata[chaptersWithMetadata.length - 1], chaptersWithMetadata)
+              }
+              title={getContinueButtonTooltip(
+                chaptersWithMetadata[chaptersWithMetadata.length - 1],
+                chaptersWithMetadata,
+              )}
             >
               <PlusIcon className="w-5 h-5" />
             </button>
