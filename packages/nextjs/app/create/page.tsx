@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseEther } from "viem";
 import { useAccount } from "wagmi";
-import { CurrencyDollarIcon, InformationCircleIcon, PhotoIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { InformationCircleIcon, PhotoIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
@@ -18,7 +18,6 @@ const CreateStoryPage = () => {
 
   const [formData, setFormData] = useState({
     title: "",
-    forkFee: "0",
     tags: "",
     description: "",
   });
@@ -26,19 +25,6 @@ const CreateStoryPage = () => {
   const [imageCid, setImageCid] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-
-  // 获取创建故事需要的质押金额
-  const { data: storyDeposit } = useScaffoldReadContract({
-    contractName: "StoryChain",
-    functionName: "getStoryDeposit",
-  });
-
-  // 获取已创建故事数量
-  const { data: storyCount } = useScaffoldReadContract({
-    contractName: "StoryChain",
-    functionName: "stories",
-    args: [BigInt(0)],
-  });
 
   // 创建故事的合约调用
   const { writeContractAsync: createStory } = useScaffoldWriteContract("StoryChain");
@@ -57,10 +43,6 @@ const CreateStoryPage = () => {
   const validateForm = () => {
     if (!formData.title.trim()) {
       notification.error(t("form.title.required"));
-      return false;
-    }
-    if (parseFloat(formData.forkFee) < 0) {
-      notification.error(t("form.fee.invalid"));
       return false;
     }
     return true;
@@ -95,16 +77,10 @@ const CreateStoryPage = () => {
       // 上传到IPFS
       const ipfsHash = await uploadStoryMetadata(metadata);
 
-      // 确定是否需要质押
-      // const needsDeposit = storyCount && storyCount >= 100n;
-      const needsDeposit = false;
-      const depositAmount = needsDeposit && storyDeposit ? storyDeposit : 0n;
-
-      // 调用合约创建故事
+      // 调用合约创建故事（不需要设置分叉费用）
       await createStory({
         functionName: "createStory",
-        args: [ipfsHash, parseEther(formData.forkFee)],
-        value: depositAmount,
+        args: [ipfsHash, parseEther("0")], // 固定为0 STT
       });
 
       notification.success(t("success.story_created"));
@@ -116,10 +92,6 @@ const CreateStoryPage = () => {
       setIsCreating(false);
     }
   };
-
-  // const needsDeposit = storyCount && storyCount >= 100n;
-  const needsDeposit = false;
-  const depositAmount = needsDeposit && storyDeposit ? Number(storyDeposit) / 1e18 : 0;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -134,16 +106,6 @@ const CreateStoryPage = () => {
         <div className="alert alert-warning mb-6">
           <InformationCircleIcon className="w-6 h-6" />
           <span>请先连接钱包才能创建故事</span>
-        </div>
-      )}
-
-      {needsDeposit && (
-        <div className="alert alert-info mb-6">
-          <InformationCircleIcon className="w-6 h-6" />
-          <div>
-            <div className="font-semibold">需要质押</div>
-            <div className="text-sm">前100个故事免费创建，之后需要质押 {depositAmount} STT（完成100章后返还）</div>
-          </div>
         </div>
       )}
 
@@ -224,48 +186,6 @@ const CreateStoryPage = () => {
               <div className="flex items-center gap-2 text-sm text-base-content/70">
                 <span className="loading loading-spinner loading-sm"></span>
                 {t("ipfs.uploading")}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="card bg-base-100 shadow-lg">
-          <div className="card-body">
-            <h2 className="card-title mb-4 flex items-center gap-2">
-              <CurrencyDollarIcon className="w-5 h-5" />
-              经济设置
-            </h2>
-
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">{t("story.fork_fee")}</span>
-                <span className="label-text-alt">STT</span>
-              </label>
-              <input
-                type="number"
-                name="forkFee"
-                value={formData.forkFee}
-                onChange={handleInputChange}
-                className="input input-bordered w-full"
-                placeholder="0.01"
-                min="0"
-                step="0.01"
-                disabled={isCreating}
-              />
-              <label className="label">
-                <span className="label-text-alt">其他用户分叉你的故事时需要支付的费用</span>
-              </label>
-            </div>
-
-            {needsDeposit && (
-              <div className="alert alert-warning">
-                <InformationCircleIcon className="w-5 h-5" />
-                <div className="text-sm">
-                  <div className="font-medium">质押说明:</div>
-                  <div>• 需要质押 {depositAmount} STT</div>
-                  <div>• 完成100个章节后自动返还</div>
-                  <div>• 质押金用于激励持续创作</div>
-                </div>
               </div>
             )}
           </div>

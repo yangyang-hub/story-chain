@@ -10,6 +10,7 @@ import {
   MagnifyingGlassIcon,
   ShareIcon,
   UserIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import ErrorBoundary from "~~/components/ErrorBoundary";
 import { LikeButton } from "~~/components/interactions/LikeButton";
@@ -394,6 +395,22 @@ const ExplorePage = () => {
     setStoriesMetadata(prev => new Map(prev.set(storyId, metadata)));
   }, []);
 
+  // 清空搜索的函数
+  const clearSearch = () => {
+    setSearchTerm("");
+  };
+
+  // 处理键盘事件
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      // 如果已有搜索词，触发搜索（这里搜索是实时的，所以不需要额外操作）
+      e.currentTarget.blur(); // 失去焦点
+    } else if (e.key === "Escape") {
+      clearSearch();
+      e.currentTarget.blur();
+    }
+  };
+
   // 客户端筛选（基于搜索词）
   const filteredStories = storiesWithMetadata.filter(story => {
     if (!searchTerm) return true;
@@ -451,36 +468,74 @@ const ExplorePage = () => {
       {/* 搜索和筛选 */}
       <div className="card bg-base-100 shadow-lg mb-8">
         <div className="card-body">
-          <div className="flex flex-col sm:flex-row gap-4">
+          {/* 搜索结果统计 */}
+          {searchTerm && (
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-base-content/70">
+                找到 <span className="font-semibold text-primary">{filteredStories.length}</span> 个故事
+                {searchTerm && (
+                  <>
+                    包含 "<span className="font-medium">{searchTerm}</span>"
+                  </>
+                )}
+              </div>
+              <button
+                className="btn btn-ghost btn-sm gap-1"
+                onClick={clearSearch}
+                title="清空搜索"
+              >
+                <XMarkIcon className="w-4 h-4" />
+                清空
+              </button>
+            </div>
+          )}
+
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* 搜索输入框 */}
             <div className="form-control flex-1">
-              <div className="input-group">
+              <div className="relative">
                 <input
                   type="text"
-                  placeholder="搜索故事标题或描述..."
-                  className="input input-bordered w-full"
+                  placeholder="搜索故事标题、描述、标签或作者地址..."
+                  className="input input-bordered w-full pr-20 focus:ring-2 focus:ring-primary/20"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
+                  onKeyDown={handleKeyDown}
                 />
-                <button className="btn btn-square">
-                  <MagnifyingGlassIcon className="w-5 h-5" />
-                </button>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                  {searchTerm ? (
+                    <button
+                      className="btn btn-ghost btn-sm btn-circle hover:bg-base-200"
+                      onClick={clearSearch}
+                      title="清空搜索 (Esc)"
+                    >
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <div className="flex items-center text-base-content/40">
+                      <MagnifyingGlassIcon className="w-5 h-5" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* 排序筛选 */}
             <div className="form-control">
-              <div className="input-group">
-                <label className="input-group-text">
-                  <FunnelIcon className="w-4 h-4" />
-                </label>
-                <select
-                  className="select select-bordered"
-                  value={sortBy}
-                  onChange={e => setSortBy(e.target.value as any)}
-                >
-                  <option value="createdTime">最新创建</option>
-                  <option value="likes">最受欢迎</option>
-                  <option value="totalTips">最多打赏</option>
-                </select>
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-medium text-base-content/70 hidden sm:block">排序：</div>
+                <div className="relative">
+                  <select
+                    className="select select-bordered select-sm bg-base-100 text-base-content pl-8 pr-4 min-w-[120px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    value={sortBy}
+                    onChange={e => setSortBy(e.target.value as any)}
+                  >
+                    <option value="createdTime">最新创建</option>
+                    <option value="likes">最受欢迎</option>
+                    <option value="totalTips">最多打赏</option>
+                  </select>
+                  <FunnelIcon className="w-4 h-4 text-base-content/60 absolute left-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
             </div>
           </div>
@@ -567,22 +622,70 @@ const ExplorePage = () => {
           </div>
         </div>
       ) : sortedStories.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedStories.map(story => (
-            <ErrorBoundary key={`boundary-${story.id}`}>
-              <StoryCard
-                key={story.id}
-                story={story}
-                onMetadataLoad={metadata => handleMetadataLoad(story.id, metadata)}
-              />
-            </ErrorBoundary>
-          ))}
-        </div>
+        <>
+          {/* 结果统计显示（当没有搜索时显示总数） */}
+          {!searchTerm && stories.length > 0 && (
+            <div className="text-sm text-base-content/70 mb-4">
+              共 <span className="font-semibold text-primary">{stories.length}</span> 个故事
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sortedStories.map(story => (
+              <ErrorBoundary key={`boundary-${story.id}`}>
+                <StoryCard
+                  key={story.id}
+                  story={story}
+                  onMetadataLoad={metadata => handleMetadataLoad(story.id, metadata)}
+                />
+              </ErrorBoundary>
+            ))}
+          </div>
+        </>
       ) : (
         <div className="text-center py-16">
-          <BookOpenIcon className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
-          <h3 className="text-xl font-semibold mb-2">还没有故事</h3>
-          <p className="text-base-content/70 mb-6">{searchTerm ? "没有找到匹配的故事" : "成为第一个创建故事的人！"}</p>
+          {searchTerm ? (
+            <>
+              <MagnifyingGlassIcon className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">没有找到匹配的故事</h3>
+              <p className="text-base-content/70 mb-6">
+                尝试使用不同的关键词，或者
+                <button
+                  className="link link-primary ml-1"
+                  onClick={clearSearch}
+                >
+                  清空搜索条件
+                </button>
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center mb-6">
+                <span className="text-sm text-base-content/50">建议搜索：</span>
+                <button
+                  className="badge badge-outline hover:badge-primary cursor-pointer"
+                  onClick={() => setSearchTerm("科幻")}
+                >
+                  科幻
+                </button>
+                <button
+                  className="badge badge-outline hover:badge-primary cursor-pointer"
+                  onClick={() => setSearchTerm("冒险")}
+                >
+                  冒险
+                </button>
+                <button
+                  className="badge badge-outline hover:badge-primary cursor-pointer"
+                  onClick={() => setSearchTerm("故事")}
+                >
+                  故事
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <BookOpenIcon className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">还没有故事</h3>
+              <p className="text-base-content/70 mb-6">成为第一个创建故事的人！</p>
+            </>
+          )}
           <Link href="/create" className="btn btn-primary gap-2">
             <BookOpenIcon className="w-4 h-4" />
             {t("story.create")}

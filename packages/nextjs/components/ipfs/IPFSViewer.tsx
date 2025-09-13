@@ -195,13 +195,6 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
                 </div>
               </div>
             )}
-
-            <details className="mt-4">
-              <summary className="text-sm font-medium text-base-content/70 cursor-pointer">原始数据</summary>
-              <pre className="mt-2 p-3 bg-base-300 rounded-lg text-xs overflow-x-auto">
-                {JSON.stringify(content, null, 2)}
-              </pre>
-            </details>
           </div>
         )}
 

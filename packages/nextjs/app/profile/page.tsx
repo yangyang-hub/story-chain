@@ -6,11 +6,13 @@ import { formatEther } from "viem";
 import { useAccount } from "wagmi";
 import {
   ArrowDownTrayIcon,
+  ArrowPathIcon,
   BookOpenIcon,
   ChartBarIcon,
   ClockIcon,
   CurrencyDollarIcon,
   DocumentTextIcon,
+  ExclamationTriangleIcon,
   HeartIcon,
   PlusIcon,
   ShareIcon,
@@ -22,9 +24,6 @@ import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
 import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
-
-// Global flag to prevent infinite API calls - removed address-specific blocking
-let GLOBAL_LOADING_LOCK = false;
 
 interface UserStory {
   id: string;
@@ -58,6 +57,12 @@ interface UserStats {
   totalForks: number;
 }
 
+interface LoadingState {
+  isLoading: boolean;
+  error: string | null;
+  lastLoadTime: number;
+}
+
 const ProfilePage = () => {
   const { address } = useAccount();
   const { withdrawRewards, pendingRewards, isLoading } = useStoryChain();
@@ -78,10 +83,17 @@ const ProfilePage = () => {
     totalRevenue: "0",
     withdrawnAmount: "0",
   });
-  const [loading, setLoading] = useState(true);
-  
-  // Aggressive protection against infinite calls
-  const isLoadingRef = useRef(false);
+
+  // 简化状态管理
+  const [loadingState, setLoadingState] = useState<LoadingState>({
+    isLoading: false,
+    error: null,
+    lastLoadTime: 0,
+  });
+
+  // 缓存机制 - 5分钟内避免重复加载
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Temporarily disable event history hooks to prevent infinite loops
   // TODO: Re-enable these when implementing advanced revenue calculations
@@ -105,113 +117,142 @@ const ProfilePage = () => {
   });
   */
 
-  const loadUserData = async (targetAddress: string) => {
-    if (!targetAddress || loading || isLoadingRef.current || GLOBAL_LOADING_LOCK) {
-      console.log("🚫 BLOCKED API CALL - loadUserData blocked by locks");
+  const loadUserData = useCallback(async (targetAddress: string, forceRefresh = false) => {
+    // 检查是否需要加载（缓存机制）
+    const now = Date.now();
+    if (!forceRefresh &&
+        loadingState.lastLoadTime > 0 &&
+        (now - loadingState.lastLoadTime) < CACHE_DURATION &&
+        !loadingState.error) {
+      console.log("📦 Using cached data, skipping API call");
       return;
     }
 
-    try {
-      console.log("🔓 STARTING API CALL - setting all locks");
-      isLoadingRef.current = true;
-      GLOBAL_LOADING_LOCK = true;
-      setLoading(true);
+    // 防止重复加载
+    if (loadingState.isLoading) {
+      console.log("🔄 Already loading, skipping duplicate call");
+      return;
+    }
 
-      // Initialize arrays
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    setLoadingState({
+      isLoading: true,
+      error: null,
+      lastLoadTime: 0,
+    });
+
+    try {
+      console.log("🚀 Starting data load for", targetAddress);
+
       const stories: UserStory[] = [];
       const chapters: UserChapter[] = [];
 
-      // Load stories
-      try {
-        console.log("📡 Fetching stories for", targetAddress);
-        const storiesRes = await fetch(`/api/data/stories?author=${targetAddress}&limit=100`);
-        if (storiesRes.ok) {
-          const storiesData = await storiesRes.json();
-          if (storiesData.stories) {
-            for (const storyData of storiesData.stories) {
-              try {
-                let metadata = null;
-                let title = `故事 #${storyData.id}`;
+      // 并行加载故事和章节数据
+      const [storiesRes, chaptersRes] = await Promise.all([
+        fetch(`/api/data/stories?author=${targetAddress}&limit=100`, {
+          signal: abortControllerRef.current.signal,
+        }),
+        fetch(`/api/data/chapters?author=${targetAddress}&limit=100`, {
+          signal: abortControllerRef.current.signal,
+        }),
+      ]);
 
-                if (storyData.ipfsHash) {
-                  try {
-                    metadata = await getJSONFromIPFS(storyData.ipfsHash);
-                    title = metadata?.title || metadata?.name || title;
-                  } catch (error) {
-                    console.error("加载故事元数据失败:", error);
-                  }
+      // 处理故事数据
+      if (storiesRes.ok) {
+        const storiesData = await storiesRes.json();
+        if (storiesData.stories) {
+          const storyPromises = storiesData.stories.map(async (storyData: any) => {
+            try {
+              let metadata = null;
+              let title = `故事 #${storyData.id}`;
+
+              if (storyData.ipfsHash) {
+                try {
+                  metadata = await getJSONFromIPFS(storyData.ipfsHash);
+                  title = metadata?.title || metadata?.name || title;
+                } catch (error) {
+                  console.warn("加载故事元数据失败:", error);
                 }
-
-                stories.push({
-                  id: storyData.id,
-                  title: title,
-                  ipfsHash: storyData.ipfsHash,
-                  createdTime: storyData.createdTime * 1000,
-                  likes: Number(storyData.likes) || 0,
-                  forkCount: Number(storyData.forkCount) || 0,
-                  totalTips: storyData.totalTips || "0",
-                  metadata,
-                });
-              } catch (error) {
-                console.error("处理故事数据失败:", error);
               }
+
+              return {
+                id: storyData.id,
+                title: title,
+                ipfsHash: storyData.ipfsHash,
+                createdTime: storyData.createdTime * 1000,
+                likes: Number(storyData.likes) || 0,
+                forkCount: Number(storyData.forkCount) || 0,
+                totalTips: storyData.totalTips || "0",
+                metadata,
+              };
+            } catch (error) {
+              console.warn("处理故事数据失败:", error);
+              return null;
             }
-          }
+          });
+
+          const resolvedStories = await Promise.all(storyPromises);
+          stories.push(...resolvedStories.filter(story => story !== null));
         }
-      } catch (error) {
-        console.error("获取用户故事失败:", error);
+      } else if (!storiesRes.ok) {
+        console.warn("获取故事数据失败:", storiesRes.status, storiesRes.statusText);
       }
 
-      // Load chapters
-      try {
-        console.log("📡 Fetching chapters for", targetAddress);
-        const chaptersRes = await fetch(`/api/data/chapters?author=${targetAddress}&limit=100`);
-        if (chaptersRes.ok) {
-          const chaptersData = await chaptersRes.json();
-          if (chaptersData.chapters) {
-            for (const chapterData of chaptersData.chapters) {
-              try {
-                let metadata = null;
-                let title = `章节 #${chapterData.id}`;
-                let chapterNumber = 1;
+      // 处理章节数据
+      if (chaptersRes.ok) {
+        const chaptersData = await chaptersRes.json();
+        if (chaptersData.chapters) {
+          const chapterPromises = chaptersData.chapters.map(async (chapterData: any) => {
+            try {
+              let metadata = null;
+              let title = `章节 #${chapterData.id}`;
+              let chapterNumber = 1;
 
-                if (chapterData.ipfsHash) {
-                  try {
-                    metadata = await getJSONFromIPFS(chapterData.ipfsHash);
-                    title = metadata?.title || metadata?.name || title;
-                    chapterNumber = metadata?.chapterNumber || 1;
-                  } catch (error) {
-                    console.error("加载章节元数据失败:", error);
-                  }
+              if (chapterData.ipfsHash) {
+                try {
+                  metadata = await getJSONFromIPFS(chapterData.ipfsHash);
+                  title = metadata?.title || metadata?.name || title;
+                  chapterNumber = metadata?.chapterNumber || 1;
+                } catch (error) {
+                  console.warn("加载章节元数据失败:", error);
                 }
-
-                chapters.push({
-                  id: chapterData.id,
-                  storyId: chapterData.storyId,
-                  title: title,
-                  ipfsHash: chapterData.ipfsHash,
-                  createdTime: chapterData.createdTime * 1000,
-                  likes: Number(chapterData.likes) || 0,
-                  forkCount: Number(chapterData.forkCount) || 0,
-                  totalTips: chapterData.totalTips || "0",
-                  chapterNumber: chapterNumber,
-                  metadata,
-                });
-              } catch (error) {
-                console.error("处理章节数据失败:", error);
               }
+
+              return {
+                id: chapterData.id,
+                storyId: chapterData.storyId,
+                title: title,
+                ipfsHash: chapterData.ipfsHash,
+                createdTime: chapterData.createdTime * 1000,
+                likes: Number(chapterData.likes) || 0,
+                forkCount: Number(chapterData.forkCount) || 0,
+                totalTips: chapterData.totalTips || "0",
+                chapterNumber: chapterNumber,
+                metadata,
+              };
+            } catch (error) {
+              console.warn("处理章节数据失败:", error);
+              return null;
             }
-          }
+          });
+
+          const resolvedChapters = await Promise.all(chapterPromises);
+          chapters.push(...resolvedChapters.filter(chapter => chapter !== null));
         }
-      } catch (error) {
-        console.error("获取用户章节失败:", error);
+      } else if (!chaptersRes.ok) {
+        console.warn("获取章节数据失败:", chaptersRes.status, chaptersRes.statusText);
       }
 
-      // Update state
+      // 更新状态
       setUserStories(stories);
       setUserChapters(chapters);
 
-      // Calculate stats
+      // 计算统计信息
       const totalStories = stories.length;
       const totalChapters = chapters.length;
       const totalLikes =
@@ -227,29 +268,42 @@ const ProfilePage = () => {
         stories.reduce((sum: number, story: UserStory) => sum + story.forkCount, 0) +
         chapters.reduce((sum: number, chapter: UserChapter) => sum + chapter.forkCount, 0);
 
-      const stats: UserStats = {
+      setUserStats({
         totalStories,
         totalChapters,
         totalLikes,
         totalTips: totalTipsValue.toString(),
         totalForks,
-      };
-      setUserStats(stats);
+      });
 
-      console.log("✅ API CALL COMPLETED - releasing locks");
+      setLoadingState({
+        isLoading: false,
+        error: null,
+        lastLoadTime: now,
+      });
 
-    } catch (error) {
-      console.error("加载用户数据失败:", error);
-    } finally {
-      setLoading(false);
-      isLoadingRef.current = false;
-      // Clear global lock after a delay to prevent rapid successive calls
-      setTimeout(() => {
-        GLOBAL_LOADING_LOCK = false;
-        console.log("🔓 GLOBAL LOCK RELEASED");
-      }, 2000); // Increase delay to 2 seconds for better protection
+      console.log("✅ Data load completed successfully");
+
+    } catch (error: any) {
+      // 如果是取消的请求，不处理错误
+      if (error.name === "AbortError") {
+        console.log("📡 Request was cancelled");
+        return;
+      }
+
+      console.error("❌ 加载用户数据失败:", error);
+
+      const errorMessage = error instanceof Error
+        ? error.message
+        : "加载数据时发生未知错误，请稍后重试";
+
+      setLoadingState({
+        isLoading: false,
+        error: errorMessage,
+        lastLoadTime: 0,
+      });
     }
-  };
+  }, [loadingState.isLoading, loadingState.lastLoadTime, loadingState.error, CACHE_DURATION]);
 
   // Use memoization for revenue calculations to prevent unnecessary recalculations
   const calculatedRevenueStats = useMemo(() => {
@@ -282,24 +336,53 @@ const ProfilePage = () => {
     setRevenueStats(calculatedRevenueStats);
   }, [calculatedRevenueStats]);
 
-  // Load data when address changes or on mount
+  // 加载数据当地址变化时
   useEffect(() => {
     if (address) {
       loadUserData(address);
     } else {
-      setLoading(false);
+      // 清空数据和状态
+      setUserStories([]);
+      setUserChapters([]);
+      setUserStats({
+        totalStories: 0,
+        totalChapters: 0,
+        totalLikes: 0,
+        totalTips: "0",
+        totalForks: 0,
+      });
+      setLoadingState({
+        isLoading: false,
+        error: null,
+        lastLoadTime: 0,
+      });
     }
-  }, [address]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [address, loadUserData]);
 
-  // 点赞成功后的回调函数，使用防抖来避免频繁调用
-  const handleLikeSuccess = useCallback(() => {
-    // Use setTimeout to debounce rapid successive calls
-    setTimeout(() => {
-      if (address && !loading && !isLoadingRef.current) {
-        loadUserData(address);
+  // 清理函数
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
-    }, 300); // 300ms delay to debounce rapid calls
-  }, [address, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+    };
+  }, []);
+
+  // 点赞成功后的回调函数，使用防抖
+  const handleLikeSuccess = useCallback(() => {
+    setTimeout(() => {
+      if (address && !loadingState.isLoading) {
+        loadUserData(address, true); // 强制刷新
+      }
+    }, 500); // 500ms 延迟
+  }, [address, loadingState.isLoading, loadUserData]);
+
+  // 手动刷新数据
+  const handleRefresh = useCallback(() => {
+    if (address) {
+      loadUserData(address, true);
+    }
+  }, [address, loadUserData]);
 
   const handleWithdrawRewards = async () => {
     try {
@@ -397,34 +480,61 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* 标签页 */}
-      <div className="tabs tabs-boxed mb-6 bg-base-100 shadow-md">
+      {/* 标签页和刷新按钮 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="tabs tabs-boxed bg-base-100 shadow-md">
+          <button
+            onClick={() => setActiveTab("stories")}
+            className={`tab tab-lg ${activeTab === "stories" ? "tab-active" : ""}`}
+          >
+            <BookOpenIcon className="w-4 h-4 mr-2" />
+            我的故事
+          </button>
+          <button
+            onClick={() => setActiveTab("chapters")}
+            className={`tab tab-lg ${activeTab === "chapters" ? "tab-active" : ""}`}
+          >
+            <DocumentTextIcon className="w-4 h-4 mr-2" />
+            我的章节
+          </button>
+          <button
+            onClick={() => setActiveTab("stats")}
+            className={`tab tab-lg ${activeTab === "stats" ? "tab-active" : ""}`}
+          >
+            <ChartBarIcon className="w-4 h-4 mr-2" />
+            统计信息
+          </button>
+        </div>
+
+        {/* 刷新按钮 */}
         <button
-          onClick={() => setActiveTab("stories")}
-          className={`tab tab-lg ${activeTab === "stories" ? "tab-active" : ""}`}
+          onClick={handleRefresh}
+          disabled={loadingState.isLoading}
+          className="btn btn-outline btn-sm gap-2"
+          title="刷新数据"
         >
-          <BookOpenIcon className="w-4 h-4 mr-2" />
-          我的故事
-        </button>
-        <button
-          onClick={() => setActiveTab("chapters")}
-          className={`tab tab-lg ${activeTab === "chapters" ? "tab-active" : ""}`}
-        >
-          <DocumentTextIcon className="w-4 h-4 mr-2" />
-          我的章节
-        </button>
-        <button
-          onClick={() => setActiveTab("stats")}
-          className={`tab tab-lg ${activeTab === "stats" ? "tab-active" : ""}`}
-        >
-          <ChartBarIcon className="w-4 h-4 mr-2" />
-          统计信息
+          <ArrowPathIcon className={`w-4 h-4 ${loadingState.isLoading ? 'animate-spin' : ''}`} />
+          刷新
         </button>
       </div>
 
       {/* 内容区域 */}
       <div className="min-h-[400px]">
-        {loading ? (
+        {/* 错误状态 */}
+        {loadingState.error && (
+          <div className="alert alert-error mb-6">
+            <ExclamationTriangleIcon className="w-6 h-6" />
+            <div>
+              <div className="font-bold">加载失败</div>
+              <div className="text-sm">{loadingState.error}</div>
+            </div>
+            <button onClick={handleRefresh} className="btn btn-sm btn-outline">
+              重试
+            </button>
+          </div>
+        )}
+
+        {loadingState.isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="card bg-base-100 shadow-md animate-pulse">
@@ -439,7 +549,7 @@ const ProfilePage = () => {
               </div>
             ))}
           </div>
-        ) : (
+        ) : !loadingState.error ? (
           <>
             {/* 我的故事 */}
             {activeTab === "stories" && (
@@ -664,7 +774,7 @@ const ProfilePage = () => {
               </div>
             )}
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );

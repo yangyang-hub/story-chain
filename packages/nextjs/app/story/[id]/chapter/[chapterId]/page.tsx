@@ -36,8 +36,12 @@ interface StoryMetadata {
 // 章节内容显示组件
 const ChapterContent: React.FC<{ cid: string }> = ({ cid }) => {
   const [content, setContent] = useState<string>("");
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [chapterTitle, setChapterTitle] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
 
   useEffect(() => {
     const loadContent = async () => {
@@ -57,6 +61,17 @@ const ChapterContent: React.FC<{ cid: string }> = ({ cid }) => {
         } else {
           setError("内容为空");
         }
+
+        // 加载章节标题
+        if (data?.title) {
+          setChapterTitle(data.title);
+        }
+
+        // 加载章节图片
+        if (data?.image) {
+          setImageUrl(`https://gateway.pinata.cloud/ipfs/${data.image}`);
+          setImageLoading(true);
+        }
       } catch (err) {
         console.error("加载内容失败:", err);
         setError("加载内容失败");
@@ -67,6 +82,15 @@ const ChapterContent: React.FC<{ cid: string }> = ({ cid }) => {
 
     loadContent();
   }, [cid]);
+
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoading(false);
+  };
 
   if (loading) {
     return (
@@ -85,8 +109,39 @@ const ChapterContent: React.FC<{ cid: string }> = ({ cid }) => {
   }
 
   return (
-    <div className="prose prose-lg max-w-none">
-      <div className="whitespace-pre-wrap leading-relaxed text-base-content">{content}</div>
+    <div className="space-y-6">
+      {/* 章节标题 */}
+      {chapterTitle && (
+        <div className="text-center">
+          <h3 className="text-2xl font-bold text-primary mb-4">{chapterTitle}</h3>
+        </div>
+      )}
+
+      {/* 章节图片 */}
+      {imageUrl && !imageError && (
+        <div className="text-center">
+          <div className="relative inline-block max-w-full">
+            {imageLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-base-200 rounded-lg">
+                <span className="loading loading-spinner loading-lg"></span>
+              </div>
+            )}
+            <img
+              src={imageUrl}
+              alt={chapterTitle || "章节插图"}
+              className="max-w-full max-h-96 rounded-lg shadow-lg mx-auto"
+              onLoad={handleImageLoad}
+              onError={handleImageError}
+              loading="lazy"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 章节内容 */}
+      <div className="prose prose-lg max-w-none">
+        <div className="whitespace-pre-wrap leading-relaxed text-base-content">{content}</div>
+      </div>
     </div>
   );
 };
