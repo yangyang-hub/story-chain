@@ -50,20 +50,20 @@ const Home: NextPage = () => {
               <PlusIcon className="h-8 w-8 fill-secondary" />
               <h3 className="text-lg font-bold mt-4 mb-2">{t("story.create")}</h3>
               <p className="text-sm text-base-content/70">
-                {t("story.create")}，开启你的创作之旅。每个故事都是独特的NFT。
+                {t("home.feature1.title")}
               </p>
             </div>
 
             <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl hover:shadow-lg transition-shadow">
               <BookOpenIcon className="h-8 w-8 fill-secondary" />
               <h3 className="text-lg font-bold mt-4 mb-2">{t("nav.explore")}</h3>
-              <p className="text-sm text-base-content/70">探索其他创作者的精彩故事，发现无限的创意可能性。</p>
+              <p className="text-sm text-base-content/70">{t("home.feature2.title")}</p>
             </div>
 
             <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl hover:shadow-lg transition-shadow">
               <SparklesIcon className="h-8 w-8 fill-secondary" />
               <h3 className="text-lg font-bold mt-4 mb-2">{t("story.fork_story")}</h3>
-              <p className="text-sm text-base-content/70">分叉喜欢的故事，创造属于你的故事分支和结局。</p>
+              <p className="text-sm text-base-content/70">{t("home.feature3.title")}</p>
             </div>
           </div>
         </div>

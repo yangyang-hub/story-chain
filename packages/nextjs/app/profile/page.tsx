@@ -20,6 +20,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { LikeButton } from "~~/components/interactions/LikeButton";
 import { Address } from "~~/components/scaffold-eth";
+import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
 import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
@@ -64,6 +65,7 @@ interface LoadingState {
 
 const ProfilePage = () => {
   const { address } = useAccount();
+  const { t } = useLanguage();
   const { withdrawRewards, pendingRewards, isLoading } = useStoryChain();
 
   const [activeTab, setActiveTab] = useState<"stories" | "chapters" | "stats">("stories");
@@ -171,14 +173,14 @@ const ProfilePage = () => {
             const storyPromises = storiesData.stories.map(async (storyData: any) => {
               try {
                 let metadata = null;
-                let title = `故事 #${storyData.id}`;
+                let title = `Story #${storyData.id}`;
 
                 if (storyData.ipfsHash) {
                   try {
                     metadata = await getJSONFromIPFS(storyData.ipfsHash);
                     title = metadata?.title || metadata?.name || title;
                   } catch (error) {
-                    console.warn("加载故事元数据失败:", error);
+                    console.warn("Failed to load story metadata:", error);
                   }
                 }
 
@@ -193,7 +195,7 @@ const ProfilePage = () => {
                   metadata,
                 };
               } catch (error) {
-                console.warn("处理故事数据失败:", error);
+                console.warn("Failed to process story data:", error);
                 return null;
               }
             });
@@ -202,7 +204,7 @@ const ProfilePage = () => {
             stories.push(...resolvedStories.filter(story => story !== null));
           }
         } else if (!storiesRes.ok) {
-          console.warn("获取故事数据失败:", storiesRes.status, storiesRes.statusText);
+          console.warn("Failed to fetch stories:", storiesRes.status, storiesRes.statusText);
         }
 
         // 处理章节数据
@@ -212,7 +214,7 @@ const ProfilePage = () => {
             const chapterPromises = chaptersData.chapters.map(async (chapterData: any) => {
               try {
                 let metadata = null;
-                let title = `章节 #${chapterData.id}`;
+                let title = `Chapter #${chapterData.id}`;
                 let chapterNumber = 1;
 
                 if (chapterData.ipfsHash) {
@@ -221,7 +223,7 @@ const ProfilePage = () => {
                     title = metadata?.title || metadata?.name || title;
                     chapterNumber = metadata?.chapterNumber || 1;
                   } catch (error) {
-                    console.warn("加载章节元数据失败:", error);
+                    console.warn("Failed to load chapter metadata:", error);
                   }
                 }
 
@@ -238,7 +240,7 @@ const ProfilePage = () => {
                   metadata,
                 };
               } catch (error) {
-                console.warn("处理章节数据失败:", error);
+                console.warn("Failed to process chapter data:", error);
                 return null;
               }
             });
@@ -247,7 +249,7 @@ const ProfilePage = () => {
             chapters.push(...resolvedChapters.filter(chapter => chapter !== null));
           }
         } else if (!chaptersRes.ok) {
-          console.warn("获取章节数据失败:", chaptersRes.status, chaptersRes.statusText);
+          console.warn("Failed to fetch chapters:", chaptersRes.status, chaptersRes.statusText);
         }
 
         // 更新状态
@@ -292,9 +294,9 @@ const ProfilePage = () => {
           return;
         }
 
-        console.error("❌ 加载用户数据失败:", error);
+        console.error("❌ Failed to load user data:", error);
 
-        const errorMessage = error instanceof Error ? error.message : "加载数据时发生未知错误，请稍后重试";
+        const errorMessage = error instanceof Error ? error.message : t("error.unknown");
 
         setLoadingState({
           isLoading: false,
@@ -303,7 +305,7 @@ const ProfilePage = () => {
         });
       }
     },
-    [loadingState.isLoading, loadingState.lastLoadTime, loadingState.error, CACHE_DURATION],
+    [loadingState.isLoading, loadingState.lastLoadTime, loadingState.error, CACHE_DURATION, t],
   );
 
   // Use memoization for revenue calculations with accurate event-based data
@@ -450,7 +452,7 @@ const ProfilePage = () => {
       <div className="container mx-auto px-4 py-8 max-w-6xl text-center">
         <div className="alert alert-info">
           <UserIcon className="w-6 h-6" />
-          <span>请先连接钱包查看个人中心</span>
+          <span>{t("wallet.connect")}</span>
         </div>
       </div>
     );
@@ -469,9 +471,9 @@ const ProfilePage = () => {
                 </div>
               </div>
               <div>
-                <h1 className="text-2xl font-bold">我的创作中心</h1>
+                <h1 className="text-2xl font-bold">{t("profile.title")}</h1>
                 <div className="flex items-center gap-2 text-sm text-base-content/70">
-                  <span>地址:</span>
+                  <span>{t("profile.address")}:</span>
                   <Address address={address} />
                 </div>
               </div>
@@ -481,7 +483,7 @@ const ProfilePage = () => {
             {parseFloat(pendingRewards) > 0 && (
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <div className="text-sm text-base-content/70">待提取奖励</div>
+                  <div className="text-sm text-base-content/70">{t("profile.pending_rewards")}</div>
                   <div className="text-xl font-bold text-success">{parseFloat(pendingRewards).toFixed(4)} STT</div>
                 </div>
                 <button onClick={handleWithdrawRewards} className="btn btn-success gap-2" disabled={isLoading}>
@@ -490,7 +492,7 @@ const ProfilePage = () => {
                   ) : (
                     <ArrowDownTrayIcon className="w-4 h-4" />
                   )}
-                  提取
+                  {t("profile.withdraw")}
                 </button>
               </div>
             )}
@@ -504,7 +506,7 @@ const ProfilePage = () => {
           <div className="stat-figure text-primary">
             <BookOpenIcon className="w-8 h-8" />
           </div>
-          <div className="stat-title">故事</div>
+          <div className="stat-title">{t("profile.stories")}</div>
           <div className="stat-value text-primary">{userStats.totalStories}</div>
         </div>
 
@@ -512,7 +514,7 @@ const ProfilePage = () => {
           <div className="stat-figure text-secondary">
             <DocumentTextIcon className="w-8 h-8" />
           </div>
-          <div className="stat-title">章节</div>
+          <div className="stat-title">{t("profile.chapters")}</div>
           <div className="stat-value text-secondary">{userStats.totalChapters}</div>
         </div>
 
@@ -520,7 +522,7 @@ const ProfilePage = () => {
           <div className="stat-figure text-accent">
             <HeartIcon className="w-8 h-8" />
           </div>
-          <div className="stat-title">获赞</div>
+          <div className="stat-title">{t("profile.likes")}</div>
           <div className="stat-value text-accent">{userStats.totalLikes}</div>
         </div>
 
@@ -528,7 +530,7 @@ const ProfilePage = () => {
           <div className="stat-figure text-warning">
             <ShareIcon className="w-8 h-8" />
           </div>
-          <div className="stat-title">被分叉</div>
+          <div className="stat-title">{t("profile.forks")}</div>
           <div className="stat-value text-warning">{userStats.totalForks}</div>
         </div>
       </div>
@@ -541,21 +543,21 @@ const ProfilePage = () => {
             className={`tab tab-lg ${activeTab === "stories" ? "tab-active" : ""}`}
           >
             <BookOpenIcon className="w-4 h-4 mr-2" />
-            我的故事
+            {t("profile.my_stories")}
           </button>
           <button
             onClick={() => setActiveTab("chapters")}
             className={`tab tab-lg ${activeTab === "chapters" ? "tab-active" : ""}`}
           >
             <DocumentTextIcon className="w-4 h-4 mr-2" />
-            我的章节
+            {t("profile.my_chapters")}
           </button>
           <button
             onClick={() => setActiveTab("stats")}
             className={`tab tab-lg ${activeTab === "stats" ? "tab-active" : ""}`}
           >
             <ChartBarIcon className="w-4 h-4 mr-2" />
-            统计信息
+            {t("profile.statistics")}
           </button>
         </div>
 
@@ -564,10 +566,10 @@ const ProfilePage = () => {
           onClick={handleRefresh}
           disabled={loadingState.isLoading}
           className="btn btn-outline btn-sm gap-2"
-          title="刷新数据"
+          title="Refresh data"
         >
           <ArrowPathIcon className={`w-4 h-4 ${loadingState.isLoading ? "animate-spin" : ""}`} />
-          刷新
+          {t("button.refresh")}
         </button>
       </div>
 
@@ -578,11 +580,11 @@ const ProfilePage = () => {
           <div className="alert alert-error mb-6">
             <ExclamationTriangleIcon className="w-6 h-6" />
             <div>
-              <div className="font-bold">加载失败</div>
+              <div className="font-bold">{t("profile.load_failed")}</div>
               <div className="text-sm">{loadingState.error}</div>
             </div>
             <button onClick={handleRefresh} className="btn btn-sm btn-outline">
-              重试
+              {t("profile.retry")}
             </button>
           </div>
         )}
@@ -608,10 +610,12 @@ const ProfilePage = () => {
             {activeTab === "stories" && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-bold">我的故事 ({userStories.length})</h2>
+                  <h2 className="text-xl font-bold">
+                    {t("profile.my_stories")} ({userStories.length})
+                  </h2>
                   <Link href="/create" className="btn btn-primary gap-2">
                     <PlusIcon className="w-4 h-4" />
-                    创建新故事
+                    {t("profile.create_new_story")}
                   </Link>
                 </div>
 
@@ -648,7 +652,7 @@ const ProfilePage = () => {
 
                             <div className="card-actions">
                               <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm">
-                                查看
+                                {t("profile.view")}
                               </Link>
                             </div>
                           </div>
@@ -659,11 +663,11 @@ const ProfilePage = () => {
                 ) : (
                   <div className="text-center py-16">
                     <BookOpenIcon className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">还没有创建故事</h3>
-                    <p className="text-base-content/70 mb-6">开始你的第一个创作吧！</p>
+                    <h3 className="text-xl font-semibold mb-2">{t("profile.no_stories")}</h3>
+                    <p className="text-base-content/70 mb-6">{t("profile.start_creating")}</p>
                     <Link href="/create" className="btn btn-primary gap-2">
                       <PlusIcon className="w-4 h-4" />
-                      创建故事
+                      {t("profile.create_story")}
                     </Link>
                   </div>
                 )}
@@ -673,7 +677,9 @@ const ProfilePage = () => {
             {/* 我的章节 */}
             {activeTab === "chapters" && (
               <div className="space-y-6">
-                <h2 className="text-xl font-bold">我的章节 ({userChapters.length})</h2>
+                <h2 className="text-xl font-bold">
+                  {t("profile.my_chapters")} ({userChapters.length})
+                </h2>
 
                 {userChapters.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -682,7 +688,9 @@ const ProfilePage = () => {
                         <div className="card-body">
                           <div className="flex justify-between items-start mb-2">
                             <h3 className="card-title text-lg line-clamp-2">{chapter.title}</h3>
-                            <div className="badge badge-primary badge-sm">第{chapter.chapterNumber}章</div>
+                            <div className="badge badge-primary badge-sm">
+                              {t("profile.chapter_num").replace("{number}", chapter.chapterNumber.toString())}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-2 text-sm text-base-content/70">
@@ -711,7 +719,7 @@ const ProfilePage = () => {
 
                             <div className="card-actions">
                               <Link href={`/story/${chapter.storyId}`} className="btn btn-primary btn-sm">
-                                查看故事
+                                {t("profile.view_story")}
                               </Link>
                             </div>
                           </div>
@@ -722,11 +730,11 @@ const ProfilePage = () => {
                 ) : (
                   <div className="text-center py-16">
                     <DocumentTextIcon className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">还没有创建章节</h3>
-                    <p className="text-base-content/70 mb-6">为你的故事或他人的故事添加章节吧！</p>
+                    <h3 className="text-xl font-semibold mb-2">{t("profile.no_chapters")}</h3>
+                    <p className="text-base-content/70 mb-6">{t("profile.explore_and_create")}</p>
                     <Link href="/explore" className="btn btn-primary gap-2">
                       <BookOpenIcon className="w-4 h-4" />
-                      探索故事
+                      {t("profile.explore_stories")}
                     </Link>
                   </div>
                 )}
@@ -736,24 +744,24 @@ const ProfilePage = () => {
             {/* 统计信息 */}
             {activeTab === "stats" && (
               <div className="space-y-6">
-                <h2 className="text-xl font-bold">详细统计</h2>
+                <h2 className="text-xl font-bold">{t("profile.detailed_stats")}</h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* 创作统计 */}
                   <div className="card bg-base-100 shadow-md">
                     <div className="card-body">
-                      <h3 className="card-title">创作统计</h3>
+                      <h3 className="card-title">{t("profile.creation_stats")}</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span>总故事数</span>
+                          <span>{t("profile.total_stories")}</span>
                           <span className="font-bold">{userStats.totalStories}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>总章节数</span>
+                          <span>{t("profile.total_chapters")}</span>
                           <span className="font-bold">{userStats.totalChapters}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>平均章节/故事</span>
+                          <span>{t("profile.avg_chapters_per_story")}</span>
                           <span className="font-bold">
                             {userStats.totalStories > 0
                               ? (userStats.totalChapters / userStats.totalStories).toFixed(1)
@@ -767,18 +775,18 @@ const ProfilePage = () => {
                   {/* 互动统计 */}
                   <div className="card bg-base-100 shadow-md">
                     <div className="card-body">
-                      <h3 className="card-title">互动统计</h3>
+                      <h3 className="card-title">{t("profile.interaction_stats")}</h3>
                       <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span>总点赞数</span>
+                          <span>{t("profile.total_likes")}</span>
                           <span className="font-bold text-error">{userStats.totalLikes}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>被分叉次数</span>
+                          <span>{t("profile.times_forked")}</span>
                           <span className="font-bold text-warning">{userStats.totalForks}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>待提取奖励</span>
+                          <span>{t("profile.pending_rewards_stat")}</span>
                           <span className="font-bold text-success">{pendingRewards} STT</span>
                         </div>
                       </div>
@@ -788,28 +796,28 @@ const ProfilePage = () => {
                   {/* 收益统计 */}
                   <div className="card bg-base-100 shadow-md md:col-span-2">
                     <div className="card-body">
-                      <h3 className="card-title">收益统计</h3>
+                      <h3 className="card-title">{t("profile.revenue_stats")}</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="stat">
-                          <div className="stat-title">打赏收益</div>
+                          <div className="stat-title">{t("profile.tip_revenue")}</div>
                           <div className="stat-value text-sm">
                             {parseFloat(calculatedRevenueStats.tipRevenue).toFixed(6)} STT
                           </div>
                         </div>
                         <div className="stat">
-                          <div className="stat-title">分叉收益</div>
+                          <div className="stat-title">{t("profile.fork_revenue")}</div>
                           <div className="stat-value text-sm">
                             {parseFloat(calculatedRevenueStats.forkRevenue).toFixed(6)} STT
                           </div>
                         </div>
                         <div className="stat">
-                          <div className="stat-title">总收益</div>
+                          <div className="stat-title">{t("profile.total_revenue")}</div>
                           <div className="stat-value text-sm">
                             {parseFloat(calculatedRevenueStats.totalRevenue).toFixed(6)} STT
                           </div>
                         </div>
                         <div className="stat">
-                          <div className="stat-title">已提取</div>
+                          <div className="stat-title">{t("profile.withdrawn")}</div>
                           <div className="stat-value text-sm">
                             {parseFloat(calculatedRevenueStats.withdrawnAmount).toFixed(6)} STT
                           </div>

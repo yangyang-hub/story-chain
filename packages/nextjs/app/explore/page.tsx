@@ -39,7 +39,8 @@ const StoryCover: React.FC<{
   title: string;
   storyId: string;
   className?: string;
-}> = ({ image, title, storyId, className = "" }) => {
+  t: (key: string, params?: Record<string, string | number>) => string;
+}> = ({ image, title, storyId, className = "", t }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(!!image);
 
@@ -84,7 +85,7 @@ const StoryCover: React.FC<{
       )}
       <img
         src={`https://gateway.pinata.cloud/ipfs/${image}`}
-        alt={title || `故事 #${storyId}`}
+        alt={title || t("explore.story_alt", { id: storyId })}
         className="w-full h-full object-cover"
         onError={handleImageError}
         onLoad={handleImageLoad}
@@ -100,9 +101,10 @@ const StoryCover: React.FC<{
   );
 };
 
-const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata: StoryMetadata) => void }> = ({
+const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata: StoryMetadata) => void; t: (key: string, params?: Record<string, string | number>) => string }> = ({
   story,
   onMetadataLoad,
+  t,
 }) => {
   const [metadata, setMetadata] = useState<StoryMetadata | null>(story.metadata || null);
   const [loading, setLoading] = useState(!story.metadata);
@@ -132,10 +134,10 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
         onMetadataLoadRef.current(validatedMetadata);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "未知错误";
-      console.error("加载故事元数据失败:", err);
-      setError(`加载故事信息失败: ${errorMessage}`);
-      notification.error(`故事 #${story.id} 元数据加载失败`);
+      const errorMessage = err instanceof Error ? err.message : t("error.unknown");
+      console.error(t("explore.error_load_failed", {error: String(err)}));
+      setError(t("explore.error_load_failed", {error: errorMessage}));
+      notification.error(t("explore.error_notification", {id: story.id}));
     } finally {
       setLoading(false);
     }
@@ -225,14 +227,15 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
         {/* 即使出错也显示封面（使用文字封面） */}
         <StoryCover
           image={undefined} // 强制使用文字封面
-          title={`故事 #${story.id}`}
+          title={t("explore.story_alt", {id: story.id})}
           storyId={story.id}
           className="h-48 w-full"
+          t={t}
         />
 
         <div className="card-body">
           <div className="flex justify-between items-start mb-3">
-            <h2 className="card-title text-lg font-bold">故事 #{story.id}</h2>
+            <h2 className="card-title text-lg font-bold">{t("story.detail.story_number", {id: story.id})}</h2>
             <div className="badge badge-secondary badge-sm">#{story.id}</div>
           </div>
 
@@ -272,11 +275,11 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
                 loadMetadata();
               }}
             >
-              重试加载
+              {t("explore.retry_load")}
             </button>
             <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm gap-1">
               <BookOpenIcon className="w-4 h-4" />
-              阅读
+              {t("explore.read_button")}
             </Link>
           </div>
         </div>
@@ -289,15 +292,16 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
       {/* 故事封面 */}
       <StoryCover
         image={metadata?.image}
-        title={metadata?.title || `故事 #${story.id}`}
+        title={metadata?.title || t("explore.story_alt", {id: story.id})}
         storyId={story.id}
         className="h-48 w-full"
+        t={t}
       />
 
       <div className="card-body">
         {/* 标题和作者 */}
         <div className="flex justify-between items-start mb-3">
-          <h2 className="card-title text-lg font-bold line-clamp-2">{metadata?.title || `故事 #${story.id}`}</h2>
+          <h2 className="card-title text-lg font-bold line-clamp-2">{metadata?.title || t("story.detail.story_number", {id: story.id})}</h2>
           <div className="badge badge-secondary badge-sm">#{story.id}</div>
         </div>
 
@@ -351,7 +355,7 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
         <div className="card-actions justify-end mt-4">
           <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm gap-1">
             <BookOpenIcon className="w-4 h-4" />
-            阅读
+            {t("explore.read_button")}
           </Link>
         </div>
       </div>
@@ -462,7 +466,7 @@ const ExplorePage = () => {
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{t("nav.explore")}</h1>
-        <p className="text-base-content/70">探索社区创作的精彩故事，发现无限的创意可能性</p>
+        <p className="text-base-content/70">{t("explore.title")}</p>
       </div>
 
       {/* 搜索和筛选 */}
@@ -472,16 +476,16 @@ const ExplorePage = () => {
           {searchTerm && (
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm text-base-content/70">
-                找到 <span className="font-semibold text-primary">{filteredStories.length}</span> 个故事
+                {t("explore.search_results", {count: filteredStories.length})}
                 {searchTerm && (
                   <>
-                    包含 "<span className="font-medium">{searchTerm}</span>"
+                    {t("explore.search_contains", {term: searchTerm})}
                   </>
                 )}
               </div>
-              <button className="btn btn-ghost btn-sm gap-1" onClick={clearSearch} title="清空搜索">
+              <button className="btn btn-ghost btn-sm gap-1" onClick={clearSearch} title={t("explore.clear_search")}>
                 <XMarkIcon className="w-4 h-4" />
-                清空
+                {t("explore.clear_search")}
               </button>
             </div>
           )}
@@ -492,7 +496,7 @@ const ExplorePage = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="搜索故事标题、描述、标签或作者地址..."
+                  placeholder={t("explore.search_placeholder")}
                   className="input input-bordered w-full pr-20 focus:ring-2 focus:ring-primary/20"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
@@ -503,7 +507,7 @@ const ExplorePage = () => {
                     <button
                       className="btn btn-ghost btn-sm btn-circle hover:bg-base-200"
                       onClick={clearSearch}
-                      title="清空搜索 (Esc)"
+                      title={t("explore.clear_search_tooltip")}
                     >
                       <XMarkIcon className="w-4 h-4" />
                     </button>
@@ -519,16 +523,16 @@ const ExplorePage = () => {
             {/* 排序筛选 */}
             <div className="form-control">
               <div className="flex items-center gap-2">
-                <div className="text-sm font-medium text-base-content/70 hidden sm:block">排序：</div>
+                <div className="text-sm font-medium text-base-content/70 hidden sm:block">{t("explore.sort_by")}</div>
                 <div className="relative">
                   <select
-                    className="select select-bordered select-sm bg-base-100 text-base-content pl-8 pr-4 min-w-[120px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="select select-bordered select-sm bg-base-100 text-base-content pl-8 pr-8 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     value={sortBy}
                     onChange={e => setSortBy(e.target.value as any)}
                   >
-                    <option value="createdTime">最新创建</option>
-                    <option value="likes">最受欢迎</option>
-                    <option value="totalTips">最多打赏</option>
+                    <option value="createdTime">{t("explore.sort_latest")}</option>
+                    <option value="likes">{t("explore.sort_popular")}</option>
+                    <option value="totalTips">{t("explore.sort_tips")}</option>
                   </select>
                   <FunnelIcon className="w-4 h-4 text-base-content/60 absolute left-2 top-1/2 transform -translate-y-1/2 pointer-events-none" />
                 </div>
@@ -541,9 +545,9 @@ const ExplorePage = () => {
       {/* 故事列表 */}
       {error && (
         <div className="alert alert-error mb-6">
-          <span>加载故事失败: {error}</span>
+          <span>{t("explore.load_error", {error})}</span>
           <button className="btn btn-sm" onClick={refetch}>
-            重试
+            {t("explore.retry_button")}
           </button>
         </div>
       )}
@@ -553,7 +557,7 @@ const ExplorePage = () => {
           {/* Loading message */}
           <div className="text-center py-8">
             <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-            <p className="text-base-content/70">正在加载故事...</p>
+            <p className="text-base-content/70">{t("explore.loading_stories")}</p>
           </div>
 
           {/* Skeleton grid */}
@@ -622,7 +626,7 @@ const ExplorePage = () => {
           {/* 结果统计显示（当没有搜索时显示总数） */}
           {!searchTerm && stories.length > 0 && (
             <div className="text-sm text-base-content/70 mb-4">
-              共 <span className="font-semibold text-primary">{stories.length}</span> 个故事
+              {t("explore.total_stories", {count: stories.length})}
             </div>
           )}
 
@@ -633,6 +637,7 @@ const ExplorePage = () => {
                   key={story.id}
                   story={story}
                   onMetadataLoad={metadata => handleMetadataLoad(story.id, metadata)}
+                  t={t}
                 />
               </ErrorBoundary>
             ))}
@@ -643,40 +648,40 @@ const ExplorePage = () => {
           {searchTerm ? (
             <>
               <MagnifyingGlassIcon className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">没有找到匹配的故事</h3>
+              <h3 className="text-xl font-semibold mb-2">{t("explore.no_stories_found")}</h3>
               <p className="text-base-content/70 mb-6">
-                尝试使用不同的关键词，或者
+                {t("explore.search_suggestions")}
                 <button className="link link-primary ml-1" onClick={clearSearch}>
-                  清空搜索条件
+                  {t("explore.clear_conditions")}
                 </button>
               </p>
               <div className="flex flex-wrap gap-2 justify-center mb-6">
-                <span className="text-sm text-base-content/50">建议搜索：</span>
+                <span className="text-sm text-base-content/50">{t("explore.suggested_searches")}</span>
                 <button
                   className="badge badge-outline hover:badge-primary cursor-pointer"
-                  onClick={() => setSearchTerm("科幻")}
+                  onClick={() => setSearchTerm(t("explore.tag_scifi"))}
                 >
-                  科幻
+                  {t("explore.tag_scifi")}
                 </button>
                 <button
                   className="badge badge-outline hover:badge-primary cursor-pointer"
-                  onClick={() => setSearchTerm("冒险")}
+                  onClick={() => setSearchTerm(t("explore.tag_adventure"))}
                 >
-                  冒险
+                  {t("explore.tag_adventure")}
                 </button>
                 <button
                   className="badge badge-outline hover:badge-primary cursor-pointer"
-                  onClick={() => setSearchTerm("故事")}
+                  onClick={() => setSearchTerm(t("explore.tag_story"))}
                 >
-                  故事
+                  {t("explore.tag_story")}
                 </button>
               </div>
             </>
           ) : (
             <>
               <BookOpenIcon className="w-16 h-16 mx-auto text-base-content/30 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">还没有故事</h3>
-              <p className="text-base-content/70 mb-6">成为第一个创建故事的人！</p>
+              <h3 className="text-xl font-semibold mb-2">{t("explore.no_stories_yet")}</h3>
+              <p className="text-base-content/70 mb-6">{t("explore.be_first_creator")}</p>
             </>
           )}
           <Link href="/create" className="btn btn-primary gap-2">
@@ -691,7 +696,7 @@ const ExplorePage = () => {
         <Link
           href="/create"
           className="btn btn-primary btn-circle btn-lg shadow-lg hover:shadow-xl transition-shadow"
-          title={t("story.create")}
+          title={t("explore.create_tooltip")}
         >
           <BookOpenIcon className="w-6 h-6" />
         </Link>

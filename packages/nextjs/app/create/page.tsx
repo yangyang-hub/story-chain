@@ -7,7 +7,7 @@ import { useAccount } from "wagmi";
 import { InformationCircleIcon, PhotoIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { useLanguage } from "~~/contexts/LanguageContext";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { type StoryMetadata, uploadStoryMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -26,7 +26,7 @@ const CreateStoryPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  // 创建故事的合约调用
+  // Create story contract call
   const { writeContractAsync: createStory } = useScaffoldWriteContract("StoryChain");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -61,7 +61,7 @@ const CreateStoryPage = () => {
     try {
       setIsCreating(true);
 
-      // 创建故事元数据
+      // Create story metadata
       const metadata: StoryMetadata = {
         title: formData.title,
         author: address,
@@ -74,19 +74,19 @@ const CreateStoryPage = () => {
         description: formData.description || formData.title,
       };
 
-      // 上传到IPFS
+      // Upload to IPFS
       const ipfsHash = await uploadStoryMetadata(metadata);
 
-      // 调用合约创建故事（不需要设置分叉费用）
+      // Call contract to create story (fork fee fixed to 0 STT)
       await createStory({
         functionName: "createStory",
-        args: [ipfsHash, parseEther("0")], // 固定为0 STT
+        args: [ipfsHash, parseEther("0")], // Fixed to 0 STT
       });
 
       notification.success(t("success.story_created"));
       router.push("/explore");
     } catch (error) {
-      console.error("创建故事失败:", error);
+      console.error("Story creation failed:", error);
       notification.error(error instanceof Error ? error.message : t("error.unknown"));
     } finally {
       setIsCreating(false);
@@ -97,22 +97,20 @@ const CreateStoryPage = () => {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{t("story.create")}</h1>
-        <p className="text-base-content/70">
-          创建你的专属故事，每个故事都是独特的NFT。其他用户可以分叉你的故事创造新的分支。
-        </p>
+        <p className="text-base-content/70">{t("create.subtitle")}</p>
       </div>
 
       {!address && (
         <div className="alert alert-warning mb-6">
           <InformationCircleIcon className="w-6 h-6" />
-          <span>请先连接钱包才能创建故事</span>
+          <span>{t("create.connect_wallet")}</span>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="card bg-base-100 shadow-lg">
           <div className="card-body">
-            <h2 className="card-title mb-4">基本信息</h2>
+            <h2 className="card-title mb-4">{t("create.basic_info")}</h2>
 
             <div className="form-control">
               <label className="label">
@@ -124,7 +122,7 @@ const CreateStoryPage = () => {
                 value={formData.title}
                 onChange={handleInputChange}
                 className="input input-bordered w-full"
-                placeholder="输入吸引人的故事标题..."
+                placeholder={t("create.title_placeholder")}
                 disabled={isCreating}
                 required
               />
@@ -132,8 +130,8 @@ const CreateStoryPage = () => {
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">故事描述</span>
-                <span className="label-text-alt">（可选）</span>
+                <span className="label-text font-medium">{t("create.story_description")}</span>
+                <span className="label-text-alt">{t("create.description_optional")}</span>
               </label>
               <input
                 type="text"
@@ -141,15 +139,15 @@ const CreateStoryPage = () => {
                 value={formData.description}
                 onChange={handleInputChange}
                 className="input input-bordered w-full"
-                placeholder="简短描述你的故事..."
+                placeholder={t("create.description_placeholder")}
                 disabled={isCreating}
               />
             </div>
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">标签</span>
-                <span className="label-text-alt">（用逗号分隔）</span>
+                <span className="label-text font-medium">{t("create.tags")}</span>
+                <span className="label-text-alt">{t("create.tags_separator")}</span>
               </label>
               <input
                 type="text"
@@ -157,7 +155,7 @@ const CreateStoryPage = () => {
                 value={formData.tags}
                 onChange={handleInputChange}
                 className="input input-bordered w-full"
-                placeholder="科幻, 悬疑, 冒险..."
+                placeholder={t("create.tags_placeholder")}
                 disabled={isCreating}
               />
             </div>
@@ -168,7 +166,7 @@ const CreateStoryPage = () => {
           <div className="card-body">
             <h2 className="card-title mb-4 flex items-center gap-2">
               <PhotoIcon className="w-5 h-5" />
-              故事封面
+              {t("create.story_cover")}
             </h2>
 
             <ImageUploader
@@ -204,7 +202,7 @@ const CreateStoryPage = () => {
             {isCreating ? (
               <>
                 <span className="loading loading-spinner loading-sm"></span>
-                创建中...
+                {t("create.creating")}
               </>
             ) : (
               <>

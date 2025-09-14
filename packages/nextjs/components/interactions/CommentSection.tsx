@@ -6,6 +6,7 @@ import { ChatBubbleLeftIcon, ClockIcon, PaperAirplaneIcon, UserIcon } from "@her
 import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
+import { useLanguage } from "~~/contexts/LanguageContext";
 import { type CommentMetadata } from "~~/services/ipfs/ipfsService";
 
 interface CommentSectionProps {
@@ -25,6 +26,7 @@ interface CommentDisplay {
 export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenType, className = "" }) => {
   const { address } = useAccount();
   const { addComment, isLoading } = useStoryChain();
+  const { t } = useLanguage();
 
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState<CommentDisplay[]>([]);
@@ -99,7 +101,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
       // 刷新评论列表
       refetchComments();
     } catch (error) {
-      console.error("添加评论失败:", error);
+      console.error("Failed to add comment:", error);
     }
   };
 
@@ -108,7 +110,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
       {/* 标题 */}
       <div className="flex items-center gap-2">
         <ChatBubbleLeftIcon className="w-5 h-5" />
-        <h3 className="text-lg font-semibold">评论 ({comments.length})</h3>
+        <h3 className="text-lg font-semibold">{t("comment.title")} ({comments.length})</h3>
       </div>
 
       {/* 添加评论表单 */}
@@ -119,7 +121,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
               className="textarea textarea-bordered w-full h-24 resize-none"
-              placeholder={`对这个${tokenType === "story" ? "故事" : "章节"}说点什么...`}
+              placeholder={t(tokenType === "story" ? "comment.placeholder_story" : "comment.placeholder_chapter")}
               disabled={isLoading}
               maxLength={500}
             />
@@ -133,12 +135,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
               {isLoading ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
-                  发布中...
+                  {t("comment.adding")}
                 </>
               ) : (
                 <>
                   <PaperAirplaneIcon className="w-4 h-4" />
-                  发布评论
+                  {t("comment.add")}
                 </>
               )}
             </button>
@@ -147,7 +149,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
       ) : (
         <div className="alert alert-info">
           <ChatBubbleLeftIcon className="w-5 h-5" />
-          <span>请连接钱包后再发表评论</span>
+          <span>{t("comment.connect_wallet")}</span>
         </div>
       )}
 
@@ -195,7 +197,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
                       className="bg-transparent border-none p-0"
                     />
                   ) : (
-                    <div className="text-base-content/60 italic">评论内容正在从IPFS加载...</div>
+                    <div className="text-base-content/60 italic">{t("comment.loading")}</div>
                   )}
                 </div>
               </div>
@@ -204,7 +206,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
         ) : (
           <div className="text-center py-8">
             <ChatBubbleLeftIcon className="w-12 h-12 mx-auto text-base-content/30 mb-4" />
-            <p className="text-base-content/70">还没有评论，来发表第一个评论吧！</p>
+            <p className="text-base-content/70">{t("comment.empty")}</p>
           </div>
         )}
       </div>

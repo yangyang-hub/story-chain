@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { CurrencyDollarIcon, InformationCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
+import { useLanguage } from "~~/contexts/LanguageContext";
 
 interface TipModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const TipModal: React.FC<TipModalProps> = ({
 }) => {
   const { address } = useAccount();
   const { tip, isLoading } = useStoryChain();
+  const { t } = useLanguage();
 
   const [tipAmount, setTipAmount] = useState("0.01");
   const [customAmount, setCustomAmount] = useState("");
@@ -57,7 +59,7 @@ export const TipModal: React.FC<TipModalProps> = ({
       setUseCustom(false);
     } catch (error) {
       // 错误处理已在 useStoryChain 中处理
-      console.error("打赏失败:", error);
+      console.error("Tip failed:", error);
     }
   };
 
@@ -86,9 +88,9 @@ export const TipModal: React.FC<TipModalProps> = ({
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <CurrencyDollarIcon className="w-6 h-6 text-warning" />
-                打赏{recipientType === "story" ? "故事" : "章节"}
+                {t(recipientType === "story" ? "tip.story" : "tip.chapter")}
               </h2>
-              <p className="text-sm text-base-content/70 mt-1">支持优质内容创作</p>
+              <p className="text-sm text-base-content/70 mt-1">{t("tip.support_creation")}</p>
             </div>
             <button onClick={onClose} className="btn btn-ghost btn-sm btn-circle">
               <XMarkIcon className="w-4 h-4" />
@@ -98,12 +100,12 @@ export const TipModal: React.FC<TipModalProps> = ({
           {/* 内容信息 */}
           <div className="bg-base-200 rounded-lg p-4 mb-6">
             <h3 className="font-medium text-sm text-base-content/70 mb-2">
-              {recipientType === "story" ? "故事" : "章节"}标题:
+              {t(recipientType === "story" ? "story.title" : "story.chapter")}:
             </h3>
             <p className="font-semibold mb-3 line-clamp-2">{title}</p>
 
             <div className="flex items-center gap-2 text-sm text-base-content/70">
-              <span>作者:</span>
+              <span>{t("story.author")}:</span>
               <Address address={recipientAddress} size="sm" />
             </div>
           </div>
@@ -112,7 +114,7 @@ export const TipModal: React.FC<TipModalProps> = ({
           <div className="space-y-4 mb-6">
             <div>
               <label className="label">
-                <span className="label-text font-medium">选择打赏金额</span>
+                <span className="label-text font-medium">{t("tip.select_amount")}</span>
                 <span className="label-text-alt">STT</span>
               </label>
 
@@ -137,7 +139,7 @@ export const TipModal: React.FC<TipModalProps> = ({
               {/* 自定义金额 */}
               <div className="form-control">
                 <label className="label cursor-pointer">
-                  <span className="label-text">自定义金额</span>
+                  <span className="label-text">{t("tip.custom_amount")}</span>
                   <input
                     type="checkbox"
                     className="checkbox checkbox-sm"
@@ -152,7 +154,7 @@ export const TipModal: React.FC<TipModalProps> = ({
                     value={customAmount}
                     onChange={handleCustomAmountChange}
                     className="input input-bordered input-sm"
-                    placeholder="输入金额..."
+                    placeholder={t("tip.enter_amount")}
                     min="0"
                     step="0.001"
                     disabled={isLoading}
@@ -166,13 +168,22 @@ export const TipModal: React.FC<TipModalProps> = ({
               <div className="alert alert-info">
                 <InformationCircleIcon className="w-5 h-5" />
                 <div className="text-sm">
-                  <div className="font-medium">费用分配:</div>
+                  <div className="font-medium">{t("tip.fee_distribution")}</div>
                   <div>
-                    • {recipientType === "story" ? "故事" : "章节"}作者: {(parseFloat(finalAmount) * 0.85).toFixed(4)}{" "}
-                    STT
+                    • {t(recipientType === "story" ? "tip.story_author_receive" : "tip.chapter_author_receive", {
+                      amount: (parseFloat(finalAmount) * 0.85).toFixed(4),
+                    })}
                   </div>
-                  <div>• 故事作者: {(parseFloat(finalAmount) * 0.1).toFixed(4)} STT</div>
-                  <div>• 平台手续费: {(parseFloat(finalAmount) * 0.05).toFixed(4)} STT</div>
+                  <div>
+                    • {t("tip.story_author_receive", {
+                      amount: (parseFloat(finalAmount) * 0.1).toFixed(4),
+                    })}
+                  </div>
+                  <div>
+                    • {t("tip.platform_fee", {
+                      amount: (parseFloat(finalAmount) * 0.05).toFixed(4),
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -181,7 +192,7 @@ export const TipModal: React.FC<TipModalProps> = ({
           {/* 操作按钮 */}
           <div className="flex gap-3">
             <button type="button" onClick={onClose} className="btn btn-outline flex-1" disabled={isLoading}>
-              取消
+              {t("button.cancel")}
             </button>
 
             <button
@@ -193,12 +204,12 @@ export const TipModal: React.FC<TipModalProps> = ({
               {isLoading ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
-                  打赏中...
+                  {t("tip.tipping")}
                 </>
               ) : (
                 <>
                   <CurrencyDollarIcon className="w-4 h-4" />
-                  打赏 {finalAmount} STT
+                  {t("tip.title")} {finalAmount} STT
                 </>
               )}
             </button>
@@ -207,7 +218,7 @@ export const TipModal: React.FC<TipModalProps> = ({
           {!address && (
             <div className="alert alert-warning mt-4">
               <InformationCircleIcon className="w-5 h-5" />
-              <span>请先连接钱包才能打赏</span>
+              <span>{t("tip.connect_wallet")}</span>
             </div>
           )}
         </div>

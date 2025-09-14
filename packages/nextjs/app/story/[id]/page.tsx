@@ -38,7 +38,8 @@ const StoryCover: React.FC<{
   title: string;
   storyId: string;
   className?: string;
-}> = ({ image, title, storyId, className = "" }) => {
+  t: (key: string, params?: Record<string, string | number>) => string;
+}> = ({ image, title, storyId, className = "", t }) => {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(!!image);
 
@@ -83,7 +84,7 @@ const StoryCover: React.FC<{
       )}
       <img
         src={`https://gateway.pinata.cloud/ipfs/${image}`}
-        alt={title || `故事 #${storyId}`}
+        alt={title || t("explore.story_alt", { id: storyId })}
         className="w-full h-full object-cover"
         onError={handleImageError}
         onLoad={handleImageLoad}
@@ -108,19 +109,22 @@ const ForkSelector: React.FC<{
   parentChapter: ChapterWithMetadata;
   forks: ChapterWithMetadata[];
   onSelectFork: (forkId: string) => void;
-}> = ({ parentChapter, forks, onSelectFork }) => {
+  t: (key: string, params?: Record<string, string | number>) => string;
+}> = ({ parentChapter, forks, onSelectFork, t }) => {
   if (forks.length <= 1) return null;
 
   return (
     <div className="mt-6 p-6 bg-gradient-to-r from-warning/10 to-info/10 border border-warning/30 rounded-xl">
       <div className="flex items-center gap-3 mb-4">
         <ShareIcon className="w-6 h-6 text-warning" />
-        <h4 className="text-lg font-bold text-warning">故事在此分叉</h4>
-        <div className="badge badge-warning">{forks.length} 个分支</div>
+        <h4 className="text-lg font-bold text-warning">{t("chapter.story_fork_here")}</h4>
+        <div className="badge badge-warning">{t("chapter.branches_count", { count: forks.length.toString() })}</div>
       </div>
       <p className="text-base-content/80 mb-6 text-sm leading-relaxed">
-        第 {parentChapter.chapterNumber} 章之后有 {forks.length}{" "}
-        个不同的发展方向，每个分支都带来不同的故事体验。选择你感兴趣的分支继续阅读：
+        {t("chapter.fork_description", {
+          number: parentChapter.chapterNumber.toString(),
+          count: forks.length.toString(),
+        })}
       </p>
       <div className="grid gap-4 md:grid-cols-2">
         {forks.map((fork, index) => (
@@ -134,7 +138,9 @@ const ForkSelector: React.FC<{
                 <div className="w-8 h-8 bg-primary text-primary-content rounded-full flex items-center justify-center font-bold text-sm">
                   {String.fromCharCode(65 + index)}
                 </div>
-                <h5 className="font-bold text-primary group-hover:text-primary-focus">第 {fork.chapterNumber} 章</h5>
+                <h5 className="font-bold text-primary group-hover:text-primary-focus">
+                  {t("chapter.title", { number: fork.chapterNumber.toString() })}
+                </h5>
               </div>
               <div className="text-xs text-base-content/60 flex items-center gap-1">
                 <UserIcon className="w-3 h-3" />
@@ -142,7 +148,7 @@ const ForkSelector: React.FC<{
               </div>
             </div>
             <div className="mb-3">
-              <div className="text-xs text-base-content/50">点击阅读详细内容</div>
+              <div className="text-xs text-base-content/50">{t("chapter.reading_detail")}</div>
             </div>
             <div className="flex justify-between items-center text-xs text-base-content/60">
               <span>{new Date(fork.createdTime * 1000).toLocaleDateString()}</span>
@@ -174,6 +180,7 @@ const ChapterCard: React.FC<{
   allChapters: ChapterWithMetadata[];
   canUserContinueChapter: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => boolean;
   getContinueButtonTooltip: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }> = ({
   chapter,
   onFork,
@@ -184,6 +191,7 @@ const ChapterCard: React.FC<{
   allChapters,
   canUserContinueChapter,
   getContinueButtonTooltip,
+  t,
 }) => {
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<any>(null);
@@ -204,7 +212,7 @@ const ChapterCard: React.FC<{
         setMetadata(data);
       } catch (error) {
         console.error(`❌ Failed to load metadata for chapter ${chapter.id}:`, error);
-        setError(error instanceof Error ? error.message : "加载章节元数据失败");
+        setError(error instanceof Error ? error.message : t("error.metadata_load_failed"));
 
         // Auto-retry for new chapters (likely IPFS sync issue)
         const isRecentChapter = Date.now() - chapter.createdTime * 1000 < 300000; // 5 minutes
@@ -236,7 +244,7 @@ const ChapterCard: React.FC<{
           {retrying && (
             <div className="text-center mt-4">
               <div className="loading loading-spinner loading-sm"></div>
-              <div className="text-sm text-base-content/70 mt-2">正在重新加载章节信息...</div>
+              <div className="text-sm text-base-content/70 mt-2">{t("chapter.reloading")}</div>
             </div>
           )}
         </div>
@@ -250,30 +258,32 @@ const ChapterCard: React.FC<{
         {/* 章节标题和编号 */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
-            <h3 className="card-title text-xl font-bold text-primary mb-2">第 {chapter.chapterNumber} 章</h3>
+            <h3 className="card-title text-xl font-bold text-primary mb-2">
+              {t("chapter.title", { number: chapter.chapterNumber.toString() })}
+            </h3>
             {metadata?.title ? (
               <h4 className="text-lg font-semibold text-base-content/90 mb-2">{metadata.title}</h4>
             ) : error ? (
               <div className="text-sm text-warning mb-2">
                 <div className="flex items-center gap-2">
-                  <span>⚠️ 章节标题加载中...</span>
+                  <span>{t("chapter.loading_title")}</span>
                   <button
                     onClick={() => {
                       setRetrying(true);
                       setLoading(true);
                     }}
                     className="btn btn-xs btn-ghost"
-                    title="重新加载章节信息"
+                    title={t("chapter.retry_loading")}
                   >
                     🔄
                   </button>
                 </div>
                 {error.includes("temporarily unavailable") && (
-                  <div className="text-xs text-base-content/60 mt-1">新章节可能需要几分钟时间同步，请稍后再试</div>
+                  <div className="text-xs text-base-content/60 mt-1">{t("chapter.loading_error_new")}</div>
                 )}
               </div>
             ) : (
-              <div className="text-sm text-base-content/60 mb-2">正在加载章节标题...</div>
+              <div className="text-sm text-base-content/60 mb-2">{t("chapter.loading_content")}</div>
             )}
           </div>
           <div className="badge badge-primary badge-lg">#{chapter.id}</div>
@@ -283,7 +293,7 @@ const ChapterCard: React.FC<{
         <div className="flex items-center gap-6 text-sm text-base-content/70 mb-4 p-3 bg-base-200/50 rounded-lg">
           <div className="flex items-center gap-2">
             <UserIcon className="w-4 h-4" />
-            <span className="font-medium">作者:</span>
+            <span className="font-medium">{t("chapter.author_label")}</span>
             <Address address={chapter.author} size="sm" />
           </div>
           <div className="flex items-center gap-2">
@@ -294,7 +304,7 @@ const ChapterCard: React.FC<{
           {chapter.forkFee && chapter.forkFee !== "0" && (
             <div className="flex items-center gap-2 text-orange-600 font-medium">
               <ShareIcon className="w-4 h-4" />
-              <span>分叉费用: {formatEther(BigInt(chapter.forkFee))} STT</span>
+              <span>{t("chapter.fork_fee_label", { fee: formatEther(BigInt(chapter.forkFee)) })}</span>
             </div>
           )}
         </div>
@@ -316,13 +326,13 @@ const ChapterCard: React.FC<{
           <div className="flex items-center gap-2 text-base-content/70">
             <ShareIcon className="w-4 h-4" />
             <span className="font-medium">{chapter.forkCount}</span>
-            <span>个分叉</span>
+            <span>{t("story.forks")}</span>
           </div>
 
           <div className="flex items-center gap-2 text-base-content/70">
             <CurrencyDollarIcon className="w-4 h-4" />
             <span className="font-medium">{formatEther(BigInt(chapter.totalTips))} STT</span>
-            <span>打赏</span>
+            <span>{t("story.tip")}</span>
           </div>
 
           {/* 分叉信息 */}
@@ -330,7 +340,7 @@ const ChapterCard: React.FC<{
             <div className="flex items-center gap-2 text-warning">
               <ShareIcon className="w-4 h-4" />
               <span className="font-medium">{forks.length}</span>
-              <span>个分支</span>
+              <span>{t("chapter.branches_count", { count: forks.length })}</span>
             </div>
           )}
         </div>
@@ -340,14 +350,14 @@ const ChapterCard: React.FC<{
           <div className="flex gap-3">
             <a href={`/story/${chapter.storyId}/chapter/${chapter.id}`} className="btn btn-primary gap-2">
               <BookOpenIcon className="w-4 h-4" />
-              阅读章节
+              {t("chapter.read_chapter")}
             </a>
 
             {forks.length > 1 && onSelectFork && (
               <div className="dropdown">
                 <button className="btn btn-secondary gap-2" role="button" tabIndex={0}>
                   <ShareIcon className="w-4 h-4" />
-                  选择分支 ({forks.length})
+                  {t("chapter.select_branch", { count: forks.length.toString() })}
                 </button>
                 <ul className="dropdown-content menu bg-base-100 rounded-box z-[1] w-80 p-2 shadow-xl border border-base-300 mt-1">
                   {forks.map((fork, index) => (
@@ -360,7 +370,9 @@ const ChapterCard: React.FC<{
                           <div className="w-6 h-6 bg-primary text-primary-content rounded-full flex items-center justify-center text-xs font-bold">
                             {String.fromCharCode(65 + index)}
                           </div>
-                          <span className="font-medium">分支 {String.fromCharCode(65 + index)}</span>
+                          <span className="font-medium">
+                            {t("chapter.branch_label", { letter: String.fromCharCode(65 + index) })}
+                          </span>
                         </div>
                         <div className="text-xs text-base-content/60">
                           <Address address={fork.author} size="sm" />
@@ -378,10 +390,10 @@ const ChapterCard: React.FC<{
               onClick={() => onTip(chapter.storyId, chapter.id)}
               className="btn btn-outline btn-sm gap-2"
               disabled={!address}
-              title={!address ? "请先连接钱包" : "给章节作者打赏"}
+              title={!address ? t("chapter.connect_wallet_tip") : t("chapter.tip_tooltip")}
             >
               <CurrencyDollarIcon className="w-4 h-4" />
-              打赏
+              {t("chapter.tip_chapter")}
             </button>
             <button
               onClick={() => onContinue(chapter.id)}
@@ -390,7 +402,7 @@ const ChapterCard: React.FC<{
               title={getContinueButtonTooltip(chapter, allChapters)}
             >
               <PlusIcon className="w-4 h-4" />
-              续写
+              {t("chapter.continue_chapter")}
             </button>
             <button
               onClick={() => onFork(chapter.id)}
@@ -398,12 +410,12 @@ const ChapterCard: React.FC<{
               disabled={!address}
               title={
                 !address
-                  ? "请先连接钱包"
-                  : `基于此章节创建分叉${chapter.forkFee && chapter.forkFee !== "0" ? ` (需支付 ${formatEther(BigInt(chapter.forkFee))} STT)` : ""}`
+                  ? t("wallet.connect")
+                  : t("chapter.fork_tooltip_fee", { fee: formatEther(BigInt(chapter.forkFee)) })
               }
             >
               <ShareIcon className="w-4 h-4" />
-              分叉
+              {t("chapter.fork_chapter")}
               {chapter.forkFee && chapter.forkFee !== "0" && (
                 <span className="badge badge-warning badge-xs ml-1">{formatEther(BigInt(chapter.forkFee))} STT</span>
               )}
@@ -414,7 +426,7 @@ const ChapterCard: React.FC<{
 
       {/* 如果有分叉，显示分叉选择器 */}
       {forks.length > 1 && onSelectFork && (
-        <ForkSelector parentChapter={chapter} forks={forks} onSelectFork={onSelectFork} />
+        <ForkSelector parentChapter={chapter} forks={forks} onSelectFork={onSelectFork} t={t} />
       )}
     </div>
   );
@@ -433,6 +445,7 @@ const ChapterTreeNode: React.FC<{
   allChapters: ChapterWithMetadata[];
   canUserContinueChapter: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => boolean;
   getContinueButtonTooltip: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }> = ({
   chapter,
   childChapters,
@@ -445,6 +458,7 @@ const ChapterTreeNode: React.FC<{
   allChapters,
   canUserContinueChapter,
   getContinueButtonTooltip,
+  t,
 }) => {
   const { address } = useAccount();
   const [metadata, setMetadata] = useState<ChapterMetadata | null>(null);
@@ -464,7 +478,7 @@ const ChapterTreeNode: React.FC<{
         setMetadata(data);
       } catch (err) {
         console.error(`❌ Failed to load tree node metadata for chapter ${chapter.id}:`, err);
-        const errorMsg = err instanceof Error ? err.message : "加载元数据失败";
+        const errorMsg = err instanceof Error ? err.message : t("error.metadata_load_failed");
         setMetadataError(errorMsg);
 
         // Auto-retry for recent chapters
@@ -508,7 +522,7 @@ const ChapterTreeNode: React.FC<{
             <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h4 className="font-semibold text-base-content flex items-center gap-2">
-                  第 {chapter.chapterNumber} 章
+                  {t("chapter.title", { number: chapter.chapterNumber })}
                   {(metadataLoading || retrying) && <span className="loading loading-spinner loading-xs"></span>}
                   {metadataError && (
                     <button
@@ -517,7 +531,7 @@ const ChapterTreeNode: React.FC<{
                         setMetadataLoading(true);
                       }}
                       className="btn btn-xs btn-ghost"
-                      title="重新加载章节信息"
+                      title={t("chapter.retry_loading")}
                     >
                       🔄
                     </button>
@@ -527,9 +541,9 @@ const ChapterTreeNode: React.FC<{
                 {metadata?.title ? (
                   <p className="text-sm text-base-content/70 mt-1">{metadata.title}</p>
                 ) : metadataError ? (
-                  <p className="text-xs text-warning mt-1">📖 章节信息加载中...</p>
+                  <p className="text-xs text-warning mt-1">{t("chapter.info_loading")}</p>
                 ) : metadataLoading ? (
-                  <p className="text-xs text-base-content/50 mt-1">正在加载章节标题...</p>
+                  <p className="text-xs text-base-content/50 mt-1">{t("chapter.loading_content")}</p>
                 ) : null}
 
                 <div className="flex items-center gap-4 text-xs text-base-content/60 mt-2">
@@ -565,17 +579,17 @@ const ChapterTreeNode: React.FC<{
               <div className="flex gap-2">
                 <a href={`/story/${storyId}/chapter/${chapter.id}`} className="btn btn-xs btn-primary gap-1">
                   <BookOpenIcon className="w-3 h-3" />
-                  阅读
+                  {t("button.read")}
                 </a>
 
                 <button
                   onClick={() => onTip(storyId, chapter.id)}
                   className="btn btn-xs btn-secondary gap-1"
                   disabled={!address}
-                  title={!address ? "请先连接钱包" : "给章节作者打赏"}
+                  title={!address ? t("chapter.connect_wallet_tip") : t("chapter.tip_tooltip")}
                 >
                   <CurrencyDollarIcon className="w-3 h-3" />
-                  打赏
+                  {t("chapter.tip_chapter")}
                 </button>
               </div>
 
@@ -587,7 +601,7 @@ const ChapterTreeNode: React.FC<{
                   title={getContinueButtonTooltip(chapter, allChapters)}
                 >
                   <PlusIcon className="w-3 h-3" />
-                  续写
+                  {t("chapter.continue_chapter")}
                 </button>
 
                 <button
@@ -596,12 +610,12 @@ const ChapterTreeNode: React.FC<{
                   disabled={!address}
                   title={
                     !address
-                      ? "请先连接钱包"
-                      : `基于此章节创建分叉${chapter.forkFee && chapter.forkFee !== "0" ? ` (需支付 ${formatEther(BigInt(chapter.forkFee))} STT)` : ""}`
+                      ? t("wallet.connect")
+                      : t("chapter.fork_tooltip_fee", { fee: formatEther(BigInt(chapter.forkFee)) })
                   }
                 >
                   <ShareIcon className="w-3 h-3" />
-                  分叉
+                  {t("chapter.fork_chapter")}
                   {chapter.forkFee && chapter.forkFee !== "0" && (
                     <span className="badge badge-warning badge-xs">{formatEther(BigInt(chapter.forkFee))} STT</span>
                   )}
@@ -613,7 +627,7 @@ const ChapterTreeNode: React.FC<{
             {childChapters.length > 1 && (
               <div className="mt-2 text-xs text-warning flex items-center gap-1">
                 <ShareIcon className="w-3 h-3" />
-                <span>此章节有 {childChapters.length} 个分叉</span>
+                <span>{t("chapter.has_forks", { count: childChapters.length })}</span>
               </div>
             )}
           </div>
@@ -639,6 +653,7 @@ const ChapterTreeNode: React.FC<{
                 allChapters={allChapters}
                 canUserContinueChapter={canUserContinueChapter}
                 getContinueButtonTooltip={getContinueButtonTooltip}
+                t={t}
               />
             );
           })}
@@ -657,7 +672,8 @@ const ChapterTreeView: React.FC<{
   storyId: string;
   canUserContinueChapter: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => boolean;
   getContinueButtonTooltip: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => string;
-}> = ({ chapters, onFork, onTip, onContinue, storyId, canUserContinueChapter, getContinueButtonTooltip }) => {
+  t: (key: string, params?: Record<string, string | number>) => string;
+}> = ({ chapters, onFork, onTip, onContinue, storyId, canUserContinueChapter, getContinueButtonTooltip, t }) => {
   // 构建树形结构
   const buildTree = () => {
     const rootChapters = chapters.filter(chapter => chapter.parentId === "0");
@@ -679,10 +695,10 @@ const ChapterTreeView: React.FC<{
       {/* 树形统计信息 */}
       <div className="flex items-center justify-between text-sm text-base-content/70 pb-4 border-b border-base-300">
         <div className="flex items-center gap-4">
-          <span>总章节: {chapters.length}</span>
-          <span>分叉点: {chapters.filter(c => getChildren(c.id).length > 1).length}</span>
+          <span>{t("story.detail.total_chapters", { count: chapters.length })}</span>
+          <span>{t("story.detail.fork_points", { count: chapters.filter(c => getChildren(c.id).length > 1).length })}</span>
         </div>
-        <div className="text-xs text-base-content/50">点击节点可查看详细信息，使用操作按钮进行互动</div>
+        <div className="text-xs text-base-content/50">{t("story.detail.tree_help")}</div>
       </div>
 
       {/* 树形结构 */}
@@ -703,6 +719,7 @@ const ChapterTreeView: React.FC<{
               allChapters={chapters}
               canUserContinueChapter={canUserContinueChapter}
               getContinueButtonTooltip={getContinueButtonTooltip}
+              t={t}
             />
           );
         })}
@@ -719,6 +736,7 @@ const AddChapterModal: React.FC<{
   onChapterAdded: () => void;
 }> = ({ isOpen, onClose, storyId, parentId, onChapterAdded }) => {
   const { address } = useAccount();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -734,12 +752,12 @@ const AddChapterModal: React.FC<{
     e.preventDefault();
 
     if (!address) {
-      notification.error("请先连接钱包");
+      notification.error(t("error.wallet_connect_required"));
       return;
     }
 
     if (!formData.title.trim() || !formData.content.trim()) {
-      notification.error("标题和内容不能为空");
+      notification.error(t("error.title_content_required"));
       return;
     }
 
@@ -767,7 +785,7 @@ const AddChapterModal: React.FC<{
         args: [BigInt(storyId), BigInt(parentId), ipfsHash, parseEther(formData.forkFee)],
       });
 
-      notification.success("章节创建成功！");
+      notification.success(t("success.chapter_created"));
       setFormData({ title: "", content: "", forkFee: "0" });
       setImageUrl("");
       setImageCid("");
@@ -780,7 +798,7 @@ const AddChapterModal: React.FC<{
       onClose();
     } catch (error) {
       console.error("创建章节失败:", error);
-      notification.error(error instanceof Error ? error.message : "创建失败");
+      notification.error(error instanceof Error ? error.message : t("error.chapter_create_failed"));
     } finally {
       setIsCreating(false);
     }
@@ -793,19 +811,19 @@ const AddChapterModal: React.FC<{
       <div className="fixed inset-0 bg-black/50" onClick={onClose}></div>
       <div className="relative bg-base-100 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-xl font-bold mb-4">添加新章节</h2>
+          <h2 className="text-xl font-bold mb-4">{t("modal.add_chapter.title")}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">章节标题 *</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.chapter_title")}</span>
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className="input input-bordered w-full"
-                placeholder="输入章节标题..."
+                placeholder={t("modal.add_chapter.title_placeholder")}
                 disabled={isCreating}
                 required
               />
@@ -813,13 +831,13 @@ const AddChapterModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">章节内容 *</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.chapter_content")}</span>
               </label>
               <textarea
                 value={formData.content}
                 onChange={e => setFormData(prev => ({ ...prev, content: e.target.value }))}
                 className="textarea textarea-bordered w-full h-48"
-                placeholder="继续你的故事..."
+                placeholder={t("modal.add_chapter.content_placeholder")}
                 disabled={isCreating}
                 required
               />
@@ -827,8 +845,8 @@ const AddChapterModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">分叉费用</span>
-                <span className="label-text-alt">STT</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.fork_fee")}</span>
+                <span className="label-text-alt">{t("modal.add_chapter.fork_fee_unit")}</span>
               </label>
               <input
                 type="number"
@@ -844,7 +862,7 @@ const AddChapterModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">章节插图</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.chapter_image")}</span>
               </label>
               <ImageUploader
                 onImageUpload={(cid, url) => {
@@ -858,19 +876,19 @@ const AddChapterModal: React.FC<{
 
             <div className="flex gap-4 pt-4">
               <button type="button" onClick={onClose} className="btn btn-outline flex-1" disabled={isCreating}>
-                取消
+                {t("button.cancel")}
               </button>
 
               <button type="submit" className="btn btn-primary flex-1 gap-2" disabled={isCreating}>
                 {isCreating ? (
                   <>
                     <span className="loading loading-spinner loading-sm"></span>
-                    创建中...
+                    {t("modal.add_chapter.creating")}
                   </>
                 ) : (
                   <>
                     <PlusIcon className="w-4 h-4" />
-                    创建章节
+                    {t("modal.add_chapter.create")}
                   </>
                 )}
               </button>
@@ -890,6 +908,7 @@ const ContinueChapterModal: React.FC<{
   onChapterAdded: () => void;
 }> = ({ isOpen, onClose, storyId, parentChapter, onChapterAdded }) => {
   const { address } = useAccount();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -918,12 +937,12 @@ const ContinueChapterModal: React.FC<{
     e.preventDefault();
 
     if (!address) {
-      notification.error("请先连接钱包");
+      notification.error(t("error.wallet_connect_required"));
       return;
     }
 
     if (!formData.title.trim() || !formData.content.trim()) {
-      notification.error("标题和内容不能为空");
+      notification.error(t("error.title_content_required"));
       return;
     }
 
@@ -951,7 +970,7 @@ const ContinueChapterModal: React.FC<{
         args: [BigInt(storyId), BigInt(parentChapter.id), ipfsHash, parseEther(formData.forkFee)],
       });
 
-      notification.success("章节续写成功！");
+      notification.success(t("success.chapter_continued"));
       setFormData({ title: "", content: "", forkFee: "0" });
       setImageUrl("");
       setImageCid("");
@@ -964,7 +983,7 @@ const ContinueChapterModal: React.FC<{
       onClose();
     } catch (error) {
       console.error("续写章节失败:", error);
-      notification.error(error instanceof Error ? error.message : "续写失败");
+      notification.error(error instanceof Error ? error.message : t("error.chapter_continue_failed"));
     } finally {
       setIsCreating(false);
     }
@@ -977,12 +996,12 @@ const ContinueChapterModal: React.FC<{
       <div className="fixed inset-0 bg-black/50" onClick={onClose}></div>
       <div className="relative bg-base-100 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-xl font-bold mb-4">续写章节 - 第 {parentChapter.chapterNumber + 1} 章</h2>
+          <h2 className="text-xl font-bold mb-4">{t("modal.continue_chapter.title", { number: parentChapter.chapterNumber + 1 })}</h2>
 
           {/* 显示父章节信息 */}
           <div className="bg-base-200 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold text-sm text-base-content/70 mb-2">基于章节：</h3>
-            <p className="font-medium">第 {parentChapter.chapterNumber} 章</p>
+            <h3 className="font-semibold text-sm text-base-content/70 mb-2">{t("modal.continue_chapter.based_on")}</h3>
+            <p className="font-medium">{t("chapter.title", { number: parentChapter.chapterNumber })}</p>
             <div className="flex items-center gap-2 text-sm text-base-content/60 mt-1">
               <UserIcon className="w-3 h-3" />
               <Address address={parentChapter.author} size="sm" />
@@ -992,14 +1011,14 @@ const ContinueChapterModal: React.FC<{
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">章节标题 *</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.chapter_title")}</span>
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className="input input-bordered w-full"
-                placeholder="输入章节标题..."
+                placeholder={t("modal.add_chapter.title_placeholder")}
                 disabled={isCreating}
                 required
               />
@@ -1007,13 +1026,13 @@ const ContinueChapterModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">章节内容 *</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.chapter_content")}</span>
               </label>
               <textarea
                 value={formData.content}
                 onChange={e => setFormData(prev => ({ ...prev, content: e.target.value }))}
                 className="textarea textarea-bordered w-full h-48"
-                placeholder="继续这个故事..."
+                placeholder={t("modal.continue_chapter.content_placeholder")}
                 disabled={isCreating}
                 required
               />
@@ -1021,8 +1040,8 @@ const ContinueChapterModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">设置续写费用</span>
-                <span className="label-text-alt">STT (其他用户续写此章节时需支付)</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.fork_fee")}</span>
+                <span className="label-text-alt">{t("modal.continue_chapter.fork_fee_desc")}</span>
               </label>
               <input
                 type="number"
@@ -1038,7 +1057,7 @@ const ContinueChapterModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">章节插图</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.chapter_image")}</span>
               </label>
               <ImageUploader
                 onImageUpload={(cid, url) => {
@@ -1052,19 +1071,19 @@ const ContinueChapterModal: React.FC<{
 
             <div className="flex gap-4 pt-4">
               <button type="button" onClick={onClose} className="btn btn-outline flex-1" disabled={isCreating}>
-                取消
+                {t("button.cancel")}
               </button>
 
               <button type="submit" className="btn btn-primary flex-1 gap-2" disabled={isCreating}>
                 {isCreating ? (
                   <>
                     <span className="loading loading-spinner loading-sm"></span>
-                    续写中...
+                    {t("modal.continue_chapter.continuing")}
                   </>
                 ) : (
                   <>
                     <PlusIcon className="w-4 h-4" />
-                    续写章节
+                    {t("modal.continue_chapter.continue")}
                   </>
                 )}
               </button>
@@ -1084,6 +1103,7 @@ const ForkModal: React.FC<{
   onForkSuccess: () => void;
 }> = ({ isOpen, onClose, storyId, parentChapter, onForkSuccess }) => {
   const { address } = useAccount();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -1112,19 +1132,19 @@ const ForkModal: React.FC<{
     e.preventDefault();
 
     if (!address) {
-      notification.error("请先连接钱包");
+      notification.error(t("error.wallet_connect_required"));
       return;
     }
 
     if (!formData.title.trim() || !formData.content.trim()) {
-      notification.error("标题和内容不能为空");
+      notification.error(t("error.title_content_required"));
       return;
     }
 
     // 检查fork费用
     const requiredFee = parseFloat(forkFeeRequired);
     if (requiredFee > 0) {
-      const confirm = window.confirm(`分叉此章节需要支付 ${forkFeeRequired} STT 给原作者。确定要继续吗？`);
+      const confirm = window.confirm(t("prompt.fork_confirm", { fee: forkFeeRequired }));
       if (!confirm) {
         return;
       }
@@ -1157,7 +1177,7 @@ const ForkModal: React.FC<{
         value: valueToSend,
       });
 
-      notification.success("章节分叉成功！");
+      notification.success(t("success.chapter_forked"));
       setFormData({ title: "", content: "", forkFee: "0" });
       setImageUrl("");
       setImageCid("");
@@ -1170,7 +1190,7 @@ const ForkModal: React.FC<{
       onClose();
     } catch (error) {
       console.error("分叉失败:", error);
-      notification.error(error instanceof Error ? error.message : "分叉失败");
+      notification.error(error instanceof Error ? error.message : t("error.chapter_fork_failed"));
     } finally {
       setIsForking(false);
     }
@@ -1183,17 +1203,17 @@ const ForkModal: React.FC<{
       <div className="fixed inset-0 bg-black/50" onClick={onClose}></div>
       <div className="relative bg-base-100 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-xl font-bold mb-4">创建章节分叉</h2>
+          <h2 className="text-xl font-bold mb-4">{t("modal.fork_chapter.title")}</h2>
 
           {/* 显示原章节信息 */}
           <div className="bg-base-200 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold text-sm text-base-content/70 mb-2">基于章节：</h3>
-            <p className="font-medium">第 {parentChapter.chapterNumber} 章</p>
+            <h3 className="font-semibold text-sm text-base-content/70 mb-2">{t("modal.continue_chapter.based_on")}</h3>
+            <p className="font-medium">{t("chapter.title", { number: parentChapter.chapterNumber })}</p>
             <div className="flex items-center gap-2 text-sm text-base-content/60 mt-1">
               <UserIcon className="w-3 h-3" />
               <Address address={parentChapter.author} size="sm" />
             </div>
-            <div className="text-xs text-base-content/50 mt-2">将创建一个新的章节分支，仍属于当前故事</div>
+            <div className="text-xs text-base-content/50 mt-2">{t("modal.fork_chapter.chapter_note")}</div>
           </div>
 
           {/* 如果需要支付fork费用，显示提醒 */}
@@ -1201,8 +1221,8 @@ const ForkModal: React.FC<{
             <div className="alert alert-warning mb-4">
               <InformationCircleIcon className="w-5 h-5" />
               <div>
-                <div className="font-semibold">需要支付分叉费用</div>
-                <div className="text-sm">分叉此章节需要支付 {forkFeeRequired} STT</div>
+                <div className="font-semibold">{t("modal.fork_chapter.fee_required")}</div>
+                <div className="text-sm">{t("modal.fork_chapter.fee_description", { fee: forkFeeRequired })}</div>
               </div>
             </div>
           )}
@@ -1210,14 +1230,14 @@ const ForkModal: React.FC<{
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">分叉章节标题 *</span>
+                <span className="label-text font-medium">{t("modal.fork_chapter.fork_title")}</span>
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className="input input-bordered w-full"
-                placeholder="输入分叉章节的标题..."
+                placeholder={t("modal.fork_chapter.title_placeholder")}
                 disabled={isForking}
                 required
               />
@@ -1225,13 +1245,13 @@ const ForkModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">分叉内容 *</span>
+                <span className="label-text font-medium">{t("modal.fork_chapter.fork_content")}</span>
               </label>
               <textarea
                 value={formData.content}
                 onChange={e => setFormData(prev => ({ ...prev, content: e.target.value }))}
                 className="textarea textarea-bordered w-full h-48"
-                placeholder="从这里开始你的分叉章节..."
+                placeholder={t("modal.fork_chapter.content_placeholder")}
                 disabled={isForking}
                 required
               />
@@ -1239,8 +1259,8 @@ const ForkModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">设置续写费用</span>
-                <span className="label-text-alt">STT (其他用户续写此分叉章节时需支付)</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.fork_fee")}</span>
+                <span className="label-text-alt">{t("modal.fork_chapter.fork_fee_desc")}</span>
               </label>
               <input
                 type="number"
@@ -1256,7 +1276,7 @@ const ForkModal: React.FC<{
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">章节插图</span>
+                <span className="label-text font-medium">{t("modal.add_chapter.chapter_image")}</span>
               </label>
               <ImageUploader
                 onImageUpload={(cid, url) => {
@@ -1270,19 +1290,21 @@ const ForkModal: React.FC<{
 
             <div className="flex gap-4 pt-4">
               <button type="button" onClick={onClose} className="btn btn-outline flex-1" disabled={isForking}>
-                取消
+                {t("button.cancel")}
               </button>
 
               <button type="submit" className="btn btn-primary flex-1 gap-2" disabled={isForking}>
                 {isForking ? (
                   <>
                     <span className="loading loading-spinner loading-sm"></span>
-                    分叉中...
+                    {t("modal.fork_chapter.forking")}
                   </>
                 ) : (
                   <>
                     <ShareIcon className="w-4 h-4" />
-                    {forkFeeRequired !== "0" ? `支付 ${forkFeeRequired} STT 并创建分叉` : "创建章节分叉"}
+                    {forkFeeRequired !== "0"
+                      ? t("modal.fork_chapter.fork_button_fee", { fee: forkFeeRequired })
+                      : t("modal.fork_chapter.fork_button")}
                   </>
                 )}
               </button>
@@ -1333,15 +1355,15 @@ const StoryDetailPage = () => {
   // 获取续写按钮的提示文本
   const getContinueButtonTooltip = useCallback(
     (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => {
-      if (!address) return "请先连接钱包";
-      if (chapter.author.toLowerCase() !== address.toLowerCase()) return "只有章节作者可以续写自己的章节";
+      if (!address) return t("wallet.connect");
+      if (chapter.author.toLowerCase() !== address.toLowerCase()) return t("chapter.only_author_continue");
 
       const hasChildren = allChapters.some(c => c.parentId === chapter.id);
-      if (hasChildren) return "只有最新章节才能续写";
+      if (hasChildren) return t("chapter.only_latest_continue");
 
-      return "续写此章节";
+      return t("chapter.continue_this_chapter");
     },
-    [address],
+    [address, t],
   );
 
   // 直接使用fetch获取数据，避开hook问题
@@ -1372,7 +1394,7 @@ const StoryDetailPage = () => {
             loadStoryMetadata(storyInfo.ipfsHash);
           }
         } else {
-          throw new Error(`故事数据获取失败: ${storyRes.status}`);
+          throw new Error(t("error.story_data_fetch_failed", { status: storyRes.status }));
         }
 
         // 获取章节数据
@@ -1383,13 +1405,13 @@ const StoryDetailPage = () => {
         }
       } catch (err) {
         console.error("获取数据失败:", err);
-        setError(err instanceof Error ? err.message : "获取数据失败");
+        setError(err instanceof Error ? err.message : t("error.fetch_data_failed"));
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [storyId],
+    [storyId, t],
   );
 
   // 加载故事元数据
@@ -1408,15 +1430,15 @@ const StoryDetailPage = () => {
       };
       setStoryMetadata(validatedMetadata);
     } catch (err) {
-      console.error("加载故事元数据失败:", err);
+      console.error(t("error.load_story_metadata_failed"), err);
     } finally {
       setMetadataLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchData();
-  }, [storyId]);
+  }, [fetchData]);
 
   // 为每个章节添加 metadata 字段以支持类型检查
   const chaptersWithMetadata: ChapterWithMetadata[] = (chapters || []).map(chapter => ({
@@ -1440,7 +1462,7 @@ const StoryDetailPage = () => {
       return;
     }
 
-    const tipAmount = prompt("请输入打赏金额 (STT):", "0.01");
+    const tipAmount = prompt(t("prompt.tip_amount"), "0.01");
     if (!tipAmount || parseFloat(tipAmount) <= 0) return;
 
     try {
@@ -1457,26 +1479,26 @@ const StoryDetailPage = () => {
       }, 3000); // Increase delay to 3 seconds
     } catch (error) {
       console.error("打赏失败:", error);
-      notification.error("打赏失败");
+      notification.error(t("error.tip_failed"));
     }
   };
 
   const handleContinueChapter = (chapterId: string) => {
     if (!address) {
-      notification.error("请先连接钱包");
+      notification.error(t("error.wallet_connect_required"));
       return;
     }
 
     // 找到要续写的章节
     const chapter = chaptersWithMetadata.find(ch => ch.id === chapterId);
     if (!chapter) {
-      notification.error("章节不存在");
+      notification.error(t("error.chapter_not_exist"));
       return;
     }
 
     // 检查续写权限：只有章节作者可以续写自己的章节
     if (chapter.author.toLowerCase() !== address.toLowerCase()) {
-      notification.error("只有章节作者可以续写自己的章节");
+      notification.error(t("error.only_author_continue"));
       return;
     }
 
@@ -1486,14 +1508,14 @@ const StoryDetailPage = () => {
 
   const handleFork = (chapterId: string) => {
     if (!address) {
-      notification.error("请先连接钱包");
+      notification.error(t("error.wallet_connect_required"));
       return;
     }
 
     // 找到要分叉的章节
     const chapter = chaptersWithMetadata.find(ch => ch.id === chapterId);
     if (!chapter) {
-      notification.error("章节不存在");
+      notification.error(t("error.chapter_not_exist"));
       return;
     }
 
@@ -1521,9 +1543,11 @@ const StoryDetailPage = () => {
       <div className="container mx-auto px-4 py-8 max-w-6xl text-center">
         <div className="alert alert-error">
           <InformationCircleIcon className="w-6 h-6" />
-          <span>加载失败: {error}</span>
-          <button className="btn btn-sm" onClick={fetchData}>
-            重试
+          <span>
+            {t("story.detail.load_failed")}: {error}
+          </span>
+          <button className="btn btn-sm" onClick={() => fetchData()}>
+            {t("story.detail.retry")}
           </button>
         </div>
       </div>
@@ -1535,7 +1559,7 @@ const StoryDetailPage = () => {
       <div className="container mx-auto px-4 py-8 max-w-6xl text-center">
         <div className="alert alert-error">
           <InformationCircleIcon className="w-6 h-6" />
-          <span>故事不存在或加载失败</span>
+          <span>{t("story.detail.story_not_found")}</span>
         </div>
       </div>
     );
@@ -1547,14 +1571,14 @@ const StoryDetailPage = () => {
       {refreshing && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-primary text-primary-content px-4 py-2 rounded-lg shadow-lg">
           <span className="loading loading-spinner loading-sm"></span>
-          <span>正在更新数据...</span>
+          <span>{t("story.detail.updating")}</span>
         </div>
       )}
 
       {/* 返回按钮 */}
       <button onClick={() => router.back()} className="btn btn-ghost gap-2 mb-6">
         <ArrowLeftIcon className="w-4 h-4" />
-        返回
+        {t("story.detail.back")}
       </button>
 
       {/* 故事信息 */}
@@ -1569,9 +1593,10 @@ const StoryDetailPage = () => {
             ) : (
               <StoryCover
                 image={storyMetadata?.image}
-                title={storyMetadata?.title || `故事 #${storyId}`}
+                title={storyMetadata?.title || t("explore.story_alt", { id: storyId })}
                 storyId={storyId}
                 className="h-64 w-full"
+                t={t}
               />
             )}
           </div>
@@ -1580,7 +1605,7 @@ const StoryDetailPage = () => {
         <div className="card-body">
           {/* 标题和基本信息 */}
           <div className="mb-4">
-            <h1 className="text-3xl font-bold mb-2">{storyMetadata?.title || `故事 #${storyId}`}</h1>
+            <h1 className="text-3xl font-bold mb-2">{storyMetadata?.title || t("explore.story_alt", { id: storyId })}</h1>
             {storyMetadata?.description && <p className="text-base-content/70 mb-4">{storyMetadata.description}</p>}
 
             {/* 标签 */}
@@ -1619,12 +1644,12 @@ const StoryDetailPage = () => {
 
               <div className="flex items-center gap-1 text-sm text-base-content/70">
                 <ShareIcon className="w-4 h-4" />
-                <span>{story.forkCount} 分叉</span>
+                <span>{story.forkCount} {t("story.forks")}</span>
               </div>
 
               <div className="flex items-center gap-1 text-sm text-base-content/70">
                 <CurrencyDollarIcon className="w-4 h-4" />
-                <span>{formatEther(BigInt(story.totalTips))} STT 打赏</span>
+                <span>{formatEther(BigInt(story.totalTips))} STT {t("story.tip")}</span>
               </div>
             </div>
 
@@ -1632,10 +1657,10 @@ const StoryDetailPage = () => {
               <button
                 onClick={() => setShowAddChapter(true)}
                 className="btn btn-primary gap-2"
-                title="添加新章节（仅故事作者可操作）"
+                title={t("story.detail.add_chapter_tooltip")}
               >
                 <PlusIcon className="w-4 h-4" />
-                添加章节
+                {t("story.add_chapter")}
               </button>
             )}
 
@@ -1658,7 +1683,7 @@ const StoryDetailPage = () => {
                   )}
                 >
                   <PlusIcon className="w-4 h-4" />
-                  续写故事
+                  {t("story.detail.continue_story")}
                 </button>
 
                 <button
@@ -1667,10 +1692,10 @@ const StoryDetailPage = () => {
                     handleFork(lastChapter.id);
                   }}
                   className="btn btn-outline gap-2"
-                  title="基于这个故事创建分叉"
+                  title={t("story.detail.fork_story_tooltip")}
                 >
                   <ShareIcon className="w-4 h-4" />
-                  分叉故事
+                  {t("story.detail.fork_story_button")}
                 </button>
               </div>
             )}
@@ -1680,14 +1705,14 @@ const StoryDetailPage = () => {
               <button
                 onClick={() => setShowAddChapter(true)}
                 className="btn btn-secondary gap-2"
-                title="为这个故事添加第一章"
+                title={t("story.detail.add_first_chapter")}
               >
                 <PlusIcon className="w-4 h-4" />
-                {story.author === address ? "添加第一章" : "续写第一章"}
+                {story.author === address ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
               </button>
             )}
 
-            {!address && <div className="text-sm text-base-content/60">连接钱包后可续写章节或创建分叉</div>}
+            {!address && <div className="text-sm text-base-content/60">{t("story.detail.connect_wallet_actions")}</div>}
           </div>
         </div>
       </div>
@@ -1697,7 +1722,7 @@ const StoryDetailPage = () => {
         <div className="flex justify-between items-center">
           <h2 className="text-3xl font-bold flex items-center gap-3">
             <BookOpenIcon className="w-8 h-8 text-primary" />
-            故事结构
+            {t("story.detail.story_structure")}
           </h2>
           {/* 快速操作按钮 */}
           {address && chaptersWithMetadata.length > 0 && (
@@ -1717,7 +1742,7 @@ const StoryDetailPage = () => {
                 )}
               >
                 <PlusIcon className="w-5 h-5" />
-                续写最新章节
+                {t("story.detail.continue_latest")}
               </button>
               <button
                 onClick={() => {
@@ -1725,10 +1750,10 @@ const StoryDetailPage = () => {
                   handleFork(lastChapter.id);
                 }}
                 className="btn btn-outline gap-2"
-                title="分叉最新章节"
+                title={t("story.detail.fork_latest")}
               >
                 <ShareIcon className="w-5 h-5" />
-                分叉最新章节
+                {t("story.detail.fork_latest")}
               </button>
             </div>
           )}
@@ -1744,20 +1769,21 @@ const StoryDetailPage = () => {
               storyId={storyId}
               canUserContinueChapter={canUserContinueChapter}
               getContinueButtonTooltip={getContinueButtonTooltip}
+              t={t}
             />
           </div>
         ) : (
           <div className="text-center py-8">
             <BookOpenIcon className="w-12 h-12 mx-auto text-base-content/30 mb-4" />
-            <p className="text-base-content/70 mb-2">还没有章节</p>
-            <p className="text-sm text-base-content/50 mb-4">任何人都可以为这个故事添加第一章，开始精彩的故事之旅</p>
+            <p className="text-base-content/70 mb-2">{t("story.detail.no_chapters")}</p>
+            <p className="text-sm text-base-content/50 mb-4">{t("story.detail.no_chapters_desc")}</p>
             {address ? (
               <button onClick={() => setShowAddChapter(true)} className="btn btn-primary mt-2 gap-2">
                 <PlusIcon className="w-4 h-4" />
-                {story.author === address ? "添加第一章" : "续写第一章"}
+                {story.author === address ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
               </button>
             ) : (
-              <div className="text-sm text-base-content/60">连接钱包后即可添加第一章</div>
+              <div className="text-sm text-base-content/60">{t("story.detail.connect_wallet_desc")}</div>
             )}
           </div>
         )}
@@ -1845,7 +1871,7 @@ const StoryDetailPage = () => {
                 handleFork(lastChapter.id);
               }}
               className="btn btn-outline btn-circle shadow-lg hover:shadow-xl transition-all"
-              title="分叉最新章节"
+              title={t("story.detail.fork_latest")}
             >
               <ShareIcon className="w-5 h-5" />
             </button>

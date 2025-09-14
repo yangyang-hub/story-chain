@@ -16,6 +16,7 @@ import {
 import { CommentSection } from "~~/components/interactions/CommentSection";
 import { LikeButton } from "~~/components/interactions/LikeButton";
 import { Address } from "~~/components/scaffold-eth";
+import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { ChapterData } from "~~/lib/monitoring/types";
 import { type ChapterMetadata, getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
@@ -35,6 +36,7 @@ interface StoryMetadata {
 
 // 章节内容显示组件
 const ChapterContent: React.FC<{ cid: string }> = ({ cid }) => {
+  const { t } = useLanguage();
   const [content, setContent] = useState<string>("");
   const [imageUrl, setImageUrl] = useState<string>("");
   const [chapterTitle, setChapterTitle] = useState<string>("");
@@ -46,7 +48,7 @@ const ChapterContent: React.FC<{ cid: string }> = ({ cid }) => {
   useEffect(() => {
     const loadContent = async () => {
       if (!cid) {
-        setError("无效的内容标识");
+        setError(t("chapter.read.invalid_content_id"));
         setLoading(false);
         return;
       }
@@ -59,7 +61,7 @@ const ChapterContent: React.FC<{ cid: string }> = ({ cid }) => {
         if (data?.content) {
           setContent(data.content);
         } else {
-          setError("内容为空");
+          setError(t("chapter.read.content_empty"));
         }
 
         // 加载章节标题
@@ -73,15 +75,15 @@ const ChapterContent: React.FC<{ cid: string }> = ({ cid }) => {
           setImageLoading(true);
         }
       } catch (err) {
-        console.error("加载内容失败:", err);
-        setError("加载内容失败");
+        console.error(t("chapter.read.load_content_failed"), err);
+        setError(t("chapter.read.load_content_failed"));
       } finally {
         setLoading(false);
       }
     };
 
     loadContent();
-  }, [cid]);
+  }, [cid, t]);
 
   const handleImageLoad = () => {
     setImageLoading(false);
@@ -128,7 +130,7 @@ const ChapterContent: React.FC<{ cid: string }> = ({ cid }) => {
             )}
             <img
               src={imageUrl}
-              alt={chapterTitle || "章节插图"}
+              alt={chapterTitle || t("chapter.read.chapter_image")}
               className="max-w-full max-h-96 rounded-lg shadow-lg mx-auto"
               onLoad={handleImageLoad}
               onError={handleImageError}
@@ -152,6 +154,7 @@ const ForkSelector: React.FC<{
   currentChapterId: string;
   storyId: string;
 }> = ({ forks, currentChapterId, storyId }) => {
+  const { t } = useLanguage();
   if (forks.length <= 1) return null;
 
   return (
@@ -159,10 +162,10 @@ const ForkSelector: React.FC<{
       <div className="card-body">
         <h3 className="card-title text-warning">
           <ShareIcon className="w-5 h-5" />
-          故事分叉点
+          {t("chapter.read.story_fork_point")}
         </h3>
         <p className="text-sm text-base-content/70 mb-4">
-          这里有 {forks.length} 个不同的故事发展方向，选择一个继续阅读：
+          {t("chapter.read.fork_description", { count: forks.length })}
         </p>
 
         <div className="grid gap-3">
@@ -177,22 +180,24 @@ const ForkSelector: React.FC<{
               <div className="card-body p-4">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2 text-xs text-base-content/60">
-                    <span className="badge badge-outline">分支 {index + 1}</span>
+                    <span className="badge badge-outline">{t("chapter.read.branch_label", { number: index + 1 })}</span>
                     <UserIcon className="w-3 h-3" />
                     <Address address={fork.author} size="sm" />
                   </div>
-                  {fork.id === currentChapterId && <span className="badge badge-primary badge-sm">当前</span>}
+                  {fork.id === currentChapterId && (
+                    <span className="badge badge-primary badge-sm">{t("chapter.read.current")}</span>
+                  )}
                 </div>
 
                 <div className="text-sm">
-                  <div className="text-base-content/50">点击阅读这个分支</div>
+                  <div className="text-base-content/50">{t("chapter.read.click_to_read")}</div>
                 </div>
 
                 <div className="flex justify-between items-center text-xs text-base-content/60 mt-2">
                   <span>{new Date(fork.createdTime * 1000).toLocaleDateString()}</span>
                   <div className="flex items-center gap-4">
                     <span>❤️ {fork.likes}</span>
-                    <span>💰 {formatEther(BigInt(fork.totalTips))} STT</span>
+                    <span>{t("chapter.read.tip_earned", { amount: formatEther(BigInt(fork.totalTips)) })}</span>
                   </div>
                 </div>
               </div>
@@ -205,6 +210,7 @@ const ForkSelector: React.FC<{
 };
 
 const ChapterReadingPage = () => {
+  const { t } = useLanguage();
   const { id: storyId, chapterId } = useParams();
   const router = useRouter();
   const { address } = useAccount();
@@ -235,7 +241,7 @@ const ChapterReadingPage = () => {
             const metadata = await getJSONFromIPFS(storyInfo.ipfsHash);
             setStoryMetadata(metadata);
           } catch (err) {
-            console.error("加载故事元数据失败:", err);
+            console.error(t("chapter.read.load_story_metadata_failed"), err);
           }
         }
       }
@@ -252,18 +258,18 @@ const ChapterReadingPage = () => {
         if (currentChapter) {
           setChapter(currentChapter);
         } else {
-          throw new Error("章节不存在");
+          throw new Error(t("chapter.read.not_found"));
         }
       } else {
-        throw new Error("获取章节数据失败");
+        throw new Error(t("chapter.read.get_chapters_failed"));
       }
     } catch (err) {
-      console.error("获取数据失败:", err);
-      setError(err instanceof Error ? err.message : "获取数据失败");
+      console.error(t("chapter.read.get_data_failed"), err);
+      setError(err instanceof Error ? err.message : t("chapter.read.get_data_failed"));
     } finally {
       setLoading(false);
     }
-  }, [storyId, chapterId]);
+  }, [storyId, chapterId, t]);
 
   useEffect(() => {
     fetchData();
@@ -294,11 +300,11 @@ const ChapterReadingPage = () => {
 
   const handleTip = async () => {
     if (!address || !chapter) {
-      notification.error("请先连接钱包");
+      notification.error(t("chapter.read.connect_wallet_first"));
       return;
     }
 
-    const amount = window.prompt("输入打赏金额 (STT):", "0.01");
+    const amount = window.prompt(t("chapter.read.input_tip_amount"), "0.01");
     if (!amount || parseFloat(amount) <= 0) return;
 
     try {
@@ -308,11 +314,11 @@ const ChapterReadingPage = () => {
         value: parseEther(amount),
       });
 
-      notification.success("打赏成功！");
+      notification.success(t("chapter.read.tip_success"));
       fetchData(); // 刷新数据
     } catch (error) {
-      console.error("打赏失败:", error);
-      notification.error("打赏失败");
+      console.error(t("chapter.read.tip_failed"), error);
+      notification.error(t("chapter.read.tip_failed"));
     }
   };
 
@@ -321,7 +327,7 @@ const ChapterReadingPage = () => {
       <div className="min-h-screen bg-base-100 flex items-center justify-center">
         <div className="text-center">
           <span className="loading loading-spinner loading-lg"></span>
-          <p className="mt-4 text-base-content/70">加载章节中...</p>
+          <p className="mt-4 text-base-content/70">{t("chapter.read.loading")}</p>
         </div>
       </div>
     );
@@ -332,10 +338,10 @@ const ChapterReadingPage = () => {
       <div className="min-h-screen bg-base-100 flex items-center justify-center">
         <div className="text-center">
           <div className="alert alert-error max-w-md">
-            <span>{error || "章节不存在"}</span>
+            <span>{error || t("chapter.read.not_found")}</span>
           </div>
           <button onClick={() => router.push(`/story/${storyId}`)} className="btn btn-primary mt-4">
-            返回故事页面
+            {t("chapter.read.return_to_story")}
           </button>
         </div>
       </div>
@@ -349,12 +355,16 @@ const ChapterReadingPage = () => {
         <div className="flex items-center justify-between mb-6">
           <button onClick={() => router.push(`/story/${storyId}`)} className="btn btn-ghost btn-sm gap-2">
             <ArrowLeftIcon className="w-4 h-4" />
-            返回故事
+            {t("chapter.read.back_to_story")}
           </button>
 
           <div className="text-center">
-            <h1 className="text-lg font-bold text-base-content">{storyMetadata?.title || `故事 #${storyId}`}</h1>
-            <p className="text-sm text-base-content/60">第 {chapter.chapterNumber} 章</p>
+            <h1 className="text-lg font-bold text-base-content">
+              {storyMetadata?.title || t("chapter.read.story_number", { id: String(storyId) })}
+            </h1>
+            <p className="text-sm text-base-content/60">
+              {t("chapter.read.chapter_number", { number: chapter.chapterNumber })}
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -371,7 +381,9 @@ const ChapterReadingPage = () => {
             {/* 章节标题和信息 */}
             <div className="border-b border-base-300 pb-4 mb-6">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xl font-bold text-base-content">第 {chapter.chapterNumber} 章</h2>
+                <h2 className="text-xl font-bold text-base-content">
+                  {t("chapter.read.chapter_number", { number: chapter.chapterNumber })}
+                </h2>
                 <div className="flex items-center gap-2 text-sm text-base-content/60">
                   <UserIcon className="w-4 h-4" />
                   <Address address={chapter.author} />
@@ -380,9 +392,11 @@ const ChapterReadingPage = () => {
 
               <div className="flex items-center gap-4 text-sm text-base-content/60">
                 <span>{new Date(chapter.createdTime * 1000).toLocaleString()}</span>
-                <span>💰 {formatEther(BigInt(chapter.totalTips))} STT 打赏</span>
+                <span>{t("chapter.read.tip_earned", { amount: formatEther(BigInt(chapter.totalTips)) })}</span>
                 {chapter.forkFee && chapter.forkFee !== "0" && (
-                  <span>🔀 分叉费用: {formatEther(BigInt(chapter.forkFee))} STT</span>
+                  <span>
+                    🔀 {t("story.fork_fee")}: {formatEther(BigInt(chapter.forkFee))} STT
+                  </span>
                 )}
               </div>
             </div>
@@ -399,7 +413,7 @@ const ChapterReadingPage = () => {
             {prevChapter ? (
               <a href={`/story/${storyId}/chapter/${prevChapter.id}`} className="btn btn-outline gap-2">
                 <ChevronLeftIcon className="w-4 h-4" />
-                上一章
+                {t("chapter.read.previous")}
               </a>
             ) : (
               <div></div>
@@ -412,20 +426,20 @@ const ChapterReadingPage = () => {
               onClick={handleTip}
               className="btn btn-secondary btn-sm gap-2"
               disabled={!address}
-              title={!address ? "请先连接钱包" : "给章节作者打赏"}
+              title={!address ? t("chapter.read.connect_wallet_tip") : t("chapter.read.tip_author")}
             >
               <CurrencyDollarIcon className="w-4 h-4" />
-              打赏
+              {t("chapter.read.tip")}
             </button>
 
             <a href={`/story/${storyId}#chapter-${chapter.id}`} className="btn btn-primary btn-sm gap-2">
               <PlusIcon className="w-4 h-4" />
-              续写
+              {t("chapter.read.continue")}
             </a>
 
             <a href={`/story/${storyId}#fork-${chapter.id}`} className="btn btn-accent btn-sm gap-2">
               <ShareIcon className="w-4 h-4" />
-              分叉
+              {t("chapter.read.fork")}
             </a>
           </div>
 
@@ -433,13 +447,13 @@ const ChapterReadingPage = () => {
           <div className="flex-1 flex justify-end">
             {nextChapters.length === 1 ? (
               <a href={`/story/${storyId}/chapter/${nextChapters[0].id}`} className="btn btn-outline gap-2">
-                下一章
+                {t("chapter.read.next")}
                 <ChevronRightIcon className="w-4 h-4" />
               </a>
             ) : nextChapters.length > 1 ? (
               <div className="dropdown dropdown-end">
                 <button className="btn btn-outline gap-2">
-                  下一章 ({nextChapters.length})
+                  {t("chapter.read.next_branches", { count: nextChapters.length })}
                   <ChevronRightIcon className="w-4 h-4" />
                 </button>
                 <ul className="dropdown-content menu bg-base-100 rounded-box z-[1] w-64 p-2 shadow-xl border border-base-300 mt-1">
@@ -449,7 +463,7 @@ const ChapterReadingPage = () => {
                         href={`/story/${storyId}/chapter/${nextChapter.id}`}
                         className="flex justify-between items-center"
                       >
-                        <span>分支 {index + 1}</span>
+                        <span>{t("chapter.read.branch_label", { number: index + 1 })}</span>
                         <span className="text-xs text-base-content/60">
                           {new Date(nextChapter.createdTime * 1000).toLocaleDateString()}
                         </span>
@@ -465,7 +479,7 @@ const ChapterReadingPage = () => {
         </div>
 
         {/* 评论区 */}
-        <CommentSection tokenId={BigInt(chapter.id)} isStory={false} />
+        <CommentSection tokenId={BigInt(chapter.id)} tokenType="chapter" />
       </div>
     </div>
   );

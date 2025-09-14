@@ -61,7 +61,7 @@ const ForkStoryPage = () => {
 
   useEffect(() => {
     if (!storyId) {
-      notification.error("缺少故事ID参数");
+      notification.error(t("fork.missing_story_id"));
       router.back();
       return;
     }
@@ -85,8 +85,8 @@ const ForkStoryPage = () => {
         setParentData(data);
         setParentMetadata(metadata);
       } catch (error) {
-        console.error("加载原始内容失败:", error);
-        notification.error("加载原始内容失败");
+        console.error("Load original content failed:", error);
+        notification.error(t("error.unknown"));
       } finally {
         setLoadingParent(false);
       }
@@ -134,7 +134,7 @@ const ForkStoryPage = () => {
     if (!validateForm()) return;
 
     if (!storyId || !parentData) {
-      notification.error("缺少必要的参数");
+      notification.error(t("error.missing_parameters"));
       return;
     }
 
@@ -160,7 +160,7 @@ const ForkStoryPage = () => {
       // 跳转到故事详情页
       router.push(`/story/${storyId}`);
     } catch (error) {
-      console.error("分叉失败:", error);
+      console.error("Fork failed:", error);
       // 错误处理已在 useStoryChain 中处理
     }
   };
@@ -170,7 +170,7 @@ const ForkStoryPage = () => {
       <div className="container mx-auto px-4 py-8 max-w-4xl text-center">
         <div className="alert alert-error">
           <InformationCircleIcon className="w-6 h-6" />
-          <span>缺少故事ID参数</span>
+          <span>{t("fork.missing_story_id")}</span>
         </div>
       </div>
     );
@@ -196,7 +196,7 @@ const ForkStoryPage = () => {
       <div className="container mx-auto px-4 py-8 max-w-4xl text-center">
         <div className="alert alert-error">
           <InformationCircleIcon className="w-6 h-6" />
-          <span>原始内容不存在或加载失败</span>
+          <span>{t("fork.original_content_not_found")}</span>
         </div>
       </div>
     );
@@ -210,7 +210,7 @@ const ForkStoryPage = () => {
       {/* 返回按钮 */}
       <button onClick={() => router.back()} className="btn btn-ghost gap-2 mb-6">
         <ArrowLeftIcon className="w-4 h-4" />
-        返回
+        {t("fork.back")}
       </button>
 
       {/* 页面标题 */}
@@ -220,7 +220,7 @@ const ForkStoryPage = () => {
           {t("story.fork_story")}
         </h1>
         <p className="text-base-content/70">
-          {isChapterFork ? "基于现有章节创建新的故事分支" : "基于现有故事创建新的故事线"}
+          {isChapterFork ? t("fork.chapter_subtitle") : t("fork.story_subtitle")}
         </p>
       </div>
 
@@ -229,9 +229,9 @@ const ForkStoryPage = () => {
         <div className="alert alert-info mb-6">
           <CurrencyDollarIcon className="w-6 h-6" />
           <div>
-            <div className="font-semibold">需要支付分叉费用</div>
+            <div className="font-semibold">{t("fork.fee_required_title")}</div>
             <div className="text-sm">
-              分叉此{isChapterFork ? "章节" : "故事"}需要支付 {forkFeeEth} STT 给原作者
+              {t("fork.fee_required_desc", { type: isChapterFork ? t("story.chapter") : t("story.title"), fee: forkFeeEth })}
             </div>
           </div>
         </div>
@@ -240,7 +240,7 @@ const ForkStoryPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* 左侧：原始内容 */}
         <div className="space-y-6">
-          <h2 className="text-xl font-bold">原始{isChapterFork ? "章节" : "故事"}</h2>
+          <h2 className="text-xl font-bold">{isChapterFork ? t("fork.original_chapter") : t("fork.original_story")}</h2>
 
           <div className="card bg-base-100 shadow-lg">
             <div className="card-body">
@@ -256,15 +256,15 @@ const ForkStoryPage = () => {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1">
                     <BookOpenIcon className="w-4 h-4" />
-                    <span>{parentData.likes?.toString() || 0} 点赞</span>
+                    <span>{parentData.likes?.toString() || 0} {t("fork.likes")}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <ShareIcon className="w-4 h-4" />
-                    <span>{parentData.forkCount?.toString() || 0} 分叉</span>
+                    <span>{parentData.forkCount?.toString() || 0} {t("fork.forks")}</span>
                   </div>
                 </div>
 
-                <div className="text-xs text-base-content/60">分叉费: {forkFeeEth} STT</div>
+                <div className="text-xs text-base-content/60">{t("fork.fork_fee_label")}: {forkFeeEth} STT</div>
               </div>
             </div>
           </div>
@@ -272,16 +272,16 @@ const ForkStoryPage = () => {
 
         {/* 右侧：分叉表单 */}
         <div className="space-y-6">
-          <h2 className="text-xl font-bold">创建分叉</h2>
+          <h2 className="text-xl font-bold">{t("fork.create_fork")}</h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="card bg-base-100 shadow-lg">
               <div className="card-body">
-                <h3 className="card-title mb-4">基本信息</h3>
+                <h3 className="card-title mb-4">{t("fork.basic_info")}</h3>
 
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text font-medium">分叉标题 *</span>
+                    <span className="label-text font-medium">{t("fork.fork_title")}</span>
                   </label>
                   <input
                     type="text"
@@ -289,7 +289,7 @@ const ForkStoryPage = () => {
                     value={formData.title}
                     onChange={handleInputChange}
                     className="input input-bordered w-full"
-                    placeholder="为你的分叉起个标题..."
+                    placeholder={t("fork.fork_title_placeholder")}
                     disabled={isLoading}
                     required
                   />
@@ -297,19 +297,19 @@ const ForkStoryPage = () => {
 
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text font-medium">分叉内容 *</span>
+                    <span className="label-text font-medium">{t("fork.fork_content")}</span>
                   </label>
                   <textarea
                     name="content"
                     value={formData.content}
                     onChange={handleInputChange}
                     className="textarea textarea-bordered w-full h-48"
-                    placeholder="继续这个故事..."
+                    placeholder={t("fork.fork_content_placeholder")}
                     disabled={isLoading}
                     required
                   />
                   <label className="label">
-                    <span className="label-text-alt">{formData.content.length} 字符</span>
+                    <span className="label-text-alt">{formData.content.length} {t("fork.characters")}</span>
                   </label>
                 </div>
               </div>
@@ -319,7 +319,7 @@ const ForkStoryPage = () => {
               <div className="card-body">
                 <h3 className="card-title mb-4 flex items-center gap-2">
                   <PhotoIcon className="w-5 h-5" />
-                  章节插图
+                  {t("fork.chapter_illustration")}
                 </h3>
 
                 <ImageUploader onImageUpload={handleImageUpload} className="w-full" previewImage={imageUrl} />
@@ -330,12 +330,12 @@ const ForkStoryPage = () => {
               <div className="card-body">
                 <h3 className="card-title mb-4 flex items-center gap-2">
                   <CurrencyDollarIcon className="w-5 h-5" />
-                  经济设置
+                  {t("fork.economic_settings")}
                 </h3>
 
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text font-medium">我的分叉费用</span>
+                    <span className="label-text font-medium">{t("fork.my_fork_fee")}</span>
                     <span className="label-text-alt">STT</span>
                   </label>
                   <input
@@ -350,7 +350,7 @@ const ForkStoryPage = () => {
                     disabled={isLoading}
                   />
                   <label className="label">
-                    <span className="label-text-alt">其他用户分叉你的内容时需要支付的费用</span>
+                    <span className="label-text-alt">{t("fork.fork_fee_description")}</span>
                   </label>
                 </div>
 
@@ -358,11 +358,11 @@ const ForkStoryPage = () => {
                   <div className="alert alert-warning">
                     <InformationCircleIcon className="w-5 h-5" />
                     <div className="text-sm">
-                      <div className="font-medium">费用分配:</div>
-                      <div>• 你需要支付: {forkFeeEth} STT</div>
-                      <div>• 原故事作者将获得: {(parseFloat(forkFeeEth) * 0.1).toFixed(4)} STT</div>
-                      <div>• 原章节作者将获得: {(parseFloat(forkFeeEth) * 0.85).toFixed(4)} STT</div>
-                      <div>• 平台手续费: {(parseFloat(forkFeeEth) * 0.05).toFixed(4)} STT</div>
+                      <div className="font-medium">{t("fork.fee_distribution")}</div>
+                      <div>• {t("fork.you_pay", { fee: forkFeeEth })}</div>
+                      <div>• {t("fork.story_author_gets", { amount: (parseFloat(forkFeeEth) * 0.1).toFixed(4) })}</div>
+                      <div>• {t("fork.chapter_author_gets", { amount: (parseFloat(forkFeeEth) * 0.85).toFixed(4) })}</div>
+                      <div>• {t("fork.platform_fee", { amount: (parseFloat(forkFeeEth) * 0.05).toFixed(4) })}</div>
                     </div>
                   </div>
                 )}
@@ -383,12 +383,12 @@ const ForkStoryPage = () => {
                 {isLoading ? (
                   <>
                     <span className="loading loading-spinner loading-sm"></span>
-                    分叉中...
+                    {t("fork.forking")}
                   </>
                 ) : (
                   <>
                     <ShareIcon className="w-4 h-4" />
-                    创建分叉
+                    {t("fork.create_fork_button")}
                     {parseFloat(forkFeeEth) > 0 && <span className="text-xs">({forkFeeEth} STT)</span>}
                   </>
                 )}

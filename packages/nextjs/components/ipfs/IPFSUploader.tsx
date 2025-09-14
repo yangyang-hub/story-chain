@@ -37,7 +37,7 @@ export const IPFSUploader: React.FC<IPFSUploaderProps> = ({
 
     // 检查文件大小
     if (file.size > maxSize) {
-      const errorMsg = `文件大小不能超过 ${Math.round(maxSize / 1024 / 1024)}MB`;
+      const errorMsg = t("upload.file_size_exceeded", { size: Math.round(maxSize / 1024 / 1024) });
       onUploadError?.(errorMsg);
       return;
     }
@@ -64,8 +64,8 @@ export const IPFSUploader: React.FC<IPFSUploaderProps> = ({
         fileInputRef.current.value = "";
       }
     } catch (error) {
-      console.error("上传失败:", error);
-      onUploadError?.(error instanceof Error ? error.message : "上传失败");
+      console.error("Upload failed:", error);
+      onUploadError?.(error instanceof Error ? error.message : t("upload.upload_failed"));
     } finally {
       setIsUploading(false);
       setTimeout(() => setUploadProgress(0), 1000);
@@ -147,9 +147,9 @@ export const IPFSUploader: React.FC<IPFSUploaderProps> = ({
               <CloudArrowUpIcon className="w-12 h-12 text-base-content/50" />
             </div>
             <div>
-              <p className="text-sm font-medium text-base-content">点击上传或拖拽文件到此处</p>
-              <p className="text-xs text-base-content/60 mt-1">支持图片、文本、JSON 等文件类型</p>
-              <p className="text-xs text-base-content/40 mt-1">最大文件大小: {Math.round(maxSize / 1024 / 1024)}MB</p>
+              <p className="text-sm font-medium text-base-content">{t("upload.click_or_drag")}</p>
+              <p className="text-xs text-base-content/60 mt-1">{t("upload.supported_types")}</p>
+              <p className="text-xs text-base-content/40 mt-1">{t("upload.max_file_size", { size: Math.round(maxSize / 1024 / 1024) })}</p>
             </div>
           </div>
         )}
@@ -186,13 +186,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
     // 检查是否为图片
     if (!file.type.startsWith("image/")) {
-      onUploadError?.("请选择图片文件");
+      onUploadError?.(t("upload.select_image_file"));
       return;
     }
 
     // 检查文件大小 (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      onUploadError?.("图片大小不能超过 5MB");
+      onUploadError?.(t("upload.image_size_exceeded"));
       return;
     }
 
@@ -210,8 +210,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         fileInputRef.current.value = "";
       }
     } catch (error) {
-      console.error("图片上传失败:", error);
-      onUploadError?.(error instanceof Error ? error.message : "图片上传失败");
+      console.error("Image upload failed:", error);
+      onUploadError?.(error instanceof Error ? error.message : t("upload.image_upload_failed"));
     } finally {
       setIsUploading(false);
     }
@@ -267,7 +267,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
         {previewImage ? (
           <div className="relative group">
-            <img src={previewImage} alt="预览" className="max-h-64 mx-auto rounded-lg" />
+            <img src={previewImage} alt={t("upload.preview")} className="max-h-64 mx-auto rounded-lg" />
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
               <PhotoIcon className="w-8 h-8 text-white" />
             </div>
@@ -284,7 +284,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             <PhotoIcon className="w-8 h-8 text-base-content/50" />
             <div>
               <p className="text-sm font-medium text-base-content">{t("form.upload_image")}</p>
-              <p className="text-xs text-base-content/60">PNG, JPG, GIF (最大 5MB)</p>
+              <p className="text-xs text-base-content/60">{t("upload.image_formats")}</p>
             </div>
           </div>
         )}

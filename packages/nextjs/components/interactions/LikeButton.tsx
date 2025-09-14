@@ -6,6 +6,7 @@ import { HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
+import { useLanguage } from "~~/contexts/LanguageContext";
 
 interface LikeButtonProps {
   tokenId: bigint;
@@ -26,6 +27,7 @@ export const LikeButton: React.FC<LikeButtonProps> = ({
 }) => {
   const { address } = useAccount();
   const { likeStory, likeChapter, isLoading } = useStoryChain();
+  const { t } = useLanguage();
   const [likes, setLikes] = useState(currentLikes);
 
   // 检查用户是否已点赞
@@ -57,12 +59,12 @@ export const LikeButton: React.FC<LikeButtonProps> = ({
       onLikeSuccess?.();
     } catch (error) {
       // 错误处理已在 useStoryChain 中处理
-      console.error("点赞失败:", error);
+      console.error("Like failed:", error);
     }
   };
 
   const isDisabled = !address || hasLiked || isLoading;
-  const buttonTitle = hasLiked ? "已点赞" : address ? "点赞" : "请先连接钱包";
+  const buttonTitle = hasLiked ? t("like.liked") : address ? t("like.like") : t("like.connect_wallet");
 
   return (
     <button

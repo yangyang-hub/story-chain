@@ -57,8 +57,8 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
           setType("image");
         }
       } catch (err) {
-        console.error("加载 IPFS 内容失败:", err);
-        setError(err instanceof Error ? err.message : "加载失败");
+        console.error(t("ipfs.load_content_failed"), err);
+        setError(err instanceof Error ? err.message : t("ipfs.load_failed"));
       } finally {
         setLoading(false);
       }
@@ -108,10 +108,10 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
             <span className="truncate">IPFS: {cid}</span>
           </div>
           <div className="flex space-x-1">
-            <button onClick={() => copyToClipboard(cid)} className="btn btn-ghost btn-xs" title="复制 CID">
+            <button onClick={() => copyToClipboard(cid)} className="btn btn-ghost btn-xs" title={t("ipfs.copy_cid")}>
               <DocumentDuplicateIcon className="w-3 h-3" />
             </button>
-            <button onClick={() => copyToClipboard(ipfsUrl)} className="btn btn-ghost btn-xs" title="复制链接">
+            <button onClick={() => copyToClipboard(ipfsUrl)} className="btn btn-ghost btn-xs" title={t("ipfs.copy_link")}>
               <LinkIcon className="w-3 h-3" />
             </button>
           </div>
@@ -134,21 +134,21 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
           <div className="space-y-2">
             {(content.name || content.title) && (
               <div>
-                <label className="text-sm font-medium text-base-content/70">标题:</label>
+                <label className="text-sm font-medium text-base-content/70">{t("ipfs.title_label")}:</label>
                 <p className="text-lg font-semibold">{content.name || content.title}</p>
               </div>
             )}
 
             {content.description && (
               <div>
-                <label className="text-sm font-medium text-base-content/70">描述:</label>
+                <label className="text-sm font-medium text-base-content/70">{t("ipfs.description_label")}:</label>
                 <p className="text-base-content/90">{content.description}</p>
               </div>
             )}
 
             {content.content && (
               <div>
-                <label className="text-sm font-medium text-base-content/70">内容:</label>
+                <label className="text-sm font-medium text-base-content/70">{t("ipfs.content_label")}:</label>
                 <div className="prose prose-sm max-w-none mt-2 p-3 bg-base-200 rounded-lg">
                   <p className="whitespace-pre-wrap">{content.content}</p>
                 </div>
@@ -157,21 +157,21 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
 
             {content.author && (
               <div>
-                <label className="text-sm font-medium text-base-content/70">作者:</label>
+                <label className="text-sm font-medium text-base-content/70">{t("ipfs.author_label")}:</label>
                 <p className="font-mono text-sm">{content.author}</p>
               </div>
             )}
 
             {content.timestamp && (
               <div>
-                <label className="text-sm font-medium text-base-content/70">创建时间:</label>
+                <label className="text-sm font-medium text-base-content/70">{t("ipfs.created_time_label")}:</label>
                 <p className="text-sm">{new Date(content.timestamp).toLocaleString()}</p>
               </div>
             )}
 
             {content.attributes && content.attributes.length > 0 && (
               <div>
-                <label className="text-sm font-medium text-base-content/70">属性:</label>
+                <label className="text-sm font-medium text-base-content/70">{t("ipfs.attributes_label")}:</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                   {content.attributes.map((attr: any, index: number) => (
                     <div key={index} className="bg-base-200 p-2 rounded text-sm">
@@ -185,7 +185,7 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
 
             {content.tags && content.tags.length > 0 && (
               <div>
-                <label className="text-sm font-medium text-base-content/70">标签:</label>
+                <label className="text-sm font-medium text-base-content/70">{t("ipfs.tags_label")}:</label>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {content.tags.map((tag: string, index: number) => (
                     <span key={index} className="badge badge-sm badge-outline">
@@ -218,6 +218,7 @@ interface IPFSPreviewProps {
 export const IPFSPreview: React.FC<IPFSPreviewProps> = ({ cid, className = "", maxLines = 3 }) => {
   const [preview, setPreview] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const loadPreview = async () => {
@@ -244,8 +245,8 @@ export const IPFSPreview: React.FC<IPFSPreviewProps> = ({ cid, className = "", m
           setPreview(textData);
         }
       } catch (err) {
-        console.error("加载预览失败:", err);
-        setPreview("加载失败");
+        console.error(t("ipfs.load_preview_failed"), err);
+        setPreview(t("ipfs.load_failed"));
       } finally {
         setLoading(false);
       }

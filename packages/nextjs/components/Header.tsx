@@ -89,6 +89,7 @@ export const HeaderMenuLinks = () => {
  */
 export const Header = () => {
   const { targetNetwork } = useTargetNetwork();
+  const { t } = useLanguage();
   const isLocalNetwork = targetNetwork.id === hardhat.id;
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
@@ -117,8 +118,8 @@ export const Header = () => {
             <Image alt="StoryChain logo" className="cursor-pointer" fill src="/story-chain-logo.png" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold leading-tight">StoryChain</span>
-            <span className="text-xs">去中心化故事平台</span>
+            <span className="font-bold leading-tight">{t("site.title")}</span>
+            <span className="text-xs">{t("site.subtitle")}</span>
           </div>
         </Link>
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">

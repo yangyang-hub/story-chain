@@ -236,14 +236,14 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         // 校验章节是否存在
         Chapter storage parentChapter = chaptersMap[parentId];
         require(parentChapter.id != 0, "Parent chapter does not exist");
-        
+
         // 校验故事是否存在
         Story storage story = storiesMap[storyId];
         require(story.id != 0, "Story does not exist");
-        
+
         // 校验章节是否属于该故事
         require(parentChapter.storyId == storyId, "Chapter does not belong to this story");
-        
+
         // 校验分叉费用（应该支付被分叉章节设置的费用）
         require(msg.value >= parentChapter.forkFee, "Insufficient payment for fork");
 
