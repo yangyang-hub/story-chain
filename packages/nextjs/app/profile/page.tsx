@@ -118,6 +118,13 @@ const ProfilePage = () => {
     fromBlock: 0n,
   });
 
+  const { data: tipEvents } = useScaffoldEventHistory({
+    contractName: "StoryChain",
+    eventName: "TipSent",
+    fromBlock: 0n,
+    filters: address ? {} : undefined, // We'll filter by author manually since tips go to chapter authors
+  });
+
   const loadUserData = useCallback(
     async (targetAddress: string, forceRefresh = false) => {
       // 检查是否需要加载（缓存机制）
@@ -268,9 +275,11 @@ const ProfilePage = () => {
           chapters.reduce((sum: bigint, chapter: UserChapter) => sum + BigInt(chapter.totalTips || "0"), 0n);
         const totalTipsValue = parseFloat(formatEther(totalTipsWei));
 
-        const totalForks =
-          stories.reduce((sum: number, story: UserStory) => sum + story.forkCount, 0) +
-          chapters.reduce((sum: number, chapter: UserChapter) => sum + chapter.forkCount, 0);
+        // 修正fork数计算 - 统计用户内容被分叉的总次数（包括自己的分叉）
+        // 分析发现：故事的forkCount已经包含了基于该故事所有章节的分叉总数
+        // 因此只需要统计用户故事的forkCount总和即可，避免重复计算
+
+        const totalForks = stories.reduce((sum: number, story: UserStory) => sum + story.forkCount, 0);
 
         setUserStats({
           totalStories,
@@ -319,8 +328,25 @@ const ProfilePage = () => {
       };
     }
 
+    // Get user's stories and chapters for tip filtering
+    const userStoryIds = new Set(userStories.map(story => story.id));
+    const userChapterIds = new Set(userChapters.map(chapter => chapter.id));
+
     // Get transaction hashes of all fork events to distinguish fork rewards from tip rewards
     const forkTxHashes = new Set(forkEvents?.map(event => event.transactionHash?.toLowerCase()).filter(Boolean) || []);
+
+    // Calculate direct tip revenue from tipSent events
+    let totalDirectTipRevenue = 0n;
+
+    if (tipEvents) {
+      tipEvents.forEach(event => {
+        const chapterId = event.args?.chapterId?.toString();
+        // Check if the tip was received by user's chapter
+        if (chapterId && userChapterIds.has(chapterId)) {
+          totalDirectTipRevenue += BigInt(event.args.amount || 0);
+        }
+      });
+    }
 
     // Calculate fork revenue: rewards from transactions that contain fork events
     let totalForkRevenue = 0n;
@@ -345,15 +371,15 @@ const ProfilePage = () => {
       });
     }
 
-    // Calculate tip revenue: rewards from transactions that do NOT contain fork events
-    let totalTipRevenue = 0n;
+    // Legacy calculation for tip revenue from rewards distribution (keep for backward compatibility)
+    let totalLegacyTipRevenue = 0n;
 
     // Story rewards from tip events (non-fork transactions)
     if (storyRewardEvents) {
       storyRewardEvents.forEach(event => {
         const txHash = event.transactionHash?.toLowerCase();
         if (txHash && !forkTxHashes.has(txHash) && event.args?.storyAuthor?.toLowerCase() === address.toLowerCase()) {
-          totalTipRevenue += BigInt(event.args.amount || 0);
+          totalLegacyTipRevenue += BigInt(event.args.amount || 0);
         }
       });
     }
@@ -363,10 +389,13 @@ const ProfilePage = () => {
       chapterRewardEvents.forEach(event => {
         const txHash = event.transactionHash?.toLowerCase();
         if (txHash && !forkTxHashes.has(txHash) && event.args?.chapterAuthor?.toLowerCase() === address.toLowerCase()) {
-          totalTipRevenue += BigInt(event.args.amount || 0);
+          totalLegacyTipRevenue += BigInt(event.args.amount || 0);
         }
       });
     }
+
+    // Total tip revenue includes both direct tips and legacy rewards
+    const totalTipRevenue = totalDirectTipRevenue + totalLegacyTipRevenue;
 
     // Calculate total withdrawn amount from RewardsWithdrawn events
     let totalWithdrawn = 0n;
@@ -389,7 +418,7 @@ const ProfilePage = () => {
       totalRevenue: totalRevenueSTT,
       withdrawnAmount: withdrawnAmountSTT,
     };
-  }, [address, storyRewardEvents, chapterRewardEvents, withdrawEvents, forkEvents]);
+  }, [address, storyRewardEvents, chapterRewardEvents, withdrawEvents, forkEvents, tipEvents, userStories, userChapters]);
 
   // 加载数据当地址变化时
   useEffect(() => {

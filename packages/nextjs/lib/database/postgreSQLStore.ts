@@ -517,8 +517,10 @@ export class PostgreSQLStore {
           await this.handleStoryCreatedDirect(eventData, blockNumber, transactionHash, timestamp, client);
           break;
         case "ChapterCreated":
-        case "ChapterForked":
           await this.handleChapterCreatedDirect(eventData, blockNumber, transactionHash, timestamp, client);
+          break;
+        case "ChapterForked":
+          await this.handleChapterForkedDirect(eventData, blockNumber, transactionHash, timestamp, client);
           break;
         case "StoryLiked":
           await this.handleStoryLikedDirect(eventData, client);
@@ -529,7 +531,7 @@ export class PostgreSQLStore {
         case "CommentAdded":
           await this.handleCommentAddedDirect(eventData, blockNumber, transactionHash, logIndex, timestamp, client);
           break;
-        case "tipSent":
+        case "TipSent":
           await this.handleTipSentDirect(eventData, client);
           break;
       }
@@ -661,6 +663,91 @@ export class PostgreSQLStore {
     console.log(`📝 成功创建章节 ${chapterId}，fork费用: ${forkFee} wei`);
   }
 
+  private async handleChapterForkedDirect(
+    eventData: any,
+    blockNumber: number,
+    transactionHash: string,
+    timestamp: number,
+    client: any,
+  ): Promise<void> {
+    // First, handle the new forked chapter creation (same as ChapterCreated)
+    await this.handleChapterCreatedDirect(eventData, blockNumber, transactionHash, timestamp, client);
+
+    const { storyId, chapterId, parentId } = eventData;
+
+    // Now, update the parent chapter's fork count
+    if (parentId.toString() !== "0") {
+      try {
+        // Get the updated fork count from the smart contract for the parent chapter
+        const { createPublicClient, http } = await import("viem");
+        const { foundry } = await import("viem/chains");
+        const deployedContracts = await import("../../contracts/deployedContracts");
+
+        const contractClient = createPublicClient({
+          chain: foundry,
+          transport: http(),
+        });
+
+        const contract = deployedContracts.default[31337]?.StoryChain;
+        if (contract) {
+          // Read the parent chapter's updated fork count
+          const parentChapterData = await contractClient.readContract({
+            address: contract.address as `0x${string}`,
+            abi: contract.abi,
+            functionName: "getChapter",
+            args: [BigInt(parentId.toString())],
+          });
+
+          if (parentChapterData && typeof parentChapterData === "object") {
+            const parentChapter = parentChapterData as any;
+            const updatedForkCount = Number(parentChapter.forkCount) || 0;
+
+            // Update parent chapter's fork count in database
+            await client.query(
+              `
+              UPDATE chapters
+              SET fork_count = $1, updated_at = CURRENT_TIMESTAMP
+              WHERE id = $2
+            `,
+              [updatedForkCount, parentId.toString()],
+            );
+
+            console.log(`🔀 更新父章节 ${parentId} 的分叉数: ${updatedForkCount}`);
+          }
+
+          // Also update the story's fork count
+          const storyData = await contractClient.readContract({
+            address: contract.address as `0x${string}`,
+            abi: contract.abi,
+            functionName: "getStory",
+            args: [BigInt(storyId.toString())],
+          });
+
+          if (storyData && typeof storyData === "object") {
+            const story = storyData as any;
+            const updatedStoryForkCount = Number(story.forkCount) || 0;
+
+            // Update story's fork count in database
+            await client.query(
+              `
+              UPDATE stories
+              SET fork_count = $1, updated_at = CURRENT_TIMESTAMP
+              WHERE id = $2
+            `,
+              [updatedStoryForkCount, storyId.toString()],
+            );
+
+            console.log(`🔀 更新故事 ${storyId} 的分叉数: ${updatedStoryForkCount}`);
+          }
+        }
+      } catch (contractError) {
+        console.warn(`无法更新父章节 ${parentId} 的分叉数:`, contractError);
+      }
+    }
+
+    console.log(`🔀 成功处理章节分叉事件: ${chapterId} (父章节: ${parentId})`);
+  }
+
   private async handleStoryLikedDirect(eventData: any, client: any): Promise<void> {
     const { storyId, newLikeCount } = eventData;
 
@@ -688,27 +775,15 @@ export class PostgreSQLStore {
   }
 
   private async handleTipSentDirect(eventData: any, client: any): Promise<void> {
-    const { storyId, chapterId, amount } = eventData;
+    const { chapterId, amount } = eventData;
 
-    // 更新story的tip信息
+    // Only update chapter tip information since story tips are no longer tracked separately
     await client.query(
       `
-      UPDATE stories 
-      SET total_tips = total_tips + $1, 
+      UPDATE chapters
+      SET total_tips = total_tips + $1,
           total_tip_count = total_tip_count + 1,
-          updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $2
-    `,
-      [amount.toString(), storyId.toString()],
-    );
-
-    // 更新chapter的tip信息
-    await client.query(
-      `
-      UPDATE chapters 
-      SET total_tips = total_tips + $1, 
-          total_tip_count = total_tip_count + 1,
-          updated_at = CURRENT_TIMESTAMP 
+          updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
     `,
       [amount.toString(), chapterId.toString()],
@@ -846,7 +921,7 @@ export class PostgreSQLStore {
               SELECT author FROM stories UNION SELECT author FROM chapters
             ) combined) as total_authors,
             (SELECT COALESCE(SUM(likes), 0) FROM stories) + (SELECT COALESCE(SUM(likes), 0) FROM chapters) as total_likes,
-            (SELECT COALESCE(SUM(total_tips), 0) FROM stories) + (SELECT COALESCE(SUM(total_tips), 0) FROM chapters) as total_tips
+            (SELECT COALESCE(SUM(total_tips), 0) FROM stories) as total_tips
         `),
 
         // 最受欢迎的故事

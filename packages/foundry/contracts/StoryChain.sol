@@ -93,7 +93,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     event CommentAdded(uint256 indexed chapterId, address indexed commenter);
     event StoryRewardsDistributed(uint256 indexed storyId, address indexed storyAuthor, uint256 amount);
     event ChapterRewardsDistributed(uint256 indexed chapterId, address indexed chapterAuthor, uint256 amount);
-    event tipSent(uint256 indexed storyId, uint256 indexed chapterId, address indexed tipper, uint256 amount);
+    event TipSent(uint256 indexed chapterId, address indexed tipper, uint256 amount);
     event RewardsWithdrawn(address indexed user, uint256 amount);
     event DepositRefunded(uint256 indexed storyId, address indexed author, uint256 amount);
 
@@ -359,17 +359,20 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     }
 
     // 打赏
-    function tip(uint256 storyId, uint256 chapterId) external payable {
+    function tip(uint256 chapterId) external payable {
         require(msg.value > 0, "Tip amount must be greater than 0");
-        Story storage story = storiesMap[storyId];
+        // Story storage story = storiesMap[storyId];
         Chapter storage chapter = chaptersMap[chapterId];
-        (uint256 storyFee, uint256 chapterFee) =
-            _distributeRewards(storyId, chapterId, story.author, chapter.author, msg.value);
-        story.totalTips += storyFee;
-        chapter.totalTips += chapterFee;
-        story.totalTipCount += 1;
+        // (uint256 storyFee, uint256 chapterFee) =
+            // _distributeRewards(storyId, chapterId, story.author, chapter.author, msg.value);
+
+        // Only add tips to chapter, not to story to avoid double counting
+        // story.totalTips += msg.value;  // Removed to prevent double display
+        chapter.totalTips += msg.value;
+        // story.totalTipCount += 1;
         chapter.totalTipCount += 1;
-        emit tipSent(storyId, chapterId, msg.sender, msg.value);
+        pendingWithdrawals[chapter.author] += msg.value;
+        emit TipSent(chapterId, msg.sender, msg.value);
     }
 
     // 提取奖励

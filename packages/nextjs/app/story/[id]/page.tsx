@@ -22,6 +22,7 @@ import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { ChapterData } from "~~/lib/monitoring/types";
 import { type ChapterMetadata, getJSONFromIPFS, uploadChapterMetadata } from "~~/services/ipfs/ipfsService";
+import chainDataService from "~~/services/chain/chainDataService";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface StoryMetadata {
@@ -173,7 +174,7 @@ const ForkSelector: React.FC<{
 const ChapterCard: React.FC<{
   chapter: ChapterWithMetadata;
   onFork: (chapterId: string) => void;
-  onTip: (storyId: string, chapterId: string) => void;
+  onTip: (chapterId: string) => void;
   onContinue: (chapterId: string) => void;
   forks?: ChapterWithMetadata[];
   onSelectFork?: (forkId: string) => void;
@@ -387,7 +388,7 @@ const ChapterCard: React.FC<{
 
           <div className="flex gap-3">
             <button
-              onClick={() => onTip(chapter.storyId, chapter.id)}
+              onClick={() => onTip(chapter.id)}
               className="btn btn-outline btn-sm gap-2"
               disabled={!address}
               title={!address ? t("chapter.connect_wallet_tip") : t("chapter.tip_tooltip")}
@@ -438,7 +439,7 @@ const ChapterTreeNode: React.FC<{
   childChapters: ChapterWithMetadata[];
   level: number;
   onFork: (chapterId: string) => void;
-  onTip: (storyId: string, chapterId: string) => void;
+  onTip: (chapterId: string) => void;
   onContinue: (chapterId: string) => void;
   storyId: string;
   isLast: boolean;
@@ -583,7 +584,7 @@ const ChapterTreeNode: React.FC<{
                 </a>
 
                 <button
-                  onClick={() => onTip(storyId, chapter.id)}
+                  onClick={() => onTip(chapter.id)}
                   className="btn btn-xs btn-secondary gap-1"
                   disabled={!address}
                   title={!address ? t("chapter.connect_wallet_tip") : t("chapter.tip_tooltip")}
@@ -667,7 +668,7 @@ const ChapterTreeNode: React.FC<{
 const ChapterTreeView: React.FC<{
   chapters: ChapterWithMetadata[];
   onFork: (chapterId: string) => void;
-  onTip: (storyId: string, chapterId: string) => void;
+  onTip: (chapterId: string) => void;
   onContinue: (chapterId: string) => void;
   storyId: string;
   canUserContinueChapter: (chapter: ChapterWithMetadata, allChapters: ChapterWithMetadata[]) => boolean;
@@ -789,6 +790,10 @@ const AddChapterModal: React.FC<{
       setFormData({ title: "", content: "", forkFee: "0" });
       setImageUrl("");
       setImageCid("");
+
+      // Clear cache immediately for better UX
+      chainDataService.clearCacheByPattern("story");
+      chainDataService.clearCacheByPattern("chapter");
 
       // 延迟重新加载数据以确保区块链状态更新
       setTimeout(() => {
@@ -975,6 +980,10 @@ const ContinueChapterModal: React.FC<{
       setImageUrl("");
       setImageCid("");
 
+      // Clear cache immediately for better UX
+      chainDataService.clearCacheByPattern("story");
+      chainDataService.clearCacheByPattern("chapter");
+
       // 延迟重新加载数据以确保区块链状态更新
       setTimeout(() => {
         onChapterAdded();
@@ -1041,7 +1050,7 @@ const ContinueChapterModal: React.FC<{
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">{t("modal.add_chapter.fork_fee")}</span>
-                <span className="label-text-alt">{t("modal.continue_chapter.fork_fee_desc")}</span>
+                <span className="label-text-alt text-info">{t("modal.continue_chapter.new_chapter_fee_desc")}</span>
               </label>
               <input
                 type="number"
@@ -1053,6 +1062,11 @@ const ContinueChapterModal: React.FC<{
                 step="0.01"
                 disabled={isCreating}
               />
+              <div className="label">
+                <span className="label-text-alt text-base-content/60">
+                  {t("modal.continue_chapter.new_chapter_fee_explanation")}
+                </span>
+              </div>
             </div>
 
             <div className="form-control">
@@ -1182,10 +1196,13 @@ const ForkModal: React.FC<{
       setImageUrl("");
       setImageCid("");
 
-      // 延迟重新加载数据以确保区块链状态更新
+      // Clear all cache for fork operations since they can affect multiple stories
+      chainDataService.clearCache();
+
+      // Increase delay for fork operations since they create new chapters
       setTimeout(() => {
         onForkSuccess();
-      }, 3000); // Increase delay to 3 seconds
+      }, 5000); // Increased to 5 seconds for fork operations
 
       onClose();
     } catch (error) {
@@ -1223,11 +1240,30 @@ const ForkModal: React.FC<{
               <div>
                 <div className="font-semibold">{t("modal.fork_chapter.fee_required")}</div>
                 <div className="text-sm">{t("modal.fork_chapter.fee_description", { fee: forkFeeRequired })}</div>
+                <div className="text-xs text-base-content/60 mt-1">
+                  {t("modal.fork_chapter.fee_explanation")}
+                </div>
               </div>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* 需要支付的分叉费用显示 */}
+            {forkFeeRequired !== "0" && (
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium text-warning">
+                    {t("modal.fork_chapter.payment_required")}
+                  </span>
+                </label>
+                <div className="input input-bordered w-full bg-warning/10 text-warning font-bold flex items-center">
+                  {forkFeeRequired} STT
+                  <span className="text-xs text-base-content/60 ml-2">
+                    ({t("modal.fork_chapter.payment_to_author")})
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">{t("modal.fork_chapter.fork_title")}</span>
@@ -1260,7 +1296,7 @@ const ForkModal: React.FC<{
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">{t("modal.add_chapter.fork_fee")}</span>
-                <span className="label-text-alt">{t("modal.fork_chapter.fork_fee_desc")}</span>
+                <span className="label-text-alt text-info">{t("modal.fork_chapter.new_chapter_fee_desc")}</span>
               </label>
               <input
                 type="number"
@@ -1272,6 +1308,11 @@ const ForkModal: React.FC<{
                 step="0.01"
                 disabled={isForking}
               />
+              <div className="label">
+                <span className="label-text-alt text-base-content/60">
+                  {t("modal.fork_chapter.new_chapter_fee_explanation")}
+                </span>
+              </div>
             </div>
 
             <div className="form-control">
@@ -1374,6 +1415,8 @@ const StoryDetailPage = () => {
       try {
         if (isRefresh) {
           setRefreshing(true);
+          // Clear all caches when refreshing to ensure we get latest data
+          chainDataService.clearCache();
         } else {
           setLoading(true);
         }
@@ -1456,7 +1499,7 @@ const StoryDetailPage = () => {
     }, 2000); // Increase delay for better data consistency
   };
 
-  const handleTip = async (storyId: string, chapterId: string) => {
+  const handleTip = async (chapterId: string) => {
     if (!address) {
       notification.error(t("wallet.connect"));
       return;
@@ -1468,15 +1511,19 @@ const StoryDetailPage = () => {
     try {
       await tip({
         functionName: "tip",
-        args: [BigInt(storyId), BigInt(chapterId)],
+        args: [BigInt(chapterId)],
         value: parseEther(tipAmount),
       });
       notification.success(t("success.tipped"));
 
-      // 延迟重新加载数据以确保区块链状态更新
+      // Clear cache and reload data immediately
+      chainDataService.clearCacheByPattern("story");
+      chainDataService.clearCacheByPattern("chapter");
+
+      // Reduced delay since we're clearing cache explicitly
       setTimeout(() => {
         fetchData(true);
-      }, 3000); // Increase delay to 3 seconds
+      }, 2000); // Reduced from 3 seconds to 2 seconds
     } catch (error) {
       console.error("打赏失败:", error);
       notification.error(t("error.tip_failed"));
@@ -1647,10 +1694,7 @@ const StoryDetailPage = () => {
                 <span>{story.forkCount} {t("story.forks")}</span>
               </div>
 
-              <div className="flex items-center gap-1 text-sm text-base-content/70">
-                <CurrencyDollarIcon className="w-4 h-4" />
-                <span>{formatEther(BigInt(story.totalTips))} STT {t("story.tip")}</span>
-              </div>
+              {/* Story tips removed - only show fork revenue now */}
             </div>
 
             {story.author === address && (
@@ -1803,9 +1847,11 @@ const StoryDetailPage = () => {
         storyId={storyId}
         parentId="0"
         onChapterAdded={() => {
-          // 重新加载章节列表
-          fetchData(true);
-          console.log("Chapter added, reloaded data");
+          // Add delay to ensure blockchain data is synced before refreshing
+          setTimeout(() => {
+            fetchData(true);
+            console.log("Chapter added, reloaded data after delay");
+          }, 1000); // Additional 1 second delay for the callback
         }}
       />
 
@@ -1820,9 +1866,11 @@ const StoryDetailPage = () => {
           storyId={storyId}
           parentChapter={selectedChapter}
           onChapterAdded={() => {
-            // 重新加载章节列表
-            fetchData(true);
-            console.log("Chapter continued, reloaded data");
+            // Add delay to ensure blockchain data is synced before refreshing
+            setTimeout(() => {
+              fetchData(true);
+              console.log("Chapter continued, reloaded data after delay");
+            }, 1000); // Additional 1 second delay for the callback
           }}
         />
       )}
@@ -1838,9 +1886,11 @@ const StoryDetailPage = () => {
           storyId={storyId}
           parentChapter={forkingChapter}
           onForkSuccess={() => {
-            // 重新加载数据
-            fetchData(true);
-            console.log("Story forked, reloaded data");
+            // Add delay to ensure blockchain data is synced before refreshing
+            setTimeout(() => {
+              fetchData(true);
+              console.log("Story forked, reloaded data after delay");
+            }, 1000); // Additional 1 second delay for the callback
           }}
         />
       )}

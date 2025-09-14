@@ -283,7 +283,7 @@ export const useStoryChain = () => {
   };
 
   // 7. 打赏
-  const tip = async (storyId: bigint, chapterId: bigint, amountEth: string) => {
+  const tip = async (chapterId: bigint, amountEth: string) => {
     if (!address) {
       notification.error(t("wallet.connect"));
       throw new Error("Wallet not connected");
@@ -294,7 +294,7 @@ export const useStoryChain = () => {
 
       await writeContractAsync({
         functionName: "tip",
-        args: [storyId, chapterId],
+        args: [chapterId],
         value: parseEther(amountEth),
       });
 
@@ -472,12 +472,12 @@ export const useStoryChain = () => {
   };
 
   // 获取打赏事件
-  const getTipEvents = (storyId?: bigint, chapterId?: bigint) => {
+  const getTipEvents = (chapterId?: bigint) => {
     return useScaffoldEventHistory({
       contractName: "StoryChain",
-      eventName: "tipSent",
+      eventName: "TipSent",
       fromBlock: 0n,
-      filters: storyId && chapterId ? { storyId, chapterId } : undefined,
+      filters: chapterId ? { chapterId } : undefined,
     });
   };
 

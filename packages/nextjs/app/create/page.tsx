@@ -9,6 +9,7 @@ import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { type StoryMetadata, uploadStoryMetadata } from "~~/services/ipfs/ipfsService";
+import chainDataService from "~~/services/chain/chainDataService";
 import { notification } from "~~/utils/scaffold-eth";
 
 const CreateStoryPage = () => {
@@ -64,6 +65,7 @@ const CreateStoryPage = () => {
       // Create story metadata
       const metadata: StoryMetadata = {
         title: formData.title,
+        content: "", // Stories don't have content, only chapters do
         author: address,
         timestamp: Date.now(),
         tags: formData.tags
@@ -82,6 +84,9 @@ const CreateStoryPage = () => {
         functionName: "createStory",
         args: [ipfsHash, parseEther("0")], // Fixed to 0 STT
       });
+
+      // Clear stories cache to ensure new story appears on explore page
+      chainDataService.clearCacheByPattern("stories");
 
       notification.success(t("success.story_created"));
       router.push("/explore");

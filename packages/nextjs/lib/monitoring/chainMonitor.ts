@@ -172,7 +172,7 @@ export class ChainMonitor {
       parseAbiItem("event ChapterLiked(uint256 indexed chapterId, address indexed liker, uint256 newLikeCount)"),
       parseAbiItem("event CommentAdded(uint256 indexed chapterId, address indexed commenter)"),
       parseAbiItem(
-        "event tipSent(uint256 indexed storyId, uint256 indexed chapterId, address indexed tipper, uint256 amount)",
+        "event TipSent(uint256 indexed chapterId, address indexed tipper, uint256 amount)",
       ),
     ];
   }

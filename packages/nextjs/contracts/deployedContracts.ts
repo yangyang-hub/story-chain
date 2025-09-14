@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     StoryChain: {
-      address: "0x700b6a60ce7eaaea56f065753d8dcb9653dbad35",
+      address: "0xed1db453c3156ff3155a97ad217b3087d5dc5f6e",
       abi: [
         {
           type: "constructor",
@@ -884,11 +884,6 @@ const deployedContracts = {
           name: "tip",
           inputs: [
             {
-              name: "storyId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
               name: "chapterId",
               type: "uint256",
               internalType: "uint256",
@@ -1373,6 +1368,31 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "TipSent",
+          inputs: [
+            {
+              name: "chapterId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "tipper",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "Transfer",
           inputs: [
             {
@@ -1391,37 +1411,6 @@ const deployedContracts = {
               name: "tokenId",
               type: "uint256",
               indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "tipSent",
-          inputs: [
-            {
-              name: "storyId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "chapterId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "tipper",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
               internalType: "uint256",
             },
           ],
@@ -1559,7 +1548,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1,
+      deployedOnBlock: 58,
     },
   },
 } as const;
