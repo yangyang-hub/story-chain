@@ -673,10 +673,6 @@ const ProfilePage = () => {
                                 <ShareIcon className="w-4 h-4" />
                                 {story.forkCount}
                               </span>
-                              <span className="flex items-center gap-1">
-                                <CurrencyDollarIcon className="w-4 h-4" />
-                                {parseFloat(formatEther(BigInt(story.totalTips || "0"))).toFixed(4)} STT
-                              </span>
                             </div>
 
                             <div className="card-actions">

@@ -33,6 +33,7 @@ pgnTestnet = "https://sepolia.publicgoods.network"
 
 
 localhost = "http://127.0.0.1:8545"
+somniaTestnet = "https://dream-rpc.somnia.network"
 
 [etherscan]
 polygonMumbai = { key = "${ETHERSCAN_API_KEY}" }
