@@ -1,7 +1,7 @@
 import deployedContracts from "../../contracts/deployedContracts";
 import { PostgreSQLStore } from "../database/postgreSQLStore";
 import { Log, createPublicClient, decodeEventLog, http, parseAbiItem } from "viem";
-import { foundry } from "viem/chains";
+import { somniaTestnet } from "viem/chains";
 
 interface ProcessedEvent {
   type: string;
@@ -17,14 +17,15 @@ export class ChainMonitor {
   private contractAddress;
   private postgresqlStore: PostgreSQLStore;
   private isMonitoring = false;
+  private deploymentBlock?: bigint; // 缓存部署区块
 
   constructor() {
     this.client = createPublicClient({
-      chain: foundry,
+      chain: somniaTestnet,
       transport: http(),
     });
 
-    const contract = deployedContracts[31337]?.StoryChain;
+    const contract = deployedContracts[50312]?.StoryChain;
     if (!contract) {
       throw new Error("StoryChain contract not found in deployed contracts");
     }
@@ -61,30 +62,70 @@ export class ChainMonitor {
   }
 
   async syncHistoricalData(fromBlock?: bigint) {
-    const startBlock = fromBlock || 0n; // 确保首次同步从区块0开始
+    // const startBlock = fromBlock || 0n; // 确保首次同步从区块0开始
+    // 获取合约部署区块，避免从区块0开始同步
+    const contract = deployedContracts[50312]?.StoryChain;
+    const deploymentBlock = BigInt(contract?.deployedOnBlock || 1);
+    const startBlock = fromBlock || deploymentBlock;
     const currentBlock = await this.client.getBlockNumber();
 
     if (fromBlock) {
       console.log(`增量同步: 从区块 ${startBlock} 到 ${currentBlock}`);
     } else {
-      console.log(`全量同步: 从创世区块(${startBlock}) 到 ${currentBlock}`);
+      console.log(`全量同步: 从合约部署区块(${startBlock}) 到 ${currentBlock}`);
     }
 
     try {
-      // 获取所有相关事件日志（不指定events参数，让processEvents来解析）
-      console.log(`正在获取区块范围 ${startBlock} - ${currentBlock} 的事件日志...`);
+      const allEvents: any[] = [];
+      const chunkSize = 1000n; // RPC限制每次最多1000个区块
+      let currentChunkStart = startBlock;
 
-      const events = await this.client.getLogs({
-        address: this.contractAddress,
-        fromBlock: startBlock,
-        toBlock: currentBlock,
-      });
+      while (currentChunkStart <= currentBlock) {
+        const currentChunkEnd =
+          currentChunkStart + chunkSize - 1n > currentBlock ? currentBlock : currentChunkStart + chunkSize - 1n;
 
-      console.log(`从区块 ${startBlock} 到 ${currentBlock} 获取到 ${events.length} 个原始日志`);
+        console.log(`正在获取区块范围 ${currentChunkStart} - ${currentChunkEnd} 的事件日志...`);
 
-      if (events.length > 0) {
-        console.log(`开始解析 ${events.length} 个日志...`);
-        const processedEvents = await this.processEvents(events);
+        try {
+          const chunkEvents = await this.client.getLogs({
+            address: this.contractAddress,
+            fromBlock: currentChunkStart,
+            toBlock: currentChunkEnd,
+          });
+
+          console.log(`区块 ${currentChunkStart}-${currentChunkEnd} 获取到 ${chunkEvents.length} 个日志`);
+          allEvents.push(...chunkEvents);
+
+          // 如果单个chunk就有很多事件，处理后再继续（避免内存占用过大）
+          if (chunkEvents.length > 500) {
+            console.log(`处理当前chunk的 ${chunkEvents.length} 个事件...`);
+            const processedEvents = await this.processEvents(chunkEvents);
+            if (processedEvents.length > 0) {
+              await this.updateEdgeConfig(processedEvents, Number(currentChunkEnd));
+            }
+            // 清空已处理的事件
+            allEvents.length = 0;
+          }
+
+          currentChunkStart = currentChunkEnd + 1n;
+
+          // 添加小延迟以避免过于频繁的RPC调用
+          if (currentChunkStart <= currentBlock) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        } catch (chunkError) {
+          console.error(`获取区块 ${currentChunkStart}-${currentChunkEnd} 失败:`, chunkError);
+          // 如果单个chunk失败，继续下一个chunk
+          currentChunkStart = currentChunkEnd + 1n;
+          continue;
+        }
+      }
+
+      console.log(`总共获取到 ${allEvents.length} 个原始日志`);
+
+      if (allEvents.length > 0) {
+        console.log(`开始解析 ${allEvents.length} 个日志...`);
+        const processedEvents = await this.processEvents(allEvents);
         console.log(`成功解析出 ${processedEvents.length} 个有效事件`);
 
         if (processedEvents.length > 0) {
@@ -95,12 +136,13 @@ export class ChainMonitor {
         }
       } else {
         console.log("没有新事件需要同步");
-        // 即使没有事件，也要更新同步状态
-        await this.postgresqlStore.updateDataIncremental({
-          lastUpdateBlock: Number(currentBlock),
-          lastUpdateTime: new Date().toISOString(),
-        });
       }
+
+      // 更新同步状态
+      await this.postgresqlStore.updateDataIncremental({
+        lastUpdateBlock: Number(currentBlock),
+        lastUpdateTime: new Date().toISOString(),
+      });
     } catch (error) {
       console.error("同步历史数据失败:", error);
       console.error("错误详情:", {
@@ -171,9 +213,7 @@ export class ChainMonitor {
       parseAbiItem("event StoryLiked(uint256 indexed storyId, address indexed liker, uint256 newLikeCount)"),
       parseAbiItem("event ChapterLiked(uint256 indexed chapterId, address indexed liker, uint256 newLikeCount)"),
       parseAbiItem("event CommentAdded(uint256 indexed chapterId, address indexed commenter)"),
-      parseAbiItem(
-        "event TipSent(uint256 indexed chapterId, address indexed tipper, uint256 amount)",
-      ),
+      parseAbiItem("event TipSent(uint256 indexed chapterId, address indexed tipper, uint256 amount)"),
     ];
   }
 
