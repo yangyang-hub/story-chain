@@ -46,7 +46,11 @@ export class ChainMonitor {
     try {
       // 获取最新数据的起始块
       const lastUpdate = await this.postgresqlStore.getLastUpdateInfo();
-      const startBlock = lastUpdate ? BigInt(lastUpdate.block + 1) : undefined;
+      // 获取合约部署区块，避免从区块0开始同步
+      const contract = deployedContracts[50312]?.StoryChain;
+      const deploymentBlock = BigInt(contract?.deployedOnBlock || 1);
+      // const startBlock = fromBlock || deploymentBlock;
+      const startBlock = lastUpdate ? BigInt(lastUpdate.block + 1) : deploymentBlock;
 
       await this.syncHistoricalData(startBlock);
       this.startRealtimeMonitoring();
@@ -62,11 +66,7 @@ export class ChainMonitor {
   }
 
   async syncHistoricalData(fromBlock?: bigint) {
-    // const startBlock = fromBlock || 0n; // 确保首次同步从区块0开始
-    // 获取合约部署区块，避免从区块0开始同步
-    const contract = deployedContracts[50312]?.StoryChain;
-    const deploymentBlock = BigInt(contract?.deployedOnBlock || 1);
-    const startBlock = fromBlock || deploymentBlock;
+    const startBlock = fromBlock || 0n; // 确保首次同步从区块0开始
     const currentBlock = await this.client.getBlockNumber();
 
     if (fromBlock) {
