@@ -330,7 +330,7 @@ const zhTranslations: Record<string, string> = {
   "story.detail.fork_points": "分叉点",
   "story.detail.tree_help": "点击节点可查看详细信息，使用操作按钮进行互动",
   "story.detail.no_chapters": "还没有章节",
-  "story.detail.no_chapters_desc": "任何人都可以为这个故事添加第一章，开始精彩的故事之旅",
+  "story.detail.no_chapters_desc": "为这个故事添加第一章，开始精彩的故事之旅",
   "story.detail.add_first_chapter": "添加第一章",
   "story.detail.continue_first_chapter": "续写第一章",
   "story.detail.only_author_can_add_first_chapter": "只有故事创建者可以添加第一章",

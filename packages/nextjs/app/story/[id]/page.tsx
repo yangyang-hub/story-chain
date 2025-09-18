@@ -1697,7 +1697,7 @@ const StoryDetailPage = () => {
               {/* Story tips removed - only show fork revenue now */}
             </div>
 
-            {story.author === address && (
+            {story.author.toLowerCase() === address?.toLowerCase() && (
               <button
                 onClick={() => setShowAddChapter(true)}
                 className="btn btn-primary gap-2"
@@ -1749,15 +1749,15 @@ const StoryDetailPage = () => {
               <button
                 onClick={() => setShowAddChapter(true)}
                 className="btn btn-secondary gap-2"
-                disabled={story.author !== address}
+                disabled={story.author.toLowerCase() !== address.toLowerCase()}
                 title={
-                  story.author !== address
+                  story.author.toLowerCase() !== address.toLowerCase()
                     ? t("story.detail.only_author_can_add_first_chapter")
                     : t("story.detail.add_first_chapter")
                 }
               >
                 <PlusIcon className="w-4 h-4" />
-                {story.author === address ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
+                {story.author.toLowerCase() === address.toLowerCase() ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
               </button>
             )}
 
@@ -1830,15 +1830,15 @@ const StoryDetailPage = () => {
               <button
                 onClick={() => setShowAddChapter(true)}
                 className="btn btn-primary mt-2 gap-2"
-                disabled={story.author !== address}
+                disabled={story.author.toLowerCase() !== address.toLowerCase()}
                 title={
-                  story.author !== address
+                  story.author.toLowerCase() !== address.toLowerCase()
                     ? t("story.detail.only_author_can_add_first_chapter")
                     : t("story.detail.add_first_chapter")
                 }
               >
                 <PlusIcon className="w-4 h-4" />
-                {story.author === address ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
+                {story.author.toLowerCase() === address.toLowerCase() ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
               </button>
             ) : (
               <div className="text-sm text-base-content/60">{t("story.detail.connect_wallet_desc")}</div>
