@@ -149,7 +149,9 @@ export const IPFSUploader: React.FC<IPFSUploaderProps> = ({
             <div>
               <p className="text-sm font-medium text-base-content">{t("upload.click_or_drag")}</p>
               <p className="text-xs text-base-content/60 mt-1">{t("upload.supported_types")}</p>
-              <p className="text-xs text-base-content/40 mt-1">{t("upload.max_file_size", { size: Math.round(maxSize / 1024 / 1024) })}</p>
+              <p className="text-xs text-base-content/40 mt-1">
+                {t("upload.max_file_size", { size: Math.round(maxSize / 1024 / 1024) })}
+              </p>
             </div>
           </div>
         )}

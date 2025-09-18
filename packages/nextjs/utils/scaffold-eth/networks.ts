@@ -42,9 +42,19 @@ export const getAlchemyHttpUrl = (chainId: number) => {
     : undefined;
 };
 
+/**
+ * Check if a chain is a local development network
+ */
+export const isLocalNetwork = (chainId: number): boolean => {
+  return chainId === chains.hardhat.id || chainId === chains.foundry.id;
+};
+
 export const NETWORKS_EXTRA_DATA: Record<string, ChainAttributes> = {
   [chains.hardhat.id]: {
     color: "#b8af0c",
+  },
+  [chains.somniaTestnet.id]: {
+    color: "#6366f1",
   },
   [chains.mainnet.id]: {
     color: "#ff8b9e",

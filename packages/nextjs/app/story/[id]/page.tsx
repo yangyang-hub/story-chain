@@ -21,8 +21,8 @@ import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { ChapterData } from "~~/lib/monitoring/types";
-import { type ChapterMetadata, getJSONFromIPFS, uploadChapterMetadata } from "~~/services/ipfs/ipfsService";
 import chainDataService from "~~/services/chain/chainDataService";
+import { type ChapterMetadata, getJSONFromIPFS, uploadChapterMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface StoryMetadata {
@@ -697,7 +697,9 @@ const ChapterTreeView: React.FC<{
       <div className="flex items-center justify-between text-sm text-base-content/70 pb-4 border-b border-base-300">
         <div className="flex items-center gap-4">
           <span>{t("story.detail.total_chapters", { count: chapters.length })}</span>
-          <span>{t("story.detail.fork_points", { count: chapters.filter(c => getChildren(c.id).length > 1).length })}</span>
+          <span>
+            {t("story.detail.fork_points", { count: chapters.filter(c => getChildren(c.id).length > 1).length })}
+          </span>
         </div>
         <div className="text-xs text-base-content/50">{t("story.detail.tree_help")}</div>
       </div>
@@ -1005,7 +1007,9 @@ const ContinueChapterModal: React.FC<{
       <div className="fixed inset-0 bg-black/50" onClick={onClose}></div>
       <div className="relative bg-base-100 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-xl font-bold mb-4">{t("modal.continue_chapter.title", { number: parentChapter.chapterNumber + 1 })}</h2>
+          <h2 className="text-xl font-bold mb-4">
+            {t("modal.continue_chapter.title", { number: parentChapter.chapterNumber + 1 })}
+          </h2>
 
           {/* 显示父章节信息 */}
           <div className="bg-base-200 rounded-lg p-4 mb-4">
@@ -1240,9 +1244,7 @@ const ForkModal: React.FC<{
               <div>
                 <div className="font-semibold">{t("modal.fork_chapter.fee_required")}</div>
                 <div className="text-sm">{t("modal.fork_chapter.fee_description", { fee: forkFeeRequired })}</div>
-                <div className="text-xs text-base-content/60 mt-1">
-                  {t("modal.fork_chapter.fee_explanation")}
-                </div>
+                <div className="text-xs text-base-content/60 mt-1">{t("modal.fork_chapter.fee_explanation")}</div>
               </div>
             </div>
           )}
@@ -1458,26 +1460,29 @@ const StoryDetailPage = () => {
   );
 
   // 加载故事元数据
-  const loadStoryMetadata = useCallback(async (ipfsHash: string) => {
-    if (!ipfsHash) return;
+  const loadStoryMetadata = useCallback(
+    async (ipfsHash: string) => {
+      if (!ipfsHash) return;
 
-    setMetadataLoading(true);
-    try {
-      const data = await getJSONFromIPFS(ipfsHash);
-      const validatedMetadata: StoryMetadata = {
-        title: data?.title || undefined,
-        description: data?.description || undefined,
-        tags: Array.isArray(data?.tags) ? data.tags : undefined,
-        content: data?.content || undefined,
-        image: data?.image || undefined,
-      };
-      setStoryMetadata(validatedMetadata);
-    } catch (err) {
-      console.error(t("error.load_story_metadata_failed"), err);
-    } finally {
-      setMetadataLoading(false);
-    }
-  }, [t]);
+      setMetadataLoading(true);
+      try {
+        const data = await getJSONFromIPFS(ipfsHash);
+        const validatedMetadata: StoryMetadata = {
+          title: data?.title || undefined,
+          description: data?.description || undefined,
+          tags: Array.isArray(data?.tags) ? data.tags : undefined,
+          content: data?.content || undefined,
+          image: data?.image || undefined,
+        };
+        setStoryMetadata(validatedMetadata);
+      } catch (err) {
+        console.error(t("error.load_story_metadata_failed"), err);
+      } finally {
+        setMetadataLoading(false);
+      }
+    },
+    [t],
+  );
 
   useEffect(() => {
     fetchData();
@@ -1652,7 +1657,9 @@ const StoryDetailPage = () => {
         <div className="card-body">
           {/* 标题和基本信息 */}
           <div className="mb-4">
-            <h1 className="text-3xl font-bold mb-2">{storyMetadata?.title || t("explore.story_alt", { id: storyId })}</h1>
+            <h1 className="text-3xl font-bold mb-2">
+              {storyMetadata?.title || t("explore.story_alt", { id: storyId })}
+            </h1>
             {storyMetadata?.description && <p className="text-base-content/70 mb-4">{storyMetadata.description}</p>}
 
             {/* 标签 */}
@@ -1691,7 +1698,9 @@ const StoryDetailPage = () => {
 
               <div className="flex items-center gap-1 text-sm text-base-content/70">
                 <ShareIcon className="w-4 h-4" />
-                <span>{story.forkCount} {t("story.forks")}</span>
+                <span>
+                  {story.forkCount} {t("story.forks")}
+                </span>
               </div>
 
               {/* Story tips removed - only show fork revenue now */}
@@ -1758,7 +1767,9 @@ const StoryDetailPage = () => {
                 }
               >
                 <PlusIcon className="w-4 h-4" />
-                {story.author.toLowerCase() === address.toLowerCase() ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
+                {story.author.toLowerCase() === address.toLowerCase()
+                  ? t("story.detail.add_first_chapter")
+                  : t("story.detail.continue_first_chapter")}
               </button>
             )}
 
@@ -1839,7 +1850,9 @@ const StoryDetailPage = () => {
                 }
               >
                 <PlusIcon className="w-4 h-4" />
-                {story.author.toLowerCase() === address.toLowerCase() ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
+                {story.author.toLowerCase() === address.toLowerCase()
+                  ? t("story.detail.add_first_chapter")
+                  : t("story.detail.continue_first_chapter")}
               </button>
             ) : (
               <div className="text-sm text-base-content/60">{t("story.detail.connect_wallet_desc")}</div>

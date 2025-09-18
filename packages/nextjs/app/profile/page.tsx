@@ -418,7 +418,16 @@ const ProfilePage = () => {
       totalRevenue: totalRevenueSTT,
       withdrawnAmount: withdrawnAmountSTT,
     };
-  }, [address, storyRewardEvents, chapterRewardEvents, withdrawEvents, forkEvents, tipEvents, userStories, userChapters]);
+  }, [
+    address,
+    storyRewardEvents,
+    chapterRewardEvents,
+    withdrawEvents,
+    forkEvents,
+    tipEvents,
+    userStories,
+    userChapters,
+  ]);
 
   // 加载数据当地址变化时
   useEffect(() => {

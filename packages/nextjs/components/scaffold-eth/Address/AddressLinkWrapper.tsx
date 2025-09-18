@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { hardhat } from "viem/chains";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { isLocalNetwork } from "~~/utils/scaffold-eth";
 
 type AddressLinkWrapperProps = {
   children: React.ReactNode;
@@ -14,14 +14,15 @@ export const AddressLinkWrapper = ({
   blockExplorerAddressLink,
 }: AddressLinkWrapperProps) => {
   const { targetNetwork } = useTargetNetwork();
+  const isLocalChain = isLocalNetwork(targetNetwork.id);
 
   return disableAddressLink ? (
     <>{children}</>
   ) : (
     <Link
       href={blockExplorerAddressLink}
-      target={targetNetwork.id === hardhat.id ? undefined : "_blank"}
-      rel={targetNetwork.id === hardhat.id ? undefined : "noopener noreferrer"}
+      target={isLocalChain ? undefined : "_blank"}
+      rel={isLocalChain ? undefined : "noopener noreferrer"}
     >
       {children}
     </Link>

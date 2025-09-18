@@ -8,8 +8,8 @@ import {
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { rainbowkitBurnerWallet } from "burner-connector";
-import * as chains from "viem/chains";
 import scaffoldConfig from "~~/scaffold.config";
+import { isLocalNetwork } from "~~/utils/scaffold-eth";
 
 const { onlyLocalBurnerWallet, targetNetworks } = scaffoldConfig;
 
@@ -20,7 +20,7 @@ const wallets = [
   coinbaseWallet,
   rainbowWallet,
   safeWallet,
-  ...(!targetNetworks.some(network => network.id !== (chains.hardhat as chains.Chain).id) || !onlyLocalBurnerWallet
+  ...(!targetNetworks.some(network => !isLocalNetwork(network.id)) || !onlyLocalBurnerWallet
     ? [rainbowkitBurnerWallet]
     : []),
 ];

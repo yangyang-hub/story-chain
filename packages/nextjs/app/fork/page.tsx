@@ -219,9 +219,7 @@ const ForkStoryPage = () => {
           <ShareIcon className="w-8 h-8" />
           {t("story.fork_story")}
         </h1>
-        <p className="text-base-content/70">
-          {isChapterFork ? t("fork.chapter_subtitle") : t("fork.story_subtitle")}
-        </p>
+        <p className="text-base-content/70">{isChapterFork ? t("fork.chapter_subtitle") : t("fork.story_subtitle")}</p>
       </div>
 
       {/* 分叉费用提醒 */}
@@ -231,7 +229,10 @@ const ForkStoryPage = () => {
           <div>
             <div className="font-semibold">{t("fork.fee_required_title")}</div>
             <div className="text-sm">
-              {t("fork.fee_required_desc", { type: isChapterFork ? t("story.chapter") : t("story.title"), fee: forkFeeEth })}
+              {t("fork.fee_required_desc", {
+                type: isChapterFork ? t("story.chapter") : t("story.title"),
+                fee: forkFeeEth,
+              })}
             </div>
           </div>
         </div>
@@ -256,15 +257,21 @@ const ForkStoryPage = () => {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1">
                     <BookOpenIcon className="w-4 h-4" />
-                    <span>{parentData.likes?.toString() || 0} {t("fork.likes")}</span>
+                    <span>
+                      {parentData.likes?.toString() || 0} {t("fork.likes")}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1">
                     <ShareIcon className="w-4 h-4" />
-                    <span>{parentData.forkCount?.toString() || 0} {t("fork.forks")}</span>
+                    <span>
+                      {parentData.forkCount?.toString() || 0} {t("fork.forks")}
+                    </span>
                   </div>
                 </div>
 
-                <div className="text-xs text-base-content/60">{t("fork.fork_fee_label")}: {forkFeeEth} STT</div>
+                <div className="text-xs text-base-content/60">
+                  {t("fork.fork_fee_label")}: {forkFeeEth} STT
+                </div>
               </div>
             </div>
           </div>
@@ -309,7 +316,9 @@ const ForkStoryPage = () => {
                     required
                   />
                   <label className="label">
-                    <span className="label-text-alt">{formData.content.length} {t("fork.characters")}</span>
+                    <span className="label-text-alt">
+                      {formData.content.length} {t("fork.characters")}
+                    </span>
                   </label>
                 </div>
               </div>
@@ -361,7 +370,9 @@ const ForkStoryPage = () => {
                       <div className="font-medium">{t("fork.fee_distribution")}</div>
                       <div>• {t("fork.you_pay", { fee: forkFeeEth })}</div>
                       <div>• {t("fork.story_author_gets", { amount: (parseFloat(forkFeeEth) * 0.1).toFixed(4) })}</div>
-                      <div>• {t("fork.chapter_author_gets", { amount: (parseFloat(forkFeeEth) * 0.85).toFixed(4) })}</div>
+                      <div>
+                        • {t("fork.chapter_author_gets", { amount: (parseFloat(forkFeeEth) * 0.85).toFixed(4) })}
+                      </div>
                       <div>• {t("fork.platform_fee", { amount: (parseFloat(forkFeeEth) * 0.05).toFixed(4) })}</div>
                     </div>
                   </div>

@@ -597,15 +597,15 @@ export class PostgreSQLStore {
     try {
       // 创建合约客户端来读取章节数据
       const { createPublicClient, http } = await import("viem");
-      const { foundry } = await import("viem/chains");
+      const { somniaTestnet } = await import("viem/chains");
       const deployedContracts = await import("../../contracts/deployedContracts");
 
       const contractClient = createPublicClient({
-        chain: foundry,
+        chain: somniaTestnet,
         transport: http(),
       });
 
-      const contract = deployedContracts.default[31337]?.StoryChain;
+      const contract = deployedContracts.default[50312]?.StoryChain;
       if (contract) {
         // 读取章节的完整信息
         const chapterData = await contractClient.readContract({
@@ -680,15 +680,15 @@ export class PostgreSQLStore {
       try {
         // Get the updated fork count from the smart contract for the parent chapter
         const { createPublicClient, http } = await import("viem");
-        const { foundry } = await import("viem/chains");
+        const { somniaTestnet } = await import("viem/chains");
         const deployedContracts = await import("../../contracts/deployedContracts");
 
         const contractClient = createPublicClient({
-          chain: foundry,
+          chain: somniaTestnet,
           transport: http(),
         });
 
-        const contract = deployedContracts.default[31337]?.StoryChain;
+        const contract = deployedContracts.default[50312]?.StoryChain;
         if (contract) {
           // Read the parent chapter's updated fork count
           const parentChapterData = await contractClient.readContract({
@@ -799,109 +799,122 @@ export class PostgreSQLStore {
     client: any,
   ): Promise<void> {
     const { chapterId, commenter } = eventData;
-
     // 使用transactionHash-logIndex作为唯一ID
     const commentId = `${transactionHash}-${logIndex}`;
 
+    let ipfsHash = "";
+
     try {
       // 从合约中获取评论的完整数据
-      let ipfsHash = "";
+      const { createPublicClient, http } = await import("viem");
+      const { somniaTestnet } = await import("viem/chains");
+      const deployedContracts = await import("../../contracts/deployedContracts");
 
-      try {
-        // 创建合约客户端来读取评论数据
-        const { createPublicClient, http } = await import("viem");
-        const { foundry } = await import("viem/chains");
-        const deployedContracts = await import("../../contracts/deployedContracts");
+      const contractClient = createPublicClient({
+        chain: somniaTestnet,
+        transport: http(),
+      });
 
-        const contractClient = createPublicClient({
-          chain: foundry,
-          transport: http(),
-        });
-
-        const contract = deployedContracts.default[31337]?.StoryChain;
-        if (contract) {
-          console.log(`🔍 尝试从合约获取评论数据，chapterId: ${chapterId}, commenter: ${commenter}`);
-
-          // 由于我们不知道确切的评论索引，需要遍历查找最新的评论
-          // 通过匹配commenter和时间戳范围来找到对应的评论
-          let commentFound = false;
-
-          // 尝试查找最近的几个评论索引（假设新评论在最后几个位置）
-          for (let index = 0; index < 10; index++) {
-            try {
-              const commentResult = await contractClient.readContract({
-                address: contract.address as `0x${string}`,
-                abi: contract.abi,
-                functionName: "comments",
-                args: [BigInt(chapterId.toString()), BigInt(index)],
-              });
-
-              if (commentResult && Array.isArray(commentResult)) {
-                const [tokenId, commentCommenter, commentIpfsHash, commentTimestamp] = commentResult;
-
-                // 检查是否是我们要找的评论（通过commenter匹配）
-                if (commentCommenter && commentCommenter.toLowerCase() === commenter.toLowerCase()) {
-                  // 检查时间戳是否接近（允许一定范围的差异）
-                  const timeDiff = Math.abs(Number(commentTimestamp) - timestamp);
-                  if (timeDiff < 300) {
-                    // 允许5分钟的时间差异
-                    ipfsHash = commentIpfsHash as string;
-                    commentFound = true;
-                    console.log(`✅ 找到匹配的评论，索引: ${index}, ipfsHash: ${ipfsHash}`);
-                    break;
-                  }
-                }
-              }
-            } catch (indexError) {
-              // 如果索引不存在，继续尝试下一个
-              if (index === 0) {
-                console.log(`⚠️  索引 ${index} 不存在或无法访问，可能还没有评论`);
-              }
-              // 如果连续几个索引都失败，可能已经超出范围
-              if (index > 2) break;
-            }
-          }
-
-          if (!commentFound) {
-            console.log(`⚠️  未能在合约中找到匹配的评论，将使用空的ipfsHash`);
-          }
-        }
-      } catch (contractError) {
-        console.warn(`无法从合约获取评论数据: ${contractError}`);
+      const contract = deployedContracts.default[50312]?.StoryChain;
+      if (!contract) {
+        console.error("❌ StoryChain contract not found for chain 50312");
+        throw new Error("Contract not found");
       }
 
-      // 插入评论记录
+      console.log(`🔍 从合约获取评论数据，chapterId: ${chapterId}, commenter: ${commenter}`);
+
+      // 由于无法直接获取评论数组长度，我们从索引0开始搜索最近的评论
+      // 搜索最近添加的评论（通常在数组末尾）
+      let commentFound = false;
+      const maxSearchAttempts = 20; // 最多尝试20个索引
+
+      // 先尝试从低索引开始查找，找到最后一个有效评论的位置
+      let lastValidIndex = -1;
+      for (let i = 0; i < maxSearchAttempts; i++) {
+        try {
+          const commentResult = (await contractClient.readContract({
+            address: contract.address as `0x${string}`,
+            abi: contract.abi,
+            functionName: "comments",
+            args: [BigInt(chapterId.toString()), BigInt(i)],
+          })) as [bigint, string, string, bigint];
+
+          if (commentResult && Array.isArray(commentResult) && commentResult[0]) {
+            lastValidIndex = i;
+          }
+        } catch {
+          // 到达数组末尾
+          break;
+        }
+      }
+
+      console.log(`📊 章节 ${chapterId} 最后有效评论索引: ${lastValidIndex}`);
+
+      if (lastValidIndex >= 0) {
+        // 从最后几个评论开始向前搜索
+        const searchStart = Math.max(0, lastValidIndex - 5);
+
+        for (let index = lastValidIndex; index >= searchStart; index--) {
+          try {
+            const commentResult = (await contractClient.readContract({
+              address: contract.address as `0x${string}`,
+              abi: contract.abi,
+              functionName: "comments",
+              args: [BigInt(chapterId.toString()), BigInt(index)],
+            })) as [bigint, string, string, bigint];
+
+            if (commentResult && Array.isArray(commentResult)) {
+              const [, commentCommenter, commentIpfsHash, commentTimestamp] = commentResult;
+
+              // 检查是否是我们要找的评论（通过commenter和时间戳匹配）
+              if (commentCommenter && commentCommenter.toLowerCase() === commenter.toLowerCase()) {
+                const timeDiff = Math.abs(Number(commentTimestamp) - timestamp);
+                console.log(
+                  `🕐 检查评论 ${index}: commenter=${commentCommenter}, timestamp=${commentTimestamp}, timeDiff=${timeDiff}`,
+                );
+
+                if (timeDiff < 60) {
+                  // 允许60秒的时间差异
+                  ipfsHash = commentIpfsHash as string;
+                  commentFound = true;
+                  console.log(`✅ 找到匹配的评论，索引: ${index}, ipfsHash: ${ipfsHash}`);
+                  break;
+                }
+              }
+            }
+          } catch (indexError) {
+            console.warn(`⚠️  无法获取评论索引 ${index}:`, indexError);
+            continue;
+          }
+        }
+      }
+
+      if (!commentFound) {
+        console.warn(`⚠️  未能在合约中找到匹配的评论，commenter: ${commenter}, timestamp: ${timestamp}`);
+      }
+    } catch (contractError) {
+      console.error(`❌ 无法从合约获取评论数据:`, contractError);
+    }
+
+    // 插入评论记录到数据库
+    try {
       await client.query(
         `
         INSERT INTO comments (
-          id, token_id, commenter, ipfs_hash, created_time, 
+          id, token_id, commenter, ipfs_hash, created_time,
           block_number, transaction_hash
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (id) DO UPDATE SET
-          ipfs_hash = EXCLUDED.ipfs_hash,
-          updated_at = CURRENT_TIMESTAMP
+          ipfs_hash = EXCLUDED.ipfs_hash
         `,
-        [
-          commentId,
-          chapterId.toString(),
-          commenter.toLowerCase(),
-          ipfsHash || "", // 使用获取到的ipfsHash，如果获取失败则为空
-          timestamp,
-          blockNumber,
-          transactionHash,
-        ],
+        [commentId, chapterId.toString(), commenter.toLowerCase(), ipfsHash, timestamp, blockNumber, transactionHash],
       );
 
-      console.log(`✅ 成功插入评论: ${commentId} for token ${chapterId}, ipfsHash: ${ipfsHash || "(empty)"}`);
-
-      // 如果ipfsHash为空，记录需要后续处理的评论
-      if (!ipfsHash) {
-        console.log(`⚠️  评论 ${commentId} 的 ipfsHash 为空，需要后续更新`);
-      }
-    } catch (error) {
-      console.error(`❌ 插入评论失败: ${commentId}`, error);
-      throw error;
+      console.log(`✅ 评论已保存到数据库: commentId=${commentId}, ipfsHash=${ipfsHash || "(empty)"}`);
+    } catch (dbError) {
+      console.error(`❌ 保存评论到数据库失败:`, dbError);
+      throw dbError;
     }
   }
 
@@ -1052,15 +1065,15 @@ export class PostgreSQLStore {
 
       // 创建合约客户端
       const { createPublicClient, http } = await import("viem");
-      const { foundry } = await import("viem/chains");
+      const { somniaTestnet } = await import("viem/chains");
       const deployedContracts = await import("../../contracts/deployedContracts");
 
       const contractClient = createPublicClient({
-        chain: foundry,
+        chain: somniaTestnet,
         transport: http(),
       });
 
-      const contract = deployedContracts.default[31337]?.StoryChain;
+      const contract = deployedContracts.default[50312]?.StoryChain;
       if (!contract) {
         console.error("无法找到合约配置");
         return;
@@ -1152,15 +1165,15 @@ export class PostgreSQLStore {
 
       // 创建合约客户端
       const { createPublicClient, http } = await import("viem");
-      const { foundry } = await import("viem/chains");
+      const { somniaTestnet } = await import("viem/chains");
       const deployedContracts = await import("../../contracts/deployedContracts");
 
       const contractClient = createPublicClient({
-        chain: foundry,
+        chain: somniaTestnet,
         transport: http(),
       });
 
-      const contract = deployedContracts.default[31337]?.StoryChain;
+      const contract = deployedContracts.default[50312]?.StoryChain;
       if (!contract) {
         console.error("无法找到合约配置");
         return;
@@ -1283,6 +1296,16 @@ export class PostgreSQLStore {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  async updateCommentIpfsHash(commentId: string, ipfsHash: string): Promise<void> {
+    try {
+      await db.query(`UPDATE comments SET ipfs_hash = $1 WHERE id = $2`, [ipfsHash, commentId]);
+      console.log(`✅ 更新评论 ${commentId} 的IPFS哈希: ${ipfsHash}`);
+    } catch (error) {
+      console.error(`❌ 更新评论IPFS哈希失败: ${commentId}`, error);
+      throw error;
     }
   }
 }

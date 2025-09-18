@@ -8,8 +8,8 @@ import { InformationCircleIcon, PhotoIcon, PlusIcon } from "@heroicons/react/24/
 import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { type StoryMetadata, uploadStoryMetadata } from "~~/services/ipfs/ipfsService";
 import chainDataService from "~~/services/chain/chainDataService";
+import { type StoryMetadata, uploadStoryMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
 const CreateStoryPage = () => {

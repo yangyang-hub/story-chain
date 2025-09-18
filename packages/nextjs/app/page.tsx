@@ -49,9 +49,7 @@ const Home: NextPage = () => {
             <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl hover:shadow-lg transition-shadow">
               <PlusIcon className="h-8 w-8 fill-secondary" />
               <h3 className="text-lg font-bold mt-4 mb-2">{t("story.create")}</h3>
-              <p className="text-sm text-base-content/70">
-                {t("home.feature1.title")}
-              </p>
+              <p className="text-sm text-base-content/70">{t("home.feature1.title")}</p>
             </div>
 
             <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl hover:shadow-lg transition-shadow">

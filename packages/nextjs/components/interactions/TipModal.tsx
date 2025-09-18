@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { useAccount } from "wagmi";
 import { CurrencyDollarIcon, InformationCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Address } from "~~/components/scaffold-eth";
-import { useStoryChain } from "~~/hooks/useStoryChain";
 import { useLanguage } from "~~/contexts/LanguageContext";
+import { useStoryChain } from "~~/hooks/useStoryChain";
 
 interface TipModalProps {
   isOpen: boolean;
@@ -170,17 +170,20 @@ export const TipModal: React.FC<TipModalProps> = ({
                 <div className="text-sm">
                   <div className="font-medium">{t("tip.fee_distribution")}</div>
                   <div>
-                    • {t(recipientType === "story" ? "tip.story_author_receive" : "tip.chapter_author_receive", {
+                    •{" "}
+                    {t(recipientType === "story" ? "tip.story_author_receive" : "tip.chapter_author_receive", {
                       amount: (parseFloat(finalAmount) * 0.85).toFixed(4),
                     })}
                   </div>
                   <div>
-                    • {t("tip.story_author_receive", {
+                    •{" "}
+                    {t("tip.story_author_receive", {
                       amount: (parseFloat(finalAmount) * 0.1).toFixed(4),
                     })}
                   </div>
                   <div>
-                    • {t("tip.platform_fee", {
+                    •{" "}
+                    {t("tip.platform_fee", {
                       amount: (parseFloat(finalAmount) * 0.05).toFixed(4),
                     })}
                   </div>

@@ -5,8 +5,8 @@ import { useAccount } from "wagmi";
 import { ChatBubbleLeftIcon, ClockIcon, PaperAirplaneIcon, UserIcon } from "@heroicons/react/24/outline";
 import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
 import { Address } from "~~/components/scaffold-eth";
-import { useStoryChain } from "~~/hooks/useStoryChain";
 import { useLanguage } from "~~/contexts/LanguageContext";
+import { useStoryChain } from "~~/hooks/useStoryChain";
 import { type CommentMetadata } from "~~/services/ipfs/ipfsService";
 
 interface CommentSectionProps {
@@ -110,7 +110,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
       {/* 标题 */}
       <div className="flex items-center gap-2">
         <ChatBubbleLeftIcon className="w-5 h-5" />
-        <h3 className="text-lg font-semibold">{t("comment.title")} ({comments.length})</h3>
+        <h3 className="text-lg font-semibold">
+          {t("comment.title")} ({comments.length})
+        </h3>
       </div>
 
       {/* 添加评论表单 */}

@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import { useAccount } from "wagmi";
 import { HeartIcon } from "@heroicons/react/24/outline";
 import { HeartIcon as HeartIconSolid } from "@heroicons/react/24/solid";
+import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useStoryChain } from "~~/hooks/useStoryChain";
-import { useLanguage } from "~~/contexts/LanguageContext";
 
 interface LikeButtonProps {
   tokenId: bigint;

@@ -100,11 +100,11 @@ const StoryCover: React.FC<{
   );
 };
 
-const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata: StoryMetadata) => void; t: (key: string, params?: Record<string, string | number>) => string }> = ({
-  story,
-  onMetadataLoad,
-  t,
-}) => {
+const StoryCard: React.FC<{
+  story: StoryWithMetadata;
+  onMetadataLoad?: (metadata: StoryMetadata) => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}> = ({ story, onMetadataLoad, t }) => {
   const [metadata, setMetadata] = useState<StoryMetadata | null>(story.metadata || null);
   const [loading, setLoading] = useState(!story.metadata);
   const [error, setError] = useState<string | null>(null);
@@ -134,9 +134,9 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t("error.unknown");
-      console.error(t("explore.error_load_failed", {error: String(err)}));
-      setError(t("explore.error_load_failed", {error: errorMessage}));
-      notification.error(t("explore.error_notification", {id: story.id}));
+      console.error(t("explore.error_load_failed", { error: String(err) }));
+      setError(t("explore.error_load_failed", { error: errorMessage }));
+      notification.error(t("explore.error_notification", { id: story.id }));
     } finally {
       setLoading(false);
     }
@@ -226,7 +226,7 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
         {/* 即使出错也显示封面（使用文字封面） */}
         <StoryCover
           image={undefined} // 强制使用文字封面
-          title={t("explore.story_alt", {id: story.id})}
+          title={t("explore.story_alt", { id: story.id })}
           storyId={story.id}
           className="h-48 w-full"
           t={t}
@@ -234,7 +234,7 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
 
         <div className="card-body">
           <div className="flex justify-between items-start mb-3">
-            <h2 className="card-title text-lg font-bold">{t("story.detail.story_number", {id: story.id})}</h2>
+            <h2 className="card-title text-lg font-bold">{t("story.detail.story_number", { id: story.id })}</h2>
             <div className="badge badge-secondary badge-sm">#{story.id}</div>
           </div>
 
@@ -291,7 +291,7 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
       {/* 故事封面 */}
       <StoryCover
         image={metadata?.image}
-        title={metadata?.title || t("explore.story_alt", {id: story.id})}
+        title={metadata?.title || t("explore.story_alt", { id: story.id })}
         storyId={story.id}
         className="h-48 w-full"
         t={t}
@@ -300,7 +300,9 @@ const StoryCard: React.FC<{ story: StoryWithMetadata; onMetadataLoad?: (metadata
       <div className="card-body">
         {/* 标题和作者 */}
         <div className="flex justify-between items-start mb-3">
-          <h2 className="card-title text-lg font-bold line-clamp-2">{metadata?.title || t("story.detail.story_number", {id: story.id})}</h2>
+          <h2 className="card-title text-lg font-bold line-clamp-2">
+            {metadata?.title || t("story.detail.story_number", { id: story.id })}
+          </h2>
           <div className="badge badge-secondary badge-sm">#{story.id}</div>
         </div>
 
@@ -470,12 +472,8 @@ const ExplorePage = () => {
           {searchTerm && (
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm text-base-content/70">
-                {t("explore.search_results", {count: filteredStories.length})}
-                {searchTerm && (
-                  <>
-                    {t("explore.search_contains", {term: searchTerm})}
-                  </>
-                )}
+                {t("explore.search_results", { count: filteredStories.length })}
+                {searchTerm && <>{t("explore.search_contains", { term: searchTerm })}</>}
               </div>
               <button className="btn btn-ghost btn-sm gap-1" onClick={clearSearch} title={t("explore.clear_search")}>
                 <XMarkIcon className="w-4 h-4" />
@@ -539,7 +537,7 @@ const ExplorePage = () => {
       {/* 故事列表 */}
       {error && (
         <div className="alert alert-error mb-6">
-          <span>{t("explore.load_error", {error})}</span>
+          <span>{t("explore.load_error", { error })}</span>
           <button className="btn btn-sm" onClick={refetch}>
             {t("explore.retry_button")}
           </button>
@@ -620,7 +618,7 @@ const ExplorePage = () => {
           {/* 结果统计显示（当没有搜索时显示总数） */}
           {!searchTerm && stories.length > 0 && (
             <div className="text-sm text-base-content/70 mb-4">
-              {t("explore.total_stories", {count: stories.length})}
+              {t("explore.total_stories", { count: stories.length })}
             </div>
           )}
 

@@ -111,7 +111,11 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
             <button onClick={() => copyToClipboard(cid)} className="btn btn-ghost btn-xs" title={t("ipfs.copy_cid")}>
               <DocumentDuplicateIcon className="w-3 h-3" />
             </button>
-            <button onClick={() => copyToClipboard(ipfsUrl)} className="btn btn-ghost btn-xs" title={t("ipfs.copy_link")}>
+            <button
+              onClick={() => copyToClipboard(ipfsUrl)}
+              className="btn btn-ghost btn-xs"
+              title={t("ipfs.copy_link")}
+            >
               <LinkIcon className="w-3 h-3" />
             </button>
           </div>
