@@ -1698,14 +1698,15 @@ const StoryDetailPage = () => {
             </div>
 
             {story.author.toLowerCase() === address?.toLowerCase() && (
-              <button
-                onClick={() => setShowAddChapter(true)}
-                className="btn btn-primary gap-2"
-                title={t("story.detail.add_chapter_tooltip")}
-              >
-                <PlusIcon className="w-4 h-4" />
-                {t("story.add_chapter")}
-              </button>
+              <></>
+              // <button
+              //   onClick={() => setShowAddChapter(true)}
+              //   className="btn btn-primary gap-2"
+              //   title={t("story.detail.add_chapter_tooltip")}
+              // >
+              //   <PlusIcon className="w-4 h-4" />
+              //   {t("story.add_chapter")}
+              // </button>
             )}
 
             {/* 续写故事按钮 - 只有最新章节的作者可以续写 */}
