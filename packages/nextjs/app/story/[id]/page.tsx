@@ -1749,7 +1749,12 @@ const StoryDetailPage = () => {
               <button
                 onClick={() => setShowAddChapter(true)}
                 className="btn btn-secondary gap-2"
-                title={t("story.detail.add_first_chapter")}
+                disabled={story.author !== address}
+                title={
+                  story.author !== address
+                    ? t("story.detail.only_author_can_add_first_chapter")
+                    : t("story.detail.add_first_chapter")
+                }
               >
                 <PlusIcon className="w-4 h-4" />
                 {story.author === address ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
@@ -1822,7 +1827,16 @@ const StoryDetailPage = () => {
             <p className="text-base-content/70 mb-2">{t("story.detail.no_chapters")}</p>
             <p className="text-sm text-base-content/50 mb-4">{t("story.detail.no_chapters_desc")}</p>
             {address ? (
-              <button onClick={() => setShowAddChapter(true)} className="btn btn-primary mt-2 gap-2">
+              <button
+                onClick={() => setShowAddChapter(true)}
+                className="btn btn-primary mt-2 gap-2"
+                disabled={story.author !== address}
+                title={
+                  story.author !== address
+                    ? t("story.detail.only_author_can_add_first_chapter")
+                    : t("story.detail.add_first_chapter")
+                }
+              >
                 <PlusIcon className="w-4 h-4" />
                 {story.author === address ? t("story.detail.add_first_chapter") : t("story.detail.continue_first_chapter")}
               </button>

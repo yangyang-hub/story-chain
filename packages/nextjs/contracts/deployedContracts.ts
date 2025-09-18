@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   50312: {
     StoryChain: {
-      address: "0xacF73b4Bdc69C11533ec8B6790B7eCFAA948fF96",
+      address: "0x33B0c8cC98F596018526C2540A57012b0a4c7627",
       abi: [
         {
           type: "constructor",
@@ -1548,7 +1548,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 179462754,
+      deployedOnBlock: 179483009,
     },
   },
 } as const;
