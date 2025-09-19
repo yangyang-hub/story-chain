@@ -282,7 +282,7 @@ const ChapterReadingPage = () => {
     }
 
     // 获取父章节（上一章）
-    const prevChapter = chapter.parentId !== 0n ? chapters.find(ch => ch.id === chapter.parentId) : null;
+    const prevChapter = chapter.parentId.toString() !== "0" ? chapters.find(ch => ch.id === chapter.parentId) : null;
 
     // 获取子章节（下一章们）
     const nextChapters = chapters.filter(ch => ch.parentId === chapter.id);

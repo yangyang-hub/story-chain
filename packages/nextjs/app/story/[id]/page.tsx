@@ -683,7 +683,7 @@ const ChapterTreeView: React.FC<{
 }> = ({ chapters, onFork, onTip, onContinue, storyId, canUserContinueChapter, getContinueButtonTooltip, t }) => {
   // 构建树形结构
   const buildTree = () => {
-    const rootChapters = chapters.filter(chapter => chapter.parentId === 0n);
+    const rootChapters = chapters.filter(chapter => chapter.parentId.toString() === "0");
     return rootChapters.sort((a, b) => Number(a.chapterNumber) - Number(b.chapterNumber));
   };
 
