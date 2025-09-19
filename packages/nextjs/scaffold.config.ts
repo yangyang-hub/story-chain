@@ -1,5 +1,5 @@
-import * as chains from "viem/chains";
 import { somnia } from "./lib/chains";
+import * as chains from "viem/chains";
 
 export type BaseConfig = {
   targetNetworks: readonly chains.Chain[];

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { Address } from "viem";
 import { createChainClient, getContractConfig } from "../../../../lib/chains";
+import { Address } from "viem";
 
 export async function GET() {
   try {
@@ -13,14 +13,7 @@ export async function GET() {
     }
 
     // 并行获取基础统计数据
-    const [
-      totalStories,
-      totalChapters,
-      topStories,
-      topChapters,
-      latestStories,
-      latestChapters,
-    ] = await Promise.all([
+    const [totalStories, totalChapters, topStories, topChapters, latestStories, latestChapters] = await Promise.all([
       publicClient.readContract({
         address: storyChainContract.address as Address,
         abi: storyChainContract.abi,
@@ -71,8 +64,8 @@ export async function GET() {
           abi: storyChainContract.abi,
           functionName: "getStory",
           args: [BigInt(i + 1)],
-        })
-      )
+        }),
+      ),
     );
 
     storyStats.forEach((story: any) => {
@@ -109,7 +102,7 @@ export async function GET() {
             });
             totalComments += commentCount;
           }
-        })
+        }),
       );
     }
 
@@ -122,19 +115,22 @@ export async function GET() {
       totalLikes: Number(totalLikes),
       totalTips: totalTips.toString(),
       mostLikedStoryId: topStories.length > 0 ? topStories[0].id.toString() : null,
-      mostForkedStoryId: topStories.length > 0 ?
-        [...topStories].sort((a, b) => Number(b.forkCount) - Number(a.forkCount))[0].id.toString() : null,
+      mostForkedStoryId:
+        topStories.length > 0
+          ? [...topStories].sort((a, b) => Number(b.forkCount) - Number(a.forkCount))[0].id.toString()
+          : null,
 
       // 顶级作者（从最受欢迎的故事和章节中提取）
-      topAuthors: [...new Set([
-        ...topStories.slice(0, 5).map(s => s.author),
-        ...topChapters.slice(0, 5).map(c => c.author),
-      ])].slice(0, 10).map(author => ({
-        address: author,
-        storyCount: storyStats.filter(s => s && s.author.toLowerCase() === author.toLowerCase()).length,
-        chapterCount: 0, // 简化版本，实际需要遍历所有章节
-        totalEarnings: "0", // 需要计算实际收益
-      })),
+      topAuthors: [
+        ...new Set([...topStories.slice(0, 5).map(s => s.author), ...topChapters.slice(0, 5).map(c => c.author)]),
+      ]
+        .slice(0, 10)
+        .map(author => ({
+          address: author,
+          storyCount: storyStats.filter(s => s && s.author.toLowerCase() === author.toLowerCase()).length,
+          chapterCount: 0, // 简化版本，实际需要遍历所有章节
+          totalEarnings: "0", // 需要计算实际收益
+        })),
 
       // 最近活动（从最新故事和章节构建）
       recentActivity: [
@@ -155,7 +151,9 @@ export async function GET() {
             author: chapter.author,
           },
         })),
-      ].sort((a, b) => Number(b.timestamp) - Number(a.timestamp)).slice(0, 20),
+      ]
+        .sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
+        .slice(0, 20),
     };
 
     return NextResponse.json({

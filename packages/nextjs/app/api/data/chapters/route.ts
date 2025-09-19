@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Address } from "viem";
 import { createChainClient, getContractConfig } from "../../../../lib/chains";
+import { Address } from "viem";
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,28 +25,34 @@ export async function GET(request: NextRequest) {
 
     if (storyId) {
       // 获取指定故事的所有章节
-      chapters = [...await publicClient.readContract({
-        address: storyChainContract.address as Address,
-        abi: storyChainContract.abi,
-        functionName: "getChaptersByStory",
-        args: [BigInt(storyId)],
-      })];
+      chapters = [
+        ...(await publicClient.readContract({
+          address: storyChainContract.address as Address,
+          abi: storyChainContract.abi,
+          functionName: "getChaptersByStory",
+          args: [BigInt(storyId)],
+        })),
+      ];
     } else if (author) {
       // 获取指定作者的所有章节
-      chapters = [...await publicClient.readContract({
-        address: storyChainContract.address as Address,
-        abi: storyChainContract.abi,
-        functionName: "getChaptersByAuthor",
-        args: [author],
-      })];
+      chapters = [
+        ...(await publicClient.readContract({
+          address: storyChainContract.address as Address,
+          abi: storyChainContract.abi,
+          functionName: "getChaptersByAuthor",
+          args: [author],
+        })),
+      ];
     } else if (parentId) {
       // 获取指定父章节的子章节
-      chapters = [...await publicClient.readContract({
-        address: storyChainContract.address as Address,
-        abi: storyChainContract.abi,
-        functionName: "getChildChapters",
-        args: [BigInt(parentId)],
-      })];
+      chapters = [
+        ...(await publicClient.readContract({
+          address: storyChainContract.address as Address,
+          abi: storyChainContract.abi,
+          functionName: "getChildChapters",
+          args: [BigInt(parentId)],
+        })),
+      ];
     } else {
       // 获取最新章节（由于合约没有getAllChapters方法，我们使用getLatestChapters）
       const totalChapters = await publicClient.readContract({
@@ -56,12 +62,14 @@ export async function GET(request: NextRequest) {
       });
 
       // 获取所有章节（通过getLatestChapters，但这里需要一个更大的limit）
-      chapters = [...await publicClient.readContract({
-        address: storyChainContract.address as Address,
-        abi: storyChainContract.abi,
-        functionName: "getLatestChapters",
-        args: [totalChapters], // 获取所有章节
-      })];
+      chapters = [
+        ...(await publicClient.readContract({
+          address: storyChainContract.address as Address,
+          abi: storyChainContract.abi,
+          functionName: "getLatestChapters",
+          args: [totalChapters], // 获取所有章节
+        })),
+      ];
     }
 
     // 转换BigInt为字符串以便JSON序列化

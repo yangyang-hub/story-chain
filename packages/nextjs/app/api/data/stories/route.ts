@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Address } from "viem";
 import { createChainClient, getContractConfig } from "../../../../lib/chains";
+import { Address } from "viem";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,12 +23,14 @@ export async function GET(request: NextRequest) {
 
     if (author) {
       // 获取指定作者的故事
-      stories = [...await publicClient.readContract({
-        address: storyChainContract.address as Address,
-        abi: storyChainContract.abi,
-        functionName: "getStoriesByAuthor",
-        args: [author],
-      })];
+      stories = [
+        ...(await publicClient.readContract({
+          address: storyChainContract.address as Address,
+          abi: storyChainContract.abi,
+          functionName: "getStoriesByAuthor",
+          args: [author],
+        })),
+      ];
     } else {
       // 获取分页故事列表
       const offset = (page - 1) * limit;
@@ -66,7 +68,7 @@ export async function GET(request: NextRequest) {
           limit,
           total: Number(total),
           totalPages: Math.ceil(Number(total) / limit),
-          hasNext: (page * limit) < Number(total),
+          hasNext: page * limit < Number(total),
           hasPrev: page > 1,
         },
       });

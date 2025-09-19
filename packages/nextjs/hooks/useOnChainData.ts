@@ -1,8 +1,8 @@
 "use client";
 
+import { Address } from "viem";
 import { useReadContract, useReadContracts } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
-import { Address } from "viem";
 
 const storyChainContract = deployedContracts[31337]?.StoryChain;
 
@@ -308,6 +308,7 @@ export function useHomePageData() {
     latestStories,
     latestChapters,
     topStories,
-    isLoading: totalStoriesLoading || totalChaptersLoading || latestStoriesLoading || latestChaptersLoading || topStoriesLoading,
+    isLoading:
+      totalStoriesLoading || totalChaptersLoading || latestStoriesLoading || latestChaptersLoading || topStoriesLoading,
   };
 }

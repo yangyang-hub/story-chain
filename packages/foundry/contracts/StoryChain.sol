@@ -364,7 +364,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         // Story storage story = storiesMap[storyId];
         Chapter storage chapter = chaptersMap[chapterId];
         // (uint256 storyFee, uint256 chapterFee) =
-            // _distributeRewards(storyId, chapterId, story.author, chapter.author, msg.value);
+        // _distributeRewards(storyId, chapterId, story.author, chapter.author, msg.value);
 
         // Only add tips to chapter, not to story to avoid double counting
         // story.totalTips += msg.value;  // Removed to prevent double display
@@ -723,11 +723,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
      * @param user 用户地址
      * @param tokenIds 故事/章节ID数组
      */
-    function getBatchLikeStatus(address user, uint256[] memory tokenIds)
-        external
-        view
-        returns (bool[] memory)
-    {
+    function getBatchLikeStatus(address user, uint256[] memory tokenIds) external view returns (bool[] memory) {
         bool[] memory statuses = new bool[](tokenIds.length);
         for (uint256 i = 0; i < tokenIds.length; i++) {
             statuses[i] = hasLiked[user][tokenIds[i]];

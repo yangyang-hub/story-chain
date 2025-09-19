@@ -1,7 +1,7 @@
-import { Chain } from "viem";
-import { hardhat } from "viem/chains";
-import { createPublicClient, http } from "viem";
 import deployedContracts from "../contracts/deployedContracts";
+import { Chain } from "viem";
+import { createPublicClient, http } from "viem";
+import { hardhat } from "viem/chains";
 
 // Somnia Testnet chain configuration
 export const somnia: Chain = {

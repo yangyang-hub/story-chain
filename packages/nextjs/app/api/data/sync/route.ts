@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Address } from "viem";
 import { createChainClient, getContractConfig } from "../../../../lib/chains";
+import { Address } from "viem";
 
 export async function POST(request: NextRequest) {
   try {

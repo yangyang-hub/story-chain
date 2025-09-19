@@ -226,16 +226,18 @@ const StoryCard: React.FC<{
         {/* 即使出错也显示封面（使用文字封面） */}
         <StoryCover
           image={undefined} // 强制使用文字封面
-          title={t("explore.story_alt", { id: story.id })}
-          storyId={story.id}
+          title={t("explore.story_alt", { id: story.id.toString() })}
+          storyId={story.id.toString()}
           className="h-48 w-full"
           t={t}
         />
 
         <div className="card-body">
           <div className="flex justify-between items-start mb-3">
-            <h2 className="card-title text-lg font-bold">{t("story.detail.story_number", { id: story.id })}</h2>
-            <div className="badge badge-secondary badge-sm">#{story.id}</div>
+            <h2 className="card-title text-lg font-bold">
+              {t("story.detail.story_number", { id: story.id.toString() })}
+            </h2>
+            <div className="badge badge-secondary badge-sm">#{story.id.toString()}</div>
           </div>
 
           <div className="alert alert-error alert-sm mb-4">
@@ -276,7 +278,7 @@ const StoryCard: React.FC<{
             >
               {t("explore.retry_load")}
             </button>
-            <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm gap-1">
+            <Link href={`/story/${story.id.toString()}`} className="btn btn-primary btn-sm gap-1">
               <BookOpenIcon className="w-4 h-4" />
               {t("explore.read_button")}
             </Link>
@@ -291,8 +293,8 @@ const StoryCard: React.FC<{
       {/* 故事封面 */}
       <StoryCover
         image={metadata?.image}
-        title={metadata?.title || t("explore.story_alt", { id: story.id })}
-        storyId={story.id}
+        title={metadata?.title || t("explore.story_alt", { id: story.id.toString() })}
+        storyId={story.id.toString()}
         className="h-48 w-full"
         t={t}
       />
@@ -301,9 +303,9 @@ const StoryCard: React.FC<{
         {/* 标题和作者 */}
         <div className="flex justify-between items-start mb-3">
           <h2 className="card-title text-lg font-bold line-clamp-2">
-            {metadata?.title || t("story.detail.story_number", { id: story.id })}
+            {metadata?.title || t("story.detail.story_number", { id: story.id.toString() })}
           </h2>
-          <div className="badge badge-secondary badge-sm">#{story.id}</div>
+          <div className="badge badge-secondary badge-sm">#{story.id.toString()}</div>
         </div>
 
         {/* 作者和创建时间 */}
@@ -349,7 +351,7 @@ const StoryCard: React.FC<{
 
         {/* 操作按钮 */}
         <div className="card-actions justify-end mt-4">
-          <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm gap-1">
+          <Link href={`/story/${story.id.toString()}`} className="btn btn-primary btn-sm gap-1">
             <BookOpenIcon className="w-4 h-4" />
             {t("explore.read_button")}
           </Link>
@@ -418,7 +420,7 @@ const ExplorePage = () => {
     const searchLower = searchTerm.toLowerCase();
 
     // 搜索故事ID
-    if (story.id.includes(searchTerm)) return true;
+    if (story.id.toString().includes(searchTerm)) return true;
 
     // 搜索作者地址
     if (story.author.toLowerCase().includes(searchLower)) return true;

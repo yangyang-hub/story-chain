@@ -323,7 +323,12 @@ const ChapterCard: React.FC<{
 
         {/* 统计信息和交互 */}
         <div className="flex flex-wrap items-center gap-4 text-sm mb-6 p-3 bg-base-200/30 rounded-lg">
-          <LikeButton tokenId={BigInt(chapter.id)} isStory={false} currentLikes={Number(chapter.likes)} showCount={true} />
+          <LikeButton
+            tokenId={BigInt(chapter.id)}
+            isStory={false}
+            currentLikes={Number(chapter.likes)}
+            showCount={true}
+          />
 
           <div className="flex items-center gap-2 text-base-content/70">
             <ShareIcon className="w-4 h-4" />

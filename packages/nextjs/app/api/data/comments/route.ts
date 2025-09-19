@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Address } from "viem";
 import { createChainClient, getContractConfig } from "../../../../lib/chains";
+import { Address } from "viem";
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,16 +48,19 @@ export async function GET(request: NextRequest) {
           limit,
           total: Number(total),
           totalPages: Math.ceil(Number(total) / limit),
-          hasNext: (page * limit) < Number(total),
+          hasNext: page * limit < Number(total),
           hasPrev: page > 1,
         },
       });
     } else {
       // 获取所有评论 - 由于合约没有getAllComments方法，我们返回空数组或错误
       // 实际项目中可能需要遍历所有token来获取评论，但这会很昂贵
-      return NextResponse.json({
-        error: "Getting all comments is not supported. Please specify tokenId parameter.",
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Getting all comments is not supported. Please specify tokenId parameter.",
+        },
+        { status: 400 },
+      );
     }
   } catch (error) {
     console.error("Error fetching comments from blockchain:", error);

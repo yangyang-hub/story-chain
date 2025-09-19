@@ -20,7 +20,5 @@ export const decodeTxData = (abi: Abi, data: string): TransactionWithFunction | 
 };
 
 export const getFunctionDetails = (abi: Abi, functionName: string): AbiFunction | undefined => {
-  return abi.find(
-    (item): item is AbiFunction => item.type === "function" && item.name === functionName,
-  );
+  return abi.find((item): item is AbiFunction => item.type === "function" && item.name === functionName);
 };
