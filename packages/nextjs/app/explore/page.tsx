@@ -136,7 +136,7 @@ const StoryCard: React.FC<{
       const errorMessage = err instanceof Error ? err.message : t("error.unknown");
       console.error(t("explore.error_load_failed", { error: String(err) }));
       setError(t("explore.error_load_failed", { error: errorMessage }));
-      notification.error(t("explore.error_notification", { id: story.id }));
+      notification.error(t("explore.error_notification", { id: story.id.toString() }));
     } finally {
       setLoading(false);
     }
