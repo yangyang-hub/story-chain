@@ -364,7 +364,7 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         // Story storage story = storiesMap[storyId];
         Chapter storage chapter = chaptersMap[chapterId];
         // (uint256 storyFee, uint256 chapterFee) =
-            // _distributeRewards(storyId, chapterId, story.author, chapter.author, msg.value);
+        // _distributeRewards(storyId, chapterId, story.author, chapter.author, msg.value);
 
         // Only add tips to chapter, not to story to avoid double counting
         // story.totalTips += msg.value;  // Removed to prevent double display
@@ -435,5 +435,358 @@ contract StoryChain is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     // 管理员修改创建故事所需质押金额
     function updateStoryDeposit(uint256 newDeposit) external onlyOwner {
         DEFAULT_STORY_DEPOSIT = newDeposit;
+    }
+
+    // ========== 新增查询方法 ==========
+
+    /**
+     * @dev 获取故事总数
+     */
+    function getTotalStories() external view returns (uint256) {
+        return stories.length;
+    }
+
+    /**
+     * @dev 获取章节总数
+     */
+    function getTotalChapters() external view returns (uint256) {
+        return _tokenIdCounter - stories.length;
+    }
+
+    /**
+     * @dev 获取所有故事ID列表
+     */
+    function getAllStoryIds() external view returns (uint256[] memory) {
+        return stories;
+    }
+
+    /**
+     * @dev 分页获取故事列表
+     * @param offset 偏移量
+     * @param limit 限制数量
+     */
+    function getStoriesPaginated(uint256 offset, uint256 limit)
+        external
+        view
+        returns (Story[] memory storiesArray, uint256 total)
+    {
+        total = stories.length;
+        if (offset >= total) {
+            return (new Story[](0), total);
+        }
+
+        uint256 end = offset + limit;
+        if (end > total) {
+            end = total;
+        }
+
+        Story[] memory result = new Story[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            result[i - offset] = storiesMap[stories[i]];
+        }
+
+        return (result, total);
+    }
+
+    /**
+     * @dev 获取指定作者的所有故事
+     * @param author 作者地址
+     */
+    function getStoriesByAuthor(address author) external view returns (Story[] memory) {
+        // 首先计算该作者的故事数量
+        uint256 count = 0;
+        for (uint256 i = 0; i < stories.length; i++) {
+            if (storiesMap[stories[i]].author == author) {
+                count++;
+            }
+        }
+
+        // 创建结果数组并填充
+        Story[] memory authorStories = new Story[](count);
+        uint256 index = 0;
+        for (uint256 i = 0; i < stories.length; i++) {
+            if (storiesMap[stories[i]].author == author) {
+                authorStories[index] = storiesMap[stories[i]];
+                index++;
+            }
+        }
+
+        return authorStories;
+    }
+
+    /**
+     * @dev 获取故事的所有章节
+     * @param storyId 故事ID
+     */
+    function getChaptersByStory(uint256 storyId) external view returns (Chapter[] memory) {
+        // 计算该故事的章节数量
+        uint256 count = 0;
+        for (uint256 i = 1; i <= _tokenIdCounter; i++) {
+            if (chaptersMap[i].storyId == storyId) {
+                count++;
+            }
+        }
+
+        // 创建结果数组并填充
+        Chapter[] memory storyChapters = new Chapter[](count);
+        uint256 index = 0;
+        for (uint256 i = 1; i <= _tokenIdCounter; i++) {
+            if (chaptersMap[i].storyId == storyId) {
+                storyChapters[index] = chaptersMap[i];
+                index++;
+            }
+        }
+
+        return storyChapters;
+    }
+
+    /**
+     * @dev 获取指定作者的所有章节
+     * @param author 作者地址
+     */
+    function getChaptersByAuthor(address author) external view returns (Chapter[] memory) {
+        // 计算该作者的章节数量
+        uint256 count = 0;
+        for (uint256 i = 1; i <= _tokenIdCounter; i++) {
+            if (chaptersMap[i].author == author) {
+                count++;
+            }
+        }
+
+        // 创建结果数组并填充
+        Chapter[] memory authorChapters = new Chapter[](count);
+        uint256 index = 0;
+        for (uint256 i = 1; i <= _tokenIdCounter; i++) {
+            if (chaptersMap[i].author == author) {
+                authorChapters[index] = chaptersMap[i];
+                index++;
+            }
+        }
+
+        return authorChapters;
+    }
+
+    /**
+     * @dev 获取指定父章节的所有子章节
+     * @param parentId 父章节ID
+     */
+    function getChildChapters(uint256 parentId) external view returns (Chapter[] memory) {
+        Chapter memory parent = chaptersMap[parentId];
+        Chapter[] memory children = new Chapter[](parent.childChapterIds.length);
+
+        for (uint256 i = 0; i < parent.childChapterIds.length; i++) {
+            children[i] = chaptersMap[parent.childChapterIds[i]];
+        }
+
+        return children;
+    }
+
+    /**
+     * @dev 获取指定token的评论数量
+     * @param tokenId 故事/章节ID
+     */
+    function getCommentCount(uint256 tokenId) external view returns (uint256) {
+        return comments[tokenId].length;
+    }
+
+    /**
+     * @dev 分页获取指定token的评论
+     * @param tokenId 故事/章节ID
+     * @param offset 偏移量
+     * @param limit 限制数量
+     */
+    function getCommentsPaginated(uint256 tokenId, uint256 offset, uint256 limit)
+        external
+        view
+        returns (Comment[] memory commentsArray, uint256 total)
+    {
+        Comment[] storage tokenComments = comments[tokenId];
+        total = tokenComments.length;
+
+        if (offset >= total) {
+            return (new Comment[](0), total);
+        }
+
+        uint256 end = offset + limit;
+        if (end > total) {
+            end = total;
+        }
+
+        Comment[] memory result = new Comment[](end - offset);
+        for (uint256 i = offset; i < end; i++) {
+            result[i - offset] = tokenComments[i];
+        }
+
+        return (result, total);
+    }
+
+    /**
+     * @dev 获取按点赞数排序的故事列表（前N个）
+     * @param limit 限制数量
+     */
+    function getTopStoriesByLikes(uint256 limit) external view returns (Story[] memory) {
+        uint256 totalStories = stories.length;
+        if (limit > totalStories) {
+            limit = totalStories;
+        }
+
+        // 简单的插入排序（对于小数据集足够）
+        Story[] memory sortedStories = new Story[](limit);
+        uint256 filled = 0;
+
+        for (uint256 i = 0; i < totalStories && filled < limit; i++) {
+            Story memory currentStory = storiesMap[stories[i]];
+
+            // 找到插入位置
+            uint256 insertPos = filled;
+            for (uint256 j = 0; j < filled; j++) {
+                if (currentStory.likes > sortedStories[j].likes) {
+                    insertPos = j;
+                    break;
+                }
+            }
+
+            // 如果有空间或者当前故事的点赞数足够高
+            if (filled < limit) {
+                // 向后移动元素
+                for (uint256 k = filled; k > insertPos; k--) {
+                    sortedStories[k] = sortedStories[k - 1];
+                }
+                sortedStories[insertPos] = currentStory;
+                filled++;
+            }
+        }
+
+        return sortedStories;
+    }
+
+    /**
+     * @dev 获取按点赞数排序的章节列表（前N个）
+     * @param limit 限制数量
+     */
+    function getTopChaptersByLikes(uint256 limit) external view returns (Chapter[] memory) {
+        // 计算章节总数
+        uint256 totalChapters = 0;
+        for (uint256 i = 1; i <= _tokenIdCounter; i++) {
+            if (chaptersMap[i].id != 0) {
+                totalChapters++;
+            }
+        }
+
+        if (limit > totalChapters) {
+            limit = totalChapters;
+        }
+
+        // 简单的插入排序
+        Chapter[] memory sortedChapters = new Chapter[](limit);
+        uint256 filled = 0;
+
+        for (uint256 i = 1; i <= _tokenIdCounter && filled < limit; i++) {
+            if (chaptersMap[i].id == 0) continue;
+
+            Chapter memory currentChapter = chaptersMap[i];
+
+            // 找到插入位置
+            uint256 insertPos = filled;
+            for (uint256 j = 0; j < filled; j++) {
+                if (currentChapter.likes > sortedChapters[j].likes) {
+                    insertPos = j;
+                    break;
+                }
+            }
+
+            // 如果有空间
+            if (filled < limit) {
+                // 向后移动元素
+                for (uint256 k = filled; k > insertPos; k--) {
+                    sortedChapters[k] = sortedChapters[k - 1];
+                }
+                sortedChapters[insertPos] = currentChapter;
+                filled++;
+            }
+        }
+
+        return sortedChapters;
+    }
+
+    /**
+     * @dev 获取用户的点赞状态
+     * @param user 用户地址
+     * @param tokenId 故事/章节ID
+     */
+    function getUserLikeStatus(address user, uint256 tokenId) external view returns (bool) {
+        return hasLiked[user][tokenId];
+    }
+
+    /**
+     * @dev 批量获取用户对多个token的点赞状态
+     * @param user 用户地址
+     * @param tokenIds 故事/章节ID数组
+     */
+    function getBatchLikeStatus(address user, uint256[] memory tokenIds) external view returns (bool[] memory) {
+        bool[] memory statuses = new bool[](tokenIds.length);
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            statuses[i] = hasLiked[user][tokenIds[i]];
+        }
+        return statuses;
+    }
+
+    /**
+     * @dev 获取用户待提取奖励
+     * @param user 用户地址
+     */
+    function getPendingRewards(address user) external view returns (uint256) {
+        return pendingWithdrawals[user];
+    }
+
+    /**
+     * @dev 检查token是否存在（故事或章节）
+     * @param tokenId token ID
+     */
+    function tokenExists(uint256 tokenId) external view returns (bool) {
+        return _exists(tokenId);
+    }
+
+    /**
+     * @dev 获取最新创建的故事列表
+     * @param limit 限制数量
+     */
+    function getLatestStories(uint256 limit) external view returns (Story[] memory) {
+        uint256 totalStories = stories.length;
+        if (limit > totalStories) {
+            limit = totalStories;
+        }
+
+        Story[] memory latestStories = new Story[](limit);
+        for (uint256 i = 0; i < limit; i++) {
+            latestStories[i] = storiesMap[stories[totalStories - 1 - i]];
+        }
+
+        return latestStories;
+    }
+
+    /**
+     * @dev 获取最新创建的章节列表
+     * @param limit 限制数量
+     */
+    function getLatestChapters(uint256 limit) external view returns (Chapter[] memory) {
+        uint256 count = 0;
+        Chapter[] memory latestChapters = new Chapter[](limit);
+
+        // 从最新的tokenId开始向前遍历
+        for (uint256 i = _tokenIdCounter; i >= 1 && count < limit; i--) {
+            if (chaptersMap[i].id != 0) {
+                latestChapters[count] = chaptersMap[i];
+                count++;
+            }
+        }
+
+        // 调整数组大小
+        Chapter[] memory result = new Chapter[](count);
+        for (uint256 i = 0; i < count; i++) {
+            result[i] = latestChapters[i];
+        }
+
+        return result;
     }
 }

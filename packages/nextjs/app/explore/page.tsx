@@ -16,7 +16,7 @@ import { LikeButton } from "~~/components/interactions/LikeButton";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useStories } from "~~/hooks/useChainData";
-import { StoryData } from "~~/lib/monitoring/types";
+import { StoryData } from "~~/lib/types";
 import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -136,7 +136,7 @@ const StoryCard: React.FC<{
       const errorMessage = err instanceof Error ? err.message : t("error.unknown");
       console.error(t("explore.error_load_failed", { error: String(err) }));
       setError(t("explore.error_load_failed", { error: errorMessage }));
-      notification.error(t("explore.error_notification", { id: story.id }));
+      notification.error(t("explore.error_notification", { id: story.id.toString() }));
     } finally {
       setLoading(false);
     }
@@ -226,16 +226,18 @@ const StoryCard: React.FC<{
         {/* 即使出错也显示封面（使用文字封面） */}
         <StoryCover
           image={undefined} // 强制使用文字封面
-          title={t("explore.story_alt", { id: story.id })}
-          storyId={story.id}
+          title={t("explore.story_alt", { id: story.id.toString() })}
+          storyId={story.id.toString()}
           className="h-48 w-full"
           t={t}
         />
 
         <div className="card-body">
           <div className="flex justify-between items-start mb-3">
-            <h2 className="card-title text-lg font-bold">{t("story.detail.story_number", { id: story.id })}</h2>
-            <div className="badge badge-secondary badge-sm">#{story.id}</div>
+            <h2 className="card-title text-lg font-bold">
+              {t("story.detail.story_number", { id: story.id.toString() })}
+            </h2>
+            <div className="badge badge-secondary badge-sm">#{story.id.toString()}</div>
           </div>
 
           <div className="alert alert-error alert-sm mb-4">
@@ -262,7 +264,7 @@ const StoryCard: React.FC<{
             </div>
             <div className="flex items-center gap-1">
               <ClockIcon className="w-4 h-4" />
-              <span>{new Date(story.createdTime * 1000).toLocaleDateString()}</span>
+              <span>{new Date(Number(story.createdTime) * 1000).toLocaleDateString()}</span>
             </div>
           </div>
 
@@ -276,7 +278,7 @@ const StoryCard: React.FC<{
             >
               {t("explore.retry_load")}
             </button>
-            <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm gap-1">
+            <Link href={`/story/${story.id.toString()}`} className="btn btn-primary btn-sm gap-1">
               <BookOpenIcon className="w-4 h-4" />
               {t("explore.read_button")}
             </Link>
@@ -291,8 +293,8 @@ const StoryCard: React.FC<{
       {/* 故事封面 */}
       <StoryCover
         image={metadata?.image}
-        title={metadata?.title || t("explore.story_alt", { id: story.id })}
-        storyId={story.id}
+        title={metadata?.title || t("explore.story_alt", { id: story.id.toString() })}
+        storyId={story.id.toString()}
         className="h-48 w-full"
         t={t}
       />
@@ -301,9 +303,9 @@ const StoryCard: React.FC<{
         {/* 标题和作者 */}
         <div className="flex justify-between items-start mb-3">
           <h2 className="card-title text-lg font-bold line-clamp-2">
-            {metadata?.title || t("story.detail.story_number", { id: story.id })}
+            {metadata?.title || t("story.detail.story_number", { id: story.id.toString() })}
           </h2>
-          <div className="badge badge-secondary badge-sm">#{story.id}</div>
+          <div className="badge badge-secondary badge-sm">#{story.id.toString()}</div>
         </div>
 
         {/* 作者和创建时间 */}
@@ -314,7 +316,7 @@ const StoryCard: React.FC<{
           </div>
           <div className="flex items-center gap-1">
             <ClockIcon className="w-4 h-4" />
-            <span>{new Date(story.createdTime * 1000).toLocaleDateString()}</span>
+            <span>{new Date(Number(story.createdTime) * 1000).toLocaleDateString()}</span>
           </div>
         </div>
 
@@ -338,18 +340,18 @@ const StoryCard: React.FC<{
         {/* 统计信息 */}
         <div className="flex justify-between items-center text-sm">
           <div className="flex items-center gap-4">
-            <LikeButton tokenId={BigInt(story.id)} isStory={true} currentLikes={story.likes} showCount={true} />
+            <LikeButton tokenId={BigInt(story.id)} isStory={true} currentLikes={Number(story.likes)} showCount={true} />
 
             <div className="flex items-center gap-1 text-base-content/70">
               <ShareIcon className="w-4 h-4" />
-              <span>{story.forkCount}</span>
+              <span>{Number(story.forkCount)}</span>
             </div>
           </div>
         </div>
 
         {/* 操作按钮 */}
         <div className="card-actions justify-end mt-4">
-          <Link href={`/story/${story.id}`} className="btn btn-primary btn-sm gap-1">
+          <Link href={`/story/${story.id.toString()}`} className="btn btn-primary btn-sm gap-1">
             <BookOpenIcon className="w-4 h-4" />
             {t("explore.read_button")}
           </Link>
@@ -383,7 +385,7 @@ const ExplorePage = () => {
 
   // 为每个故事添加 metadata 字段以支持类型检查
   const storiesWithMetadata: StoryWithMetadata[] = stories.map(story => {
-    const metadata = storiesMetadata.get(story.id) || undefined;
+    const metadata = storiesMetadata.get(story.id.toString()) || undefined;
     return {
       ...story,
       metadata,
@@ -418,7 +420,7 @@ const ExplorePage = () => {
     const searchLower = searchTerm.toLowerCase();
 
     // 搜索故事ID
-    if (story.id.includes(searchTerm)) return true;
+    if (story.id.toString().includes(searchTerm)) return true;
 
     // 搜索作者地址
     if (story.author.toLowerCase().includes(searchLower)) return true;
@@ -628,7 +630,7 @@ const ExplorePage = () => {
                 <StoryCard
                   key={story.id}
                   story={story}
-                  onMetadataLoad={metadata => handleMetadataLoad(story.id, metadata)}
+                  onMetadataLoad={metadata => handleMetadataLoad(story.id.toString(), metadata)}
                   t={t}
                 />
               </ErrorBoundary>

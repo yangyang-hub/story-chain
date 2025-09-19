@@ -44,7 +44,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
           id: comment.id,
           commenter: comment.commenter,
           ipfsHash: comment.ipfsHash,
-          timestamp: parseInt(comment.createdTime) * 1000, // 转换为毫秒
+          timestamp: Number(comment.createdTime) * 1000, // 转换为毫秒
         }));
         setComments(fetchedComments);
       } else {

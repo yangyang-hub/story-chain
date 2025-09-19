@@ -25,4 +25,4 @@ export {
 } from "../hooks/useChainData";
 
 // 导出数据类型
-export type { StoryData, ChapterData, AnalyticsData } from "./monitoring/types";
+export type { StoryData, ChapterData, AnalyticsData } from "./types";

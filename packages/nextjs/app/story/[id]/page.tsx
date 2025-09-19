@@ -20,7 +20,7 @@ import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { ChapterData } from "~~/lib/monitoring/types";
+import { ChapterData } from "~~/lib/types";
 import chainDataService from "~~/services/chain/chainDataService";
 import { type ChapterMetadata, getJSONFromIPFS, uploadChapterMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
@@ -131,7 +131,7 @@ const ForkSelector: React.FC<{
         {forks.map((fork, index) => (
           <button
             key={fork.id}
-            onClick={() => onSelectFork(fork.id)}
+            onClick={() => onSelectFork(fork.id.toString())}
             className="text-left p-4 border-2 border-base-300 rounded-xl hover:border-primary hover:bg-primary/5 transition-all group"
           >
             <div className="flex justify-between items-start mb-3">
@@ -152,7 +152,7 @@ const ForkSelector: React.FC<{
               <div className="text-xs text-base-content/50">{t("chapter.reading_detail")}</div>
             </div>
             <div className="flex justify-between items-center text-xs text-base-content/60">
-              <span>{new Date(fork.createdTime * 1000).toLocaleDateString()}</span>
+              <span>{new Date(Number(fork.createdTime) * 1000).toLocaleDateString()}</span>
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1">
                   <span>👍</span>
@@ -217,7 +217,7 @@ const ChapterCard: React.FC<{
         setError(error instanceof Error ? error.message : t("error.metadata_load_failed"));
 
         // Auto-retry for new chapters (likely IPFS sync issue)
-        const isRecentChapter = Date.now() - chapter.createdTime * 1000 < 300000; // 5 minutes
+        const isRecentChapter = Date.now() - Number(chapter.createdTime) * 1000 < 300000; // 5 minutes
         if (isRecentChapter && !retrying) {
           console.log(`⏳ Auto-retrying metadata load for recent chapter ${chapter.id} in 5 seconds...`);
           setRetrying(true);
@@ -300,10 +300,10 @@ const ChapterCard: React.FC<{
           </div>
           <div className="flex items-center gap-2">
             <ClockIcon className="w-4 h-4" />
-            <span>{new Date(chapter.createdTime * 1000).toLocaleDateString()}</span>
+            <span>{new Date(Number(chapter.createdTime) * 1000).toLocaleDateString()}</span>
           </div>
           {/* 显示fork费用 */}
-          {chapter.forkFee && chapter.forkFee !== "0" && (
+          {chapter.forkFee && chapter.forkFee !== 0n && (
             <div className="flex items-center gap-2 text-orange-600 font-medium">
               <ShareIcon className="w-4 h-4" />
               <span>{t("chapter.fork_fee_label", { fee: formatEther(BigInt(chapter.forkFee)) })}</span>
@@ -323,11 +323,16 @@ const ChapterCard: React.FC<{
 
         {/* 统计信息和交互 */}
         <div className="flex flex-wrap items-center gap-4 text-sm mb-6 p-3 bg-base-200/30 rounded-lg">
-          <LikeButton tokenId={BigInt(chapter.id)} isStory={false} currentLikes={chapter.likes} showCount={true} />
+          <LikeButton
+            tokenId={BigInt(chapter.id)}
+            isStory={false}
+            currentLikes={Number(chapter.likes)}
+            showCount={true}
+          />
 
           <div className="flex items-center gap-2 text-base-content/70">
             <ShareIcon className="w-4 h-4" />
-            <span className="font-medium">{chapter.forkCount}</span>
+            <span className="font-medium">{Number(chapter.forkCount)}</span>
             <span>{t("story.forks")}</span>
           </div>
 
@@ -389,7 +394,7 @@ const ChapterCard: React.FC<{
 
           <div className="flex gap-3">
             <button
-              onClick={() => onTip(chapter.id)}
+              onClick={() => onTip(chapter.id.toString())}
               className="btn btn-outline btn-sm gap-2"
               disabled={!address}
               title={!address ? t("chapter.connect_wallet_tip") : t("chapter.tip_tooltip")}
@@ -398,7 +403,7 @@ const ChapterCard: React.FC<{
               {t("chapter.tip_chapter")}
             </button>
             <button
-              onClick={() => onContinue(chapter.id)}
+              onClick={() => onContinue(chapter.id.toString())}
               className="btn btn-secondary btn-sm gap-2"
               disabled={!address || !canUserContinueChapter(chapter, allChapters)}
               title={getContinueButtonTooltip(chapter, allChapters)}
@@ -407,7 +412,7 @@ const ChapterCard: React.FC<{
               {t("chapter.continue_chapter")}
             </button>
             <button
-              onClick={() => onFork(chapter.id)}
+              onClick={() => onFork(chapter.id.toString())}
               className="btn btn-primary btn-sm gap-2"
               disabled={!address}
               title={
@@ -418,7 +423,7 @@ const ChapterCard: React.FC<{
             >
               <ShareIcon className="w-4 h-4" />
               {t("chapter.fork_chapter")}
-              {chapter.forkFee && chapter.forkFee !== "0" && (
+              {chapter.forkFee && chapter.forkFee !== 0n && (
                 <span className="badge badge-warning badge-xs ml-1">{formatEther(BigInt(chapter.forkFee))} STT</span>
               )}
             </button>
@@ -484,7 +489,7 @@ const ChapterTreeNode: React.FC<{
         setMetadataError(errorMsg);
 
         // Auto-retry for recent chapters
-        const isRecentChapter = Date.now() - chapter.createdTime * 1000 < 300000; // 5 minutes
+        const isRecentChapter = Date.now() - Number(chapter.createdTime) * 1000 < 300000; // 5 minutes
         if (isRecentChapter && !retrying) {
           console.log(`⏳ Auto-retrying tree node metadata for recent chapter ${chapter.id} in 3 seconds...`);
           setRetrying(true);
@@ -524,7 +529,7 @@ const ChapterTreeNode: React.FC<{
             <div className="flex justify-between items-start mb-3">
               <div className="flex-1">
                 <h4 className="font-semibold text-base-content flex items-center gap-2">
-                  {t("chapter.title", { number: chapter.chapterNumber })}
+                  {t("chapter.title", { number: Number(chapter.chapterNumber) })}
                   {(metadataLoading || retrying) && <span className="loading loading-spinner loading-xs"></span>}
                   {metadataError && (
                     <button
@@ -553,7 +558,7 @@ const ChapterTreeNode: React.FC<{
                     <UserIcon className="w-3 h-3" />
                     <Address address={chapter.author} size="sm" />
                   </div>
-                  <span>{new Date(chapter.createdTime * 1000).toLocaleDateString()}</span>
+                  <span>{new Date(Number(chapter.createdTime) * 1000).toLocaleDateString()}</span>
                 </div>
               </div>
 
@@ -567,7 +572,7 @@ const ChapterTreeNode: React.FC<{
                   <span>💰</span>
                   <span>{formatEther(BigInt(chapter.totalTips))} STT</span>
                 </div>
-                {chapter.forkFee && chapter.forkFee !== "0" && (
+                {chapter.forkFee && chapter.forkFee !== 0n && (
                   <div className="flex items-center gap-1">
                     <span>🔀</span>
                     <span>{formatEther(BigInt(chapter.forkFee))} STT</span>
@@ -585,7 +590,7 @@ const ChapterTreeNode: React.FC<{
                 </a>
 
                 <button
-                  onClick={() => onTip(chapter.id)}
+                  onClick={() => onTip(chapter.id.toString())}
                   className="btn btn-xs btn-secondary gap-1"
                   disabled={!address}
                   title={!address ? t("chapter.connect_wallet_tip") : t("chapter.tip_tooltip")}
@@ -597,7 +602,7 @@ const ChapterTreeNode: React.FC<{
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => onContinue(chapter.id)}
+                  onClick={() => onContinue(chapter.id.toString())}
                   className="btn btn-xs btn-outline gap-1"
                   disabled={!address || !canUserContinueChapter(chapter, allChapters)}
                   title={getContinueButtonTooltip(chapter, allChapters)}
@@ -607,7 +612,7 @@ const ChapterTreeNode: React.FC<{
                 </button>
 
                 <button
-                  onClick={() => onFork(chapter.id)}
+                  onClick={() => onFork(chapter.id.toString())}
                   className="btn btn-xs btn-accent gap-1"
                   disabled={!address}
                   title={
@@ -618,7 +623,7 @@ const ChapterTreeNode: React.FC<{
                 >
                   <ShareIcon className="w-3 h-3" />
                   {t("chapter.fork_chapter")}
-                  {chapter.forkFee && chapter.forkFee !== "0" && (
+                  {chapter.forkFee && chapter.forkFee !== 0n && (
                     <span className="badge badge-warning badge-xs">{formatEther(BigInt(chapter.forkFee))} STT</span>
                   )}
                 </button>
@@ -678,12 +683,12 @@ const ChapterTreeView: React.FC<{
 }> = ({ chapters, onFork, onTip, onContinue, storyId, canUserContinueChapter, getContinueButtonTooltip, t }) => {
   // 构建树形结构
   const buildTree = () => {
-    const rootChapters = chapters.filter(chapter => chapter.parentId === "0");
-    return rootChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+    const rootChapters = chapters.filter(chapter => chapter.parentId === 0n);
+    return rootChapters.sort((a, b) => Number(a.chapterNumber) - Number(b.chapterNumber));
   };
 
   const getChildren = (parentId: string) => {
-    return chapters.filter(chapter => chapter.parentId === parentId).sort((a, b) => a.chapterNumber - b.chapterNumber);
+    return chapters.filter(chapter => chapter.parentId.toString() === parentId).sort((a, b) => Number(a.chapterNumber) - Number(b.chapterNumber));
   };
 
   const rootChapters = buildTree();
@@ -699,7 +704,7 @@ const ChapterTreeView: React.FC<{
         <div className="flex items-center gap-4">
           <span>{t("story.detail.total_chapters", { count: chapters.length })}</span>
           <span>
-            {t("story.detail.fork_points", { count: chapters.filter(c => getChildren(c.id).length > 1).length })}
+            {t("story.detail.fork_points", { count: chapters.filter(c => getChildren(c.id.toString()).length > 1).length })}
           </span>
         </div>
         <div className="text-xs text-base-content/50">{t("story.detail.tree_help")}</div>
@@ -708,7 +713,7 @@ const ChapterTreeView: React.FC<{
       {/* 树形结构 */}
       <div className="space-y-6">
         {rootChapters.map((rootChapter, index) => {
-          const children = getChildren(rootChapter.id);
+          const children = getChildren(rootChapter.id.toString());
           return (
             <ChapterTreeNode
               key={rootChapter.id}
@@ -966,7 +971,7 @@ const ContinueChapterModal: React.FC<{
         timestamp: Date.now(),
         storyId: storyId.toString(),
         parentChapterId: parentChapter.id.toString(),
-        chapterNumber: parentChapter.chapterNumber + 1,
+        chapterNumber: Number(parentChapter.chapterNumber) + 1,
         image: imageCid,
       };
 
@@ -1010,13 +1015,13 @@ const ContinueChapterModal: React.FC<{
       <div className="relative bg-base-100 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <h2 className="text-xl font-bold mb-4">
-            {t("modal.continue_chapter.title", { number: parentChapter.chapterNumber + 1 })}
+            {t("modal.continue_chapter.title", { number: Number(parentChapter.chapterNumber) + 1 })}
           </h2>
 
           {/* 显示父章节信息 */}
           <div className="bg-base-200 rounded-lg p-4 mb-4">
             <h3 className="font-semibold text-sm text-base-content/70 mb-2">{t("modal.continue_chapter.based_on")}</h3>
-            <p className="font-medium">{t("chapter.title", { number: parentChapter.chapterNumber })}</p>
+            <p className="font-medium">{t("chapter.title", { number: Number(parentChapter.chapterNumber) })}</p>
             <div className="flex items-center gap-2 text-sm text-base-content/60 mt-1">
               <UserIcon className="w-3 h-3" />
               <Address address={parentChapter.author} size="sm" />
@@ -1181,7 +1186,7 @@ const ForkModal: React.FC<{
         timestamp: Date.now(),
         storyId: storyId, // 保持在同一个故事中
         parentChapterId: parentChapter.id.toString(),
-        chapterNumber: parentChapter.chapterNumber + 1, // 下一章编号
+        chapterNumber: Number(parentChapter.chapterNumber) + 1, // 下一章编号
         image: imageCid,
       };
 
@@ -1231,7 +1236,7 @@ const ForkModal: React.FC<{
           {/* 显示原章节信息 */}
           <div className="bg-base-200 rounded-lg p-4 mb-4">
             <h3 className="font-semibold text-sm text-base-content/70 mb-2">{t("modal.continue_chapter.based_on")}</h3>
-            <p className="font-medium">{t("chapter.title", { number: parentChapter.chapterNumber })}</p>
+            <p className="font-medium">{t("chapter.title", { number: Number(parentChapter.chapterNumber) })}</p>
             <div className="flex items-center gap-2 text-sm text-base-content/60 mt-1">
               <UserIcon className="w-3 h-3" />
               <Address address={parentChapter.author} size="sm" />
@@ -1544,7 +1549,7 @@ const StoryDetailPage = () => {
     }
 
     // 找到要续写的章节
-    const chapter = chaptersWithMetadata.find(ch => ch.id === chapterId);
+    const chapter = chaptersWithMetadata.find(ch => ch.id.toString() === chapterId);
     if (!chapter) {
       notification.error(t("error.chapter_not_exist"));
       return;
@@ -1567,7 +1572,7 @@ const StoryDetailPage = () => {
     }
 
     // 找到要分叉的章节
-    const chapter = chaptersWithMetadata.find(ch => ch.id === chapterId);
+    const chapter = chaptersWithMetadata.find(ch => ch.id.toString() === chapterId);
     if (!chapter) {
       notification.error(t("error.chapter_not_exist"));
       return;
@@ -1683,7 +1688,7 @@ const StoryDetailPage = () => {
               </div>
               <div className="flex items-center gap-1">
                 <ClockIcon className="w-4 h-4" />
-                <span>{new Date(story.createdTime * 1000).toLocaleDateString()}</span>
+                <span>{new Date(Number(story.createdTime) * 1000).toLocaleDateString()}</span>
               </div>
             </div>
           </div>
@@ -1693,7 +1698,7 @@ const StoryDetailPage = () => {
               <LikeButton
                 tokenId={BigInt(storyId)}
                 isStory={true}
-                currentLikes={story.likes}
+                currentLikes={Number(story.likes)}
                 showCount={true}
                 onLikeSuccess={handleLikeSuccess}
               />
@@ -1727,7 +1732,7 @@ const StoryDetailPage = () => {
                   onClick={() => {
                     // 续写最后一章
                     const lastChapter = chaptersWithMetadata[chaptersWithMetadata.length - 1];
-                    handleContinueChapter(lastChapter.id);
+                    handleContinueChapter(lastChapter.id.toString());
                   }}
                   className="btn btn-secondary gap-2"
                   disabled={
@@ -1745,7 +1750,7 @@ const StoryDetailPage = () => {
                 <button
                   onClick={() => {
                     const lastChapter = chaptersWithMetadata[chaptersWithMetadata.length - 1];
-                    handleFork(lastChapter.id);
+                    handleFork(lastChapter.id.toString());
                   }}
                   className="btn btn-outline gap-2"
                   title={t("story.detail.fork_story_tooltip")}
@@ -1793,7 +1798,7 @@ const StoryDetailPage = () => {
               <button
                 onClick={() => {
                   const lastChapter = chaptersWithMetadata[chaptersWithMetadata.length - 1];
-                  handleContinueChapter(lastChapter.id);
+                  handleContinueChapter(lastChapter.id.toString());
                 }}
                 className="btn btn-secondary gap-2"
                 disabled={
@@ -1810,7 +1815,7 @@ const StoryDetailPage = () => {
               <button
                 onClick={() => {
                   const lastChapter = chaptersWithMetadata[chaptersWithMetadata.length - 1];
-                  handleFork(lastChapter.id);
+                  handleFork(lastChapter.id.toString());
                 }}
                 className="btn btn-outline gap-2"
                 title={t("story.detail.fork_latest")}
@@ -1932,7 +1937,7 @@ const StoryDetailPage = () => {
             <button
               onClick={() => {
                 const lastChapter = chaptersWithMetadata[chaptersWithMetadata.length - 1];
-                handleContinueChapter(lastChapter.id);
+                handleContinueChapter(lastChapter.id.toString());
               }}
               className="btn btn-secondary btn-circle shadow-lg hover:shadow-xl transition-all"
               disabled={
@@ -1948,7 +1953,7 @@ const StoryDetailPage = () => {
             <button
               onClick={() => {
                 const lastChapter = chaptersWithMetadata[chaptersWithMetadata.length - 1];
-                handleFork(lastChapter.id);
+                handleFork(lastChapter.id.toString());
               }}
               className="btn btn-outline btn-circle shadow-lg hover:shadow-xl transition-all"
               title={t("story.detail.fork_latest")}

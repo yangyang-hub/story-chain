@@ -18,7 +18,7 @@ import { LikeButton } from "~~/components/interactions/LikeButton";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { ChapterData } from "~~/lib/monitoring/types";
+import { ChapterData } from "~~/lib/types";
 import { type ChapterMetadata, getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -174,7 +174,7 @@ const ForkSelector: React.FC<{
               key={fork.id}
               href={`/story/${storyId}/chapter/${fork.id}`}
               className={`card bg-base-200 hover:bg-base-300 transition-colors border ${
-                fork.id === currentChapterId ? "border-primary bg-primary/5" : "border-base-300"
+                fork.id.toString() === currentChapterId ? "border-primary bg-primary/5" : "border-base-300"
               }`}
             >
               <div className="card-body p-4">
@@ -184,7 +184,7 @@ const ForkSelector: React.FC<{
                     <UserIcon className="w-3 h-3" />
                     <Address address={fork.author} size="sm" />
                   </div>
-                  {fork.id === currentChapterId && (
+                  {fork.id.toString() === currentChapterId && (
                     <span className="badge badge-primary badge-sm">{t("chapter.read.current")}</span>
                   )}
                 </div>
@@ -194,7 +194,7 @@ const ForkSelector: React.FC<{
                 </div>
 
                 <div className="flex justify-between items-center text-xs text-base-content/60 mt-2">
-                  <span>{new Date(fork.createdTime * 1000).toLocaleDateString()}</span>
+                  <span>{new Date(Number(fork.createdTime) * 1000).toLocaleDateString()}</span>
                   <div className="flex items-center gap-4">
                     <span>❤️ {fork.likes}</span>
                     <span>{t("chapter.read.tip_earned", { amount: formatEther(BigInt(fork.totalTips)) })}</span>
@@ -282,7 +282,7 @@ const ChapterReadingPage = () => {
     }
 
     // 获取父章节（上一章）
-    const prevChapter = chapter.parentId !== "0" ? chapters.find(ch => ch.id === chapter.parentId) : null;
+    const prevChapter = chapter.parentId !== 0n ? chapters.find(ch => ch.id === chapter.parentId) : null;
 
     // 获取子章节（下一章们）
     const nextChapters = chapters.filter(ch => ch.parentId === chapter.id);
@@ -310,7 +310,7 @@ const ChapterReadingPage = () => {
     try {
       await tip({
         functionName: "tip",
-        args: [BigInt(storyId as string), BigInt(chapter.id)],
+        args: [BigInt(chapter.id)],
         value: parseEther(amount),
       });
 
@@ -363,12 +363,17 @@ const ChapterReadingPage = () => {
               {storyMetadata?.title || t("chapter.read.story_number", { id: String(storyId) })}
             </h1>
             <p className="text-sm text-base-content/60">
-              {t("chapter.read.chapter_number", { number: chapter.chapterNumber })}
+              {t("chapter.read.chapter_number", { number: Number(chapter.chapterNumber) })}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <LikeButton tokenId={BigInt(chapter.id)} isStory={false} currentLikes={chapter.likes} showCount={true} />
+            <LikeButton
+              tokenId={BigInt(chapter.id)}
+              isStory={false}
+              currentLikes={Number(chapter.likes)}
+              showCount={true}
+            />
           </div>
         </div>
 
@@ -382,7 +387,7 @@ const ChapterReadingPage = () => {
             <div className="border-b border-base-300 pb-4 mb-6">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xl font-bold text-base-content">
-                  {t("chapter.read.chapter_number", { number: chapter.chapterNumber })}
+                  {t("chapter.read.chapter_number", { number: Number(chapter.chapterNumber) })}
                 </h2>
                 <div className="flex items-center gap-2 text-sm text-base-content/60">
                   <UserIcon className="w-4 h-4" />
@@ -391,9 +396,9 @@ const ChapterReadingPage = () => {
               </div>
 
               <div className="flex items-center gap-4 text-sm text-base-content/60">
-                <span>{new Date(chapter.createdTime * 1000).toLocaleString()}</span>
+                <span>{new Date(Number(chapter.createdTime) * 1000).toLocaleString()}</span>
                 <span>{t("chapter.read.tip_earned", { amount: formatEther(BigInt(chapter.totalTips)) })}</span>
-                {chapter.forkFee && chapter.forkFee !== "0" && (
+                {chapter.forkFee && chapter.forkFee !== 0n && (
                   <span>
                     🔀 {t("story.fork_fee")}: {formatEther(BigInt(chapter.forkFee))} STT
                   </span>
@@ -465,7 +470,7 @@ const ChapterReadingPage = () => {
                       >
                         <span>{t("chapter.read.branch_label", { number: index + 1 })}</span>
                         <span className="text-xs text-base-content/60">
-                          {new Date(nextChapter.createdTime * 1000).toLocaleDateString()}
+                          {new Date(Number(nextChapter.createdTime) * 1000).toLocaleDateString()}
                         </span>
                       </a>
                     </li>

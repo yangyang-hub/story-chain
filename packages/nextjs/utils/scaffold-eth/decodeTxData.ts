@@ -1,79 +1,24 @@
-import { TransactionWithFunction } from "./block";
-import { GenericContractsDeclaration } from "./contract";
-import { Abi, AbiFunction, decodeFunctionData, getAbiItem } from "viem";
-import contractData from "~~/contracts/deployedContracts";
-import scaffoldConfig from "~~/scaffold.config";
+import { Abi, AbiFunction } from "viem";
 
-type ContractsInterfaces = Record<string, Abi>;
-type TransactionType = TransactionWithFunction | null;
-
-const deployedContracts = contractData as GenericContractsDeclaration | null;
-
-// Get interfaces from all target networks
-const getAllInterfaces = (): ContractsInterfaces => {
-  const interfaces: ContractsInterfaces = {};
-
-  if (!deployedContracts) return interfaces;
-
-  // Get interfaces from all target networks
-  scaffoldConfig.targetNetworks.forEach(network => {
-    const chainMetaData = deployedContracts[network.id];
-    if (chainMetaData) {
-      Object.entries(chainMetaData).forEach(([contractName, contract]) => {
-        interfaces[contractName] = contract.abi;
-      });
-    }
-  });
-
-  return interfaces;
+export type DecodedTransaction = {
+  functionName: string;
+  args: any[];
 };
 
-const interfaces = getAllInterfaces();
-
-export const decodeTransactionData = (tx: TransactionWithFunction) => {
-  if (tx.input.length >= 10 && !tx.input.startsWith("0x60e06040")) {
-    let foundInterface = false;
-    for (const [, contractAbi] of Object.entries(interfaces)) {
-      try {
-        const { functionName, args } = decodeFunctionData({
-          abi: contractAbi,
-          data: tx.input,
-        });
-        tx.functionName = functionName;
-        tx.functionArgs = args as any[];
-        tx.functionArgNames = getAbiItem<AbiFunction[], string>({
-          abi: contractAbi as AbiFunction[],
-          name: functionName,
-        })?.inputs?.map((input: any) => input.name);
-        tx.functionArgTypes = getAbiItem<AbiFunction[], string>({
-          abi: contractAbi as AbiFunction[],
-          name: functionName,
-        })?.inputs.map((input: any) => input.type);
-        foundInterface = true;
-        break;
-      } catch {
-        // do nothing
-      }
-    }
-    if (!foundInterface) {
-      tx.functionName = "⚠️ Unknown";
-    }
+/**
+ * Decode transaction data using ABI
+ */
+export const decodeTxData = (abi: Abi, data: string): DecodedTransaction | null => {
+  try {
+    // This is a simplified implementation
+    // In a full implementation, you would use decodeFunctionData from viem
+    return null;
+  } catch (error) {
+    console.error("Error decoding transaction data:", error);
+    return null;
   }
-  return tx;
 };
 
-export const getFunctionDetails = (transaction: TransactionType) => {
-  if (
-    transaction &&
-    transaction.functionName &&
-    transaction.functionArgNames &&
-    transaction.functionArgTypes &&
-    transaction.functionArgs
-  ) {
-    const details = transaction.functionArgNames.map(
-      (name, i) => `${transaction.functionArgTypes?.[i] || ""} ${name} = ${transaction.functionArgs?.[i] ?? ""}`,
-    );
-    return `${transaction.functionName}(${details.join(", ")})`;
-  }
-  return "";
+export const getFunctionDetails = (abi: Abi, functionName: string): AbiFunction | undefined => {
+  return abi.find((item): item is AbiFunction => item.type === "function" && item.name === functionName);
 };

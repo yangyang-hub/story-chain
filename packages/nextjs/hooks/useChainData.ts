@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnalyticsData, ChapterData, StoryData } from "~~/lib/monitoring/types";
+import { AnalyticsData, ChapterData, StoryData } from "~~/lib/types";
 import chainDataService, { ChapterFilters, PaginatedResponse, StoryFilters } from "~~/services/chain/chainDataService";
 
 interface UseAsyncDataState<T> {

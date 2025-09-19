@@ -1,4 +1,4 @@
-import { AnalyticsData, ChapterData, StoryData } from "~~/lib/monitoring/types";
+import { AnalyticsData, ChapterData, StoryData } from "~~/lib/types";
 
 export interface PaginationParams {
   page?: number;

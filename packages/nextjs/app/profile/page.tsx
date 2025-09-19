@@ -195,7 +195,7 @@ const ProfilePage = () => {
                   id: storyData.id,
                   title: title,
                   ipfsHash: storyData.ipfsHash,
-                  createdTime: storyData.createdTime * 1000,
+                  createdTime: Number(storyData.createdTime) * 1000,
                   likes: Number(storyData.likes) || 0,
                   forkCount: Number(storyData.forkCount) || 0,
                   totalTips: storyData.totalTips || "0",
@@ -222,13 +222,13 @@ const ProfilePage = () => {
               try {
                 let metadata = null;
                 let title = `Chapter #${chapterData.id}`;
-                let chapterNumber = 1;
+                // 使用API返回的真实章节编号，而不是metadata中的
+                const chapterNumber = Number(chapterData.chapterNumber) || 1;
 
                 if (chapterData.ipfsHash) {
                   try {
                     metadata = await getJSONFromIPFS(chapterData.ipfsHash);
                     title = metadata?.title || metadata?.name || title;
-                    chapterNumber = metadata?.chapterNumber || 1;
                   } catch (error) {
                     console.warn("Failed to load chapter metadata:", error);
                   }
@@ -239,7 +239,7 @@ const ProfilePage = () => {
                   storyId: chapterData.storyId,
                   title: title,
                   ipfsHash: chapterData.ipfsHash,
-                  createdTime: chapterData.createdTime * 1000,
+                  createdTime: Number(chapterData.createdTime) * 1000,
                   likes: Number(chapterData.likes) || 0,
                   forkCount: Number(chapterData.forkCount) || 0,
                   totalTips: chapterData.totalTips || "0",

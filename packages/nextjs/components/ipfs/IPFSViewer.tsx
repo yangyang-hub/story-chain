@@ -132,7 +132,7 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
               className="max-w-full max-h-96 mx-auto rounded-lg shadow-sm"
               width={384}
               height={384}
-              style={{objectFit: 'contain'}}
+              style={{ objectFit: "contain" }}
             />
           </div>
         )}

@@ -270,7 +270,14 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
         {previewImage ? (
           <div className="relative group">
-            <Image src={previewImage} alt={t("upload.preview")} className="max-h-64 mx-auto rounded-lg" width={256} height={256} style={{objectFit: 'contain'}} />
+            <Image
+              src={previewImage}
+              alt={t("upload.preview")}
+              className="max-h-64 mx-auto rounded-lg"
+              width={256}
+              height={256}
+              style={{ objectFit: "contain" }}
+            />
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
               <PhotoIcon className="w-8 h-8 text-white" />
             </div>
