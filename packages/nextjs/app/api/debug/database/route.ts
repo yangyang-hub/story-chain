@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PostgreSQLStore } from "../../../../lib/database/postgreSQLStore";
 
-export async function GET(request: NextRequest) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_: NextRequest) {
   try {
     const store = new PostgreSQLStore();
 

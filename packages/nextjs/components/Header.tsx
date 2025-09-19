@@ -4,7 +4,7 @@ import React, { useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bars3Icon, BookOpenIcon, BugAntIcon, ChartBarIcon, PlusIcon, UserIcon } from "@heroicons/react/24/outline";
+import { Bars3Icon, BookOpenIcon, PlusIcon, UserIcon } from "@heroicons/react/24/outline";
 import { LanguageSwitcher } from "~~/components/LanguageSwitcher";
 import { SwitchTheme } from "~~/components/SwitchTheme";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";

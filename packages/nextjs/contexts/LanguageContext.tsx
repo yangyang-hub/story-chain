@@ -244,13 +244,6 @@ const zhTranslations: Record<string, string> = {
   "explore.be_first_creator": "成为第一个创建故事的人！",
   "explore.create_tooltip": "创建故事",
 
-  // 分叉页面
-  "fork.title": "基于现有章节创建新的故事分支",
-  "fork.original_story": "原始故事",
-  "fork.create_fork": "创建分叉",
-  "fork.new_title": "新故事标题",
-  "fork.new_content": "新故事内容",
-
   // 评论系统
   "comment.title": "评论",
   "comment.add": "发布评论",
@@ -729,14 +722,6 @@ const enTranslations: Record<string, string> = {
   "explore.no_stories_yet": "No stories yet",
   "explore.be_first_creator": "Be the first to create a story!",
   "explore.create_tooltip": "Create Story",
-
-  // Fork page
-  "fork.title": "Create new story branch based on existing chapter",
-  "fork.original_story": "Original Story",
-  "fork.create_fork": "Create Fork",
-  "fork.new_title": "New Story Title",
-  "fork.new_content": "New Story Content",
-
   // Comment system
   "comment.title": "Comments",
   "comment.add": "Post Comment",

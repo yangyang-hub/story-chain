@@ -10,7 +10,6 @@ import { useStoryChain } from "~~/hooks/useStoryChain";
 interface TipModalProps {
   isOpen: boolean;
   onClose: () => void;
-  storyId: bigint;
   chapterId: bigint;
   recipientAddress: string;
   recipientType: "story" | "chapter";
@@ -21,7 +20,6 @@ interface TipModalProps {
 export const TipModal: React.FC<TipModalProps> = ({
   isOpen,
   onClose,
-  storyId,
   chapterId,
   recipientAddress,
   recipientType,
@@ -49,7 +47,7 @@ export const TipModal: React.FC<TipModalProps> = ({
     }
 
     try {
-      await tip(storyId, chapterId, amount);
+      await tip(BigInt(chapterId), amount);
       onTipSuccess?.();
       onClose();
 

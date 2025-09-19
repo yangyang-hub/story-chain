@@ -1112,7 +1112,8 @@ export class PostgreSQLStore {
                   }
                 }
               }
-            } catch (indexError) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            } catch (_) {
               // 继续下一个索引
               continue;
             }
@@ -1254,12 +1255,12 @@ export class PostgreSQLStore {
 
         // 构建章节层次结构
         const chapterMap = new Map();
-        chapters.forEach(chapter => {
+        chapters.forEach((chapter: any) => {
           chapterMap.set(chapter.id, chapter);
         });
 
         // 递归计算章节编号
-        const calculateChapterNumber = (chapterId, visited = new Set()) => {
+        const calculateChapterNumber = (chapterId: any, visited = new Set()): number => {
           if (visited.has(chapterId)) {
             return 1; // 避免循环引用
           }

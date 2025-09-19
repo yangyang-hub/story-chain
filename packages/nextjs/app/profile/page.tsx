@@ -328,8 +328,7 @@ const ProfilePage = () => {
       };
     }
 
-    // Get user's stories and chapters for tip filtering
-    const userStoryIds = new Set(userStories.map(story => story.id));
+    // Get user's chapters for tip filtering
     const userChapterIds = new Set(userChapters.map(chapter => chapter.id));
 
     // Get transaction hashes of all fork events to distinguish fork rewards from tip rewards

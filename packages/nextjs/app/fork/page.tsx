@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatEther } from "viem";
 import { useAccount } from "wagmi";
@@ -20,7 +20,7 @@ import { useStoryChain } from "~~/hooks/useStoryChain";
 import { type ChapterMetadata, getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 
-const ForkStoryPage = () => {
+const ForkStoryPageContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { address } = useAccount();
@@ -409,6 +409,18 @@ const ForkStoryPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const ForkStoryPage = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="loading loading-spinner loading-lg"></div>
+      </div>
+    }>
+      <ForkStoryPageContent />
+    </Suspense>
   );
 };
 

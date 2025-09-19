@@ -158,7 +158,8 @@ export default function SimpleStoryPage() {
           <h3 className="card-title">章节列表</h3>
           {chapters.length > 0 ? (
             <div className="space-y-2">
-              {chapters.map((chapter, index) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
+              {chapters.map((chapter, _) => (
                 <div key={chapter.id} className="border rounded p-3">
                   <strong>章节 #{chapter.id}</strong> - 作者: {chapter.author}
                 </div>

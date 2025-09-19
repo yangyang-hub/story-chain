@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { ChatBubbleLeftIcon, ClockIcon, PaperAirplaneIcon, UserIcon } from "@heroicons/react/24/outline";
 import { IPFSContentViewer } from "~~/components/ipfs/IPFSViewer";
@@ -33,7 +33,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
   const [loadingComments, setLoadingComments] = useState(true);
 
   // 从API获取评论数据
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     try {
       setLoadingComments(true);
       const response = await fetch(`/api/data/comments?tokenId=${tokenId.toString()}`);
@@ -57,12 +57,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ tokenId, tokenTy
     } finally {
       setLoadingComments(false);
     }
-  };
+  }, [tokenId]);
 
   // 初始加载评论
   useEffect(() => {
     fetchComments();
-  }, [tokenId]);
+  }, [fetchComments]);
 
   // 提交评论后重新获取评论列表
   const refetchComments = () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { DocumentDuplicateIcon, EyeIcon, LinkIcon } from "@heroicons/react/24/outline";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { getFromIPFS, getIPFSUrl, getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
@@ -65,7 +66,7 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
     };
 
     loadContent();
-  }, [cid, contentType]);
+  }, [cid, contentType, t]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -125,11 +126,13 @@ export const IPFSContentViewer: React.FC<IPFSContentViewerProps> = ({
       <div className="p-4">
         {type === "image" && (
           <div className="text-center">
-            <img
+            <Image
               src={content}
               alt="IPFS Content"
               className="max-w-full max-h-96 mx-auto rounded-lg shadow-sm"
-              loading="lazy"
+              width={384}
+              height={384}
+              style={{objectFit: 'contain'}}
             />
           </div>
         )}
@@ -257,7 +260,7 @@ export const IPFSPreview: React.FC<IPFSPreviewProps> = ({ cid, className = "", m
     };
 
     loadPreview();
-  }, [cid]);
+  }, [cid, t]);
 
   if (loading) {
     return (

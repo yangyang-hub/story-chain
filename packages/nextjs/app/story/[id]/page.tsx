@@ -171,6 +171,7 @@ const ForkSelector: React.FC<{
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const ChapterCard: React.FC<{
   chapter: ChapterWithMetadata;
   onFork: (chapterId: string) => void;
@@ -924,6 +925,7 @@ const ContinueChapterModal: React.FC<{
   const [imageUrl, setImageUrl] = useState("");
   const [imageCid, setImageCid] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [forkFeeRequired, setForkFeeRequired] = useState<string>("0");
 
   const { writeContractAsync: createChapter } = useScaffoldWriteContract("StoryChain");

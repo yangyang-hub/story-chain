@@ -11,9 +11,9 @@ export default function DiagnosticPage() {
     try {
       const response = await fetch(url, options);
       const data = await response.json();
-      setResults(prev => ({ ...prev, [testName]: data }));
+      setResults((prev: any) => ({ ...prev, [testName]: data }));
     } catch (error) {
-      setResults(prev => ({
+      setResults((prev: any) => ({
         ...prev,
         [testName]: {
           success: false,
@@ -147,14 +147,14 @@ export default function DiagnosticPage() {
                 {tests.find(t => t.key === testKey)?.name}
                 <div
                   className={`badge ${
-                    result.success === true
+                    (result as any).success === true
                       ? "badge-success"
-                      : result.success === false
+                      : (result as any).success === false
                         ? "badge-error"
                         : "badge-neutral"
                   }`}
                 >
-                  {result.success === true ? "成功" : result.success === false ? "失败" : "未知"}
+                  {(result as any).success === true ? "成功" : (result as any).success === false ? "失败" : "未知"}
                 </div>
               </h2>
 
@@ -205,17 +205,17 @@ export default function DiagnosticPage() {
             <h4 className="font-bold">如果评论不显示:</h4>
             <ul className="list-disc list-inside ml-4 space-y-1">
               <li>首先检查数据库表是否存在 (检查数据库表)</li>
-              <li>如果表不存在，点击"初始化数据库表"</li>
+              <li>如果表不存在，点击&quot;初始化数据库表&quot;</li>
               <li>检查监控是否运行 (监控状态)</li>
-              <li>如果监控未运行，点击"启动监控"</li>
+              <li>如果监控未运行，点击&quot;启动监控&quot;</li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-bold">测试评论插入:</h4>
             <ul className="list-disc list-inside ml-4 space-y-1">
-              <li>点击"插入测试评论"手动添加测试数据</li>
-              <li>然后点击"查询所有评论"验证是否成功</li>
+              <li>点击&quot;插入测试评论&quot;手动添加测试数据</li>
+              <li>然后点击&quot;查询所有评论&quot;验证是否成功</li>
               <li>如果成功，说明数据库工作正常</li>
             </ul>
           </div>
@@ -225,7 +225,7 @@ export default function DiagnosticPage() {
       <div className="mt-8 p-6 bg-warning/20 rounded-lg">
         <h3 className="text-lg font-bold mb-4">⚠️ 常见问题</h3>
         <ul className="list-disc list-inside space-y-2">
-          <li>如果监控状态显示未运行，请点击"启动监控"</li>
+          <li>如果监控状态显示未运行，请点击&quot;启动监控&quot;</li>
           <li>如果数据库连接失败，请检查PostgreSQL是否正在运行</li>
           <li>如果评论插入失败，请检查数据库表是否存在</li>
           <li>如果链上事件无法捕获，请检查合约地址配置</li>
