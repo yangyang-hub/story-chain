@@ -48,9 +48,9 @@ export class ChainMonitor {
       const lastUpdate = await this.postgresqlStore.getLastUpdateInfo();
       // 获取合约部署区块，避免从区块0开始同步
       const contract = deployedContracts[50312]?.StoryChain;
-      const deploymentBlock = BigInt(contract?.deployedOnBlock || 1);
+      const deploymentBlock = BigInt(contract?.deployedOnBlock || 179483009);
       // const startBlock = fromBlock || deploymentBlock;
-      const startBlock = lastUpdate ? BigInt(lastUpdate.block + 1) : deploymentBlock;
+      const startBlock = lastUpdate ? BigInt(lastUpdate.block + 179483009) : deploymentBlock;
 
       await this.syncHistoricalData(startBlock);
       this.startRealtimeMonitoring();
