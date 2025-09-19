@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: process.env.NEXT_PUBLIC_IGNORE_BUILD_ERROR === "true",
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "bronze-working-manatee-308.mypinata.cloud",
+        port: "",
+        pathname: "/ipfs/**",
+      },
+    ],
+  },
   webpack: config => {
     config.resolve.fallback = { fs: false, net: false, tls: false };
     config.externals.push("pino-pretty", "lokijs", "encoding");
@@ -22,6 +32,7 @@ if (isIpfs) {
   nextConfig.output = "export";
   nextConfig.trailingSlash = true;
   nextConfig.images = {
+    ...nextConfig.images,
     unoptimized: true,
   };
 }

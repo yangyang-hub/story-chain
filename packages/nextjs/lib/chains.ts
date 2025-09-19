@@ -14,10 +14,10 @@ export const somnia: Chain = {
   },
   rpcUrls: {
     default: {
-      http: ["https://testnet-rpc.somnia.network"],
+      http: ["https://dream-rpc.somnia.network"],
     },
     public: {
-      http: ["https://testnet-rpc.somnia.network"],
+      http: ["https://dream-rpc.somnia.network"],
     },
   },
   blockExplorers: {
@@ -36,14 +36,14 @@ export function getChainConfig() {
   if (useFoundry) {
     return {
       chain: hardhat,
-      rpcUrl: "http://localhost:8546",
+      rpcUrl: "http://localhost:8545",
       chainId: 31337,
       contract: deployedContracts[31337]?.StoryChain,
     };
   } else {
     return {
       chain: somnia,
-      rpcUrl: "https://testnet-rpc.somnia.network",
+      rpcUrl: "https://dream-rpc.somnia.network",
       chainId: 50312,
       contract: deployedContracts[50312]?.StoryChain,
     };

@@ -338,11 +338,11 @@ const StoryCard: React.FC<{
         {/* 统计信息 */}
         <div className="flex justify-between items-center text-sm">
           <div className="flex items-center gap-4">
-            <LikeButton tokenId={BigInt(story.id)} isStory={true} currentLikes={story.likes} showCount={true} />
+            <LikeButton tokenId={BigInt(story.id)} isStory={true} currentLikes={Number(story.likes)} showCount={true} />
 
             <div className="flex items-center gap-1 text-base-content/70">
               <ShareIcon className="w-4 h-4" />
-              <span>{story.forkCount}</span>
+              <span>{Number(story.forkCount)}</span>
             </div>
           </div>
         </div>

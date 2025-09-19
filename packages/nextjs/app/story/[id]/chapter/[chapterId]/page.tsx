@@ -368,7 +368,7 @@ const ChapterReadingPage = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <LikeButton tokenId={BigInt(chapter.id)} isStory={false} currentLikes={chapter.likes} showCount={true} />
+            <LikeButton tokenId={BigInt(chapter.id)} isStory={false} currentLikes={Number(chapter.likes)} showCount={true} />
           </div>
         </div>
 

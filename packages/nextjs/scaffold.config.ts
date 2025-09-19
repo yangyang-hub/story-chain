@@ -42,7 +42,7 @@ const scaffoldConfig = {
   // The key is the chain ID, and the value is the HTTP RPC URL
   rpcOverrides: {
     // Foundry local chain RPC override
-    [chains.hardhat.id]: "http://localhost:8546",
+    [chains.hardhat.id]: "http://localhost:8545",
     // Somnia testnet RPC - using the default from chain definition
   } as Record<number, string>,
   // This is ours WalletConnect's default project ID.

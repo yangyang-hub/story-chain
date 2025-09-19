@@ -222,13 +222,13 @@ const ProfilePage = () => {
               try {
                 let metadata = null;
                 let title = `Chapter #${chapterData.id}`;
-                let chapterNumber = 1;
+                // 使用API返回的真实章节编号，而不是metadata中的
+                const chapterNumber = Number(chapterData.chapterNumber) || 1;
 
                 if (chapterData.ipfsHash) {
                   try {
                     metadata = await getJSONFromIPFS(chapterData.ipfsHash);
                     title = metadata?.title || metadata?.name || title;
-                    chapterNumber = metadata?.chapterNumber || 1;
                   } catch (error) {
                     console.warn("Failed to load chapter metadata:", error);
                   }
