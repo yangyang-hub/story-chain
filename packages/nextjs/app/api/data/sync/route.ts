@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PostgreSQLStore } from "../../../../lib/database/postgreSQLStore";
-import { getGlobalMonitor } from "../../../../lib/monitoring";
+import { Address } from "viem";
+import { createChainClient, getContractConfig } from "../../../../lib/chains";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,45 +10,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const monitor = getGlobalMonitor();
-    if (!monitor) {
-      return NextResponse.json({ error: "Monitor not initialized" }, { status: 503 });
-    }
-
-    // 获取请求参数
-    const { searchParams } = new URL(request.url);
-    const fromBlock = searchParams.get("fromBlock");
-    const syncType = searchParams.get("type"); // 新增：同步类型参数
-
-    // 如果指定了同步章节详情
-    if (syncType === "chapter-details") {
-      const store = new PostgreSQLStore();
-      await store.syncChapterDetails();
-
-      return NextResponse.json({
-        success: true,
-        message: "Chapter details sync completed successfully",
-      });
-    }
-
-    // 默认的历史数据同步
-    const lastUpdate = await monitor.getStatus();
-    const startBlock = fromBlock
-      ? BigInt(fromBlock)
-      : lastUpdate.lastUpdate
-        ? BigInt(lastUpdate.lastUpdate.block + 1)
-        : undefined;
-
-    // 调用公开的同步方法
-    await monitor.syncHistoricalData(startBlock);
-
+    // 由于不再使用数据库同步，这个API现在只返回成功状态
+    // 实际的数据都直接从链上获取，无需同步
     return NextResponse.json({
       success: true,
-      message: "Data sync triggered successfully",
-      lastUpdate: await monitor.getStatus(),
+      message: "Data sync is no longer needed - all data is fetched directly from blockchain",
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Error triggering data sync:", error);
+    console.error("Error in sync API:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 },
@@ -58,15 +28,43 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const monitor = getGlobalMonitor();
-    if (!monitor) {
-      return NextResponse.json({ error: "Monitor not initialized" }, { status: 503 });
+    // 在请求时动态创建客户端和获取合约配置
+    const publicClient = createChainClient();
+    const storyChainContract = getContractConfig();
+
+    if (!storyChainContract) {
+      return NextResponse.json({ error: "Contract not found" }, { status: 500 });
     }
 
-    const status = await monitor.getStatus();
+    // 获取区块链和合约状态信息
+    const [currentBlock, totalStories, totalChapters] = await Promise.all([
+      publicClient.getBlockNumber(),
+      publicClient.readContract({
+        address: storyChainContract.address as Address,
+        abi: storyChainContract.abi,
+        functionName: "getTotalStories",
+      }),
+      publicClient.readContract({
+        address: storyChainContract.address as Address,
+        abi: storyChainContract.abi,
+        functionName: "getTotalChapters",
+      }),
+    ]);
+
+    const status = {
+      isMonitoring: true, // 总是为true，因为直接从链上读取
+      contractAddress: storyChainContract.address,
+      currentBlock: Number(currentBlock),
+      totalStories: Number(totalStories),
+      totalChapters: Number(totalChapters),
+      lastUpdateTime: new Date().toISOString(),
+      syncMethod: "direct-blockchain-reads",
+      databaseSync: false, // 不再使用数据库同步
+    };
+
     return NextResponse.json({ status });
   } catch (error) {
-    console.error("Error getting monitor status:", error);
+    console.error("Error getting blockchain status:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Internal server error" },
       { status: 500 },

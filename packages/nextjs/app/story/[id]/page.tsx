@@ -20,7 +20,7 @@ import { ImageUploader } from "~~/components/ipfs/IPFSUploader";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { ChapterData } from "~~/lib/monitoring/types";
+import { ChapterData } from "~~/lib/types";
 import chainDataService from "~~/services/chain/chainDataService";
 import { type ChapterMetadata, getJSONFromIPFS, uploadChapterMetadata } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";

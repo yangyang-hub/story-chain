@@ -16,7 +16,7 @@ import { LikeButton } from "~~/components/interactions/LikeButton";
 import { Address } from "~~/components/scaffold-eth";
 import { useLanguage } from "~~/contexts/LanguageContext";
 import { useStories } from "~~/hooks/useChainData";
-import { StoryData } from "~~/lib/monitoring/types";
+import { StoryData } from "~~/lib/types";
 import { getJSONFromIPFS } from "~~/services/ipfs/ipfsService";
 import { notification } from "~~/utils/scaffold-eth";
 

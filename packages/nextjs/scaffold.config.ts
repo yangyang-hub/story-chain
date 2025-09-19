@@ -1,4 +1,5 @@
 import * as chains from "viem/chains";
+import { somnia } from "./lib/chains";
 
 export type BaseConfig = {
   targetNetworks: readonly chains.Chain[];
@@ -15,18 +16,16 @@ export const DEFAULT_ALCHEMY_API_KEY = "oKxs-03sij-U_N0iOlrSsZFr29-IqbuF";
 
 // Create networks array based on environment variables
 const createTargetNetworks = () => {
-  // Always include Somnia testnet as base network
-  const baseNetworks = [chains.somniaTestnet] as const;
-
-  // Enable foundry network for local development or when explicitly enabled
-  // In production (Vercel), set NEXT_PUBLIC_ENABLE_FOUNDRY=false to disable foundry
-  const enableFoundry = process.env.NEXT_PUBLIC_ENABLE_FOUNDRY !== "false";
+  // Check if foundry is enabled (true by default for development)
+  const enableFoundry = process.env.NEXT_PUBLIC_ENABLE_FOUNDRY === "true";
 
   if (enableFoundry) {
-    return [chains.foundry, ...baseNetworks] as const;
+    // Use foundry local chain when enabled
+    return [chains.hardhat] as const;
+  } else {
+    // Use Somnia testnet when foundry is disabled
+    return [somnia] as const;
   }
-
-  return baseNetworks;
 };
 
 const scaffoldConfig = {
@@ -42,9 +41,10 @@ const scaffoldConfig = {
   // If you want to use a different RPC for a specific network, you can add it here.
   // The key is the chain ID, and the value is the HTTP RPC URL
   rpcOverrides: {
-    // Example:
-    // [chains.mainnet.id]: "https://mainnet.buidlguidl.com",
-  },
+    // Foundry local chain RPC override
+    [chains.hardhat.id]: "http://localhost:8546",
+    // Somnia testnet RPC - using the default from chain definition
+  } as Record<number, string>,
   // This is ours WalletConnect's default project ID.
   // You can get your own at https://cloud.walletconnect.com
   // It's recommended to store it in an env variable:
