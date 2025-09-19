@@ -264,7 +264,7 @@ const StoryCard: React.FC<{
             </div>
             <div className="flex items-center gap-1">
               <ClockIcon className="w-4 h-4" />
-              <span>{new Date(story.createdTime * 1000).toLocaleDateString()}</span>
+              <span>{new Date(Number(story.createdTime) * 1000).toLocaleDateString()}</span>
             </div>
           </div>
 
@@ -316,7 +316,7 @@ const StoryCard: React.FC<{
           </div>
           <div className="flex items-center gap-1">
             <ClockIcon className="w-4 h-4" />
-            <span>{new Date(story.createdTime * 1000).toLocaleDateString()}</span>
+            <span>{new Date(Number(story.createdTime) * 1000).toLocaleDateString()}</span>
           </div>
         </div>
 
@@ -385,7 +385,7 @@ const ExplorePage = () => {
 
   // 为每个故事添加 metadata 字段以支持类型检查
   const storiesWithMetadata: StoryWithMetadata[] = stories.map(story => {
-    const metadata = storiesMetadata.get(story.id) || undefined;
+    const metadata = storiesMetadata.get(story.id.toString()) || undefined;
     return {
       ...story,
       metadata,
@@ -630,7 +630,7 @@ const ExplorePage = () => {
                 <StoryCard
                   key={story.id}
                   story={story}
-                  onMetadataLoad={metadata => handleMetadataLoad(story.id, metadata)}
+                  onMetadataLoad={metadata => handleMetadataLoad(story.id.toString(), metadata)}
                   t={t}
                 />
               </ErrorBoundary>

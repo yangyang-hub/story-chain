@@ -1,6 +1,6 @@
 import { Abi, AbiFunction } from "viem";
 
-export type TransactionWithFunction = {
+export type DecodedTransaction = {
   functionName: string;
   args: any[];
 };
@@ -8,7 +8,7 @@ export type TransactionWithFunction = {
 /**
  * Decode transaction data using ABI
  */
-export const decodeTxData = (abi: Abi, data: string): TransactionWithFunction | null => {
+export const decodeTxData = (abi: Abi, data: string): DecodedTransaction | null => {
   try {
     // This is a simplified implementation
     // In a full implementation, you would use decodeFunctionData from viem

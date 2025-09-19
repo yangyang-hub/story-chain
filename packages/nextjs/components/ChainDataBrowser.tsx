@@ -208,7 +208,7 @@ export default function ChainDataBrowser() {
                     <strong>作者:</strong> <span className="font-mono text-xs">{formatAddress(story.author)}</span>
                   </div>
                   <div>
-                    <strong>创建时间:</strong> {new Date(story.createdTime * 1000).toLocaleString()}
+                    <strong>创建时间:</strong> {new Date(Number(story.createdTime) * 1000).toLocaleString()}
                   </div>
                   <div>
                     <strong>IPFS:</strong> <span className="font-mono text-xs">{story.ipfsHash.slice(0, 12)}...</span>
@@ -297,7 +297,7 @@ export default function ChainDataBrowser() {
                     <strong>作者:</strong> <span className="font-mono text-xs">{formatAddress(chapter.author)}</span>
                   </div>
                   <div>
-                    <strong>创建时间:</strong> {new Date(chapter.createdTime * 1000).toLocaleString()}
+                    <strong>创建时间:</strong> {new Date(Number(chapter.createdTime) * 1000).toLocaleString()}
                   </div>
                   <div className="flex justify-between">
                     <span>❤️ {chapter.likes}</span>
