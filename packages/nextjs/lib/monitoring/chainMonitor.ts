@@ -50,7 +50,7 @@ export class ChainMonitor {
       const contract = deployedContracts[50312]?.StoryChain;
       const deploymentBlock = BigInt(contract?.deployedOnBlock || 179483009);
       // const startBlock = fromBlock || deploymentBlock;
-      const startBlock = lastUpdate ? BigInt(lastUpdate.block + 179483009) : deploymentBlock;
+      const startBlock = lastUpdate ? BigInt(lastUpdate.block + 1) : deploymentBlock;
 
       await this.syncHistoricalData(startBlock);
       this.startRealtimeMonitoring();
