@@ -311,11 +311,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Related Links
 
+- 🚀 **Live Demo**: [https://story-chain-chi.vercel.app/](https://story-chain-chi.vercel.app/)
 - 📋 **Project Planning**: [GitHub Project Board](https://github.com/yourusername/story-chain/projects)
 - 🐛 **Issue Reports**: [GitHub Issues](https://github.com/yourusername/story-chain/issues)
 - 💬 **Community Discussion**: [GitHub Discussions](https://github.com/yourusername/story-chain/discussions)
 - 📖 **Project Documentation**: [Documentation](https://docs.storychain.io/) (in development)
-- 🔗 **Contract Address**: [Etherscan](https://etherscan.io/) (updated after deployment)
+- 🔗 **Contract Addresses**:
+  - **Local Development Network (Chain ID: 31337)**: [`0x700b6a60ce7eaaea56f065753d8dcb9653dbad35`](http://localhost:8545)
+  - **Somnia Network (Chain ID: 50312)**: [`0xFaFb27232e704f3BFe272c2FBb6a28f54f8C0653`](https://explorer.somnia.network/address/0xFaFb27232e704f3BFe272c2FBb6a28f54f8C0653)
 - 🌐 **IPFS Gateway**: [IPFS Gateway](https://ipfs.io/)
 
 ## 🙏 Acknowledgments

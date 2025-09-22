@@ -307,11 +307,13 @@ story-chain/
 
 ## 🔗 相关链接
 
+- 🚀 **在线体验**: [https://story-chain-chi.vercel.app/](https://story-chain-chi.vercel.app/)
 - 📋 **项目计划**: [GitHub Project Board](https://github.com/yourusername/story-chain/projects)
 - 🐛 **问题反馈**: [GitHub Issues](https://github.com/yourusername/story-chain/issues)
 - 💬 **社区讨论**: [GitHub Discussions](https://github.com/yourusername/story-chain/discussions)
 - 📖 **项目文档**: [Documentation](https://docs.storychain.io/) (开发中)
-- 🔗 **合约地址**: [Etherscan](https://etherscan.io/) (部署后更新)
+- 🔗 **合约地址**:
+  - **Somnia 网络 (Chain ID: 50312)**: [`0xFaFb27232e704f3BFe272c2FBb6a28f54f8C0653`](https://explorer.somnia.network/address/0xFaFb27232e704f3BFe272c2FBb6a28f54f8C0653)
 - 🌐 **IPFS网关**: [IPFS Gateway](https://ipfs.io/)
 
 ## 🙏 致谢
